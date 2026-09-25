@@ -96,6 +96,13 @@ class Delegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldHandleReopen(_ s: NSApplication, hasVisibleWindows f: Bool) -> Bool { window?.makeKeyAndOrderFront(nil); return true }
+    // closing Speechform stops listening, so the microphone is never left on behind it
+    func applicationWillTerminate(_ n: Notification) {
+        var req = URLRequest(url: URL(string: appURL + "stop")!); req.httpMethod = "POST"; req.httpBody = "{}".data(using: .utf8); req.timeoutInterval = 1
+        let sem = DispatchSemaphore(value: 0)
+        URLSession.shared.dataTask(with: req) { _, _, _ in sem.signal() }.resume()
+        _ = sem.wait(timeout: .now() + 1.2)
+    }
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
 }
 

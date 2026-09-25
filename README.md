@@ -61,16 +61,25 @@ The same page runs in any browser. Start the server with `.worker/bin/python ima
 
 ## Using it
 
-- **Open TouchDesigner.** This button opens `Speechform.toe` and starts the image. When TouchDesigner is running, the button reads "TouchDesigner is drawing".
-- **Start listening.** This button turns the microphone on. It reads "Listening · tap to stop" while it is on. You can also type a phrase below the transcript.
-- **Deciding.** This button shows who steers the image and whether they are answering. Tap it to choose one of the following:
-  - **The stand-in**, the default, which needs no account. It sets warmth from warm and cool words, tempo from the pace of speech, trail memory from how often ideas return, and a variation for each idea.
-  - **Jev**, or any decision service you run. Give its endpoint and key. Every few seconds it receives the latest transcript and answers with decisions (see [AGENTS.md](AGENTS.md)).
-  - **Claude**, using your own Anthropic API key. The default model is Claude Haiku 4.5.
-  - **A local model** through any OpenAI-compatible endpoint, such as [Ollama](https://ollama.com) (`http://127.0.0.1:11434/v1`, for example `gemma3:1b`). It is free and offline.
+A row of icons runs across the top.
 
-  **Test** asks the provider once and shows the answer. The stand-in keeps running between calls.
-- **New session** starts a fresh image and transcript. Memory keeps everything already said.
+| Icon | Does |
+| --- | --- |
+| ≡ | Opens the transcript. |
+| ⋄ (four joined points) | Opens the classifier. |
+| ◷ | Opens the memory. |
+| ▶ | Starts. It opens TouchDesigner if it is not running, then listens. The green dot means TouchDesigner is drawing. |
+| ■ | Stops listening. The image holds where it is, and closing the app stops listening too. |
+| + | Starts a new session. Memory keeps everything already said. |
+| ⚿ (a key) | Holds the provider fields: provider, endpoint, key, model, and how often to ask. **Test** asks the provider once. |
+
+You can also type a phrase below the transcript.
+
+The key fields are optional. With no provider, a built-in stand-in steers the image by simple rules: warmth from warm and cool words, tempo from the pace of speech, trail memory from how often ideas return, and a variation for each idea. You can add one of the following:
+
+- **Jev**, or any decision service. Give its endpoint and key; every few seconds it receives the latest transcript and answers with decisions (see [AGENTS.md](AGENTS.md)).
+- **Claude**, with your Anthropic API key. The default model is Claude Haiku 4.5.
+- **A local model** through any OpenAI-compatible endpoint, such as [Ollama](https://ollama.com) at `http://127.0.0.1:11434/v1` with `gemma3:1b`.
 
 ## Privacy
 

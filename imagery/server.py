@@ -20,6 +20,8 @@ the transcript, the classifier at work, and the memory of everything said. Behin
   GET  /status    is TouchDesigner drawing, is the speech worker alive, is the microphone on,
                   who decides and whether a key is saved (the key itself is never sent)
   POST /touchdesigner   opens Speechform.toe in TouchDesigner
+  POST /start     opens TouchDesigner if it is not running, then listens through the microphone
+  POST /stop      stops listening; the image holds where it is
   POST /settings/test   asks the chosen provider once and reports how it went
   POST /settings  {"provider": "jev" | "claude" | "local" | "stand-in", "endpoint", "key", "model", "every"}
                   Stored in ~/.config/loom/jev.json, readable only by this user; the key is never sent back.
@@ -431,6 +433,19 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, test_provider())
         if path == '/touchdesigner':
             return self._send(200, open_touchdesigner())
+        if path in ('/start', '/stop'):
+            on = path == '/start'
+            opened = None
+            if on and not td_up():
+                opened = open_touchdesigner()           # the microphone lives in TouchDesigner
+                if not opened.get('ok'):
+                    return self._send(200, opened)
+            p = read_json(PANEL, {})
+            p['microphone'] = on
+            if d.get('speaker') in ('A', 'B'):
+                p['speaker'] = d['speaker']
+            write_atomic(PANEL, p)
+            return self._send(200, {'ok': True, 'listening': on, 'opened_touchdesigner': bool(opened)})
         return self._send(404, {'error': 'not here'})
 
     def log_message(self, *a):

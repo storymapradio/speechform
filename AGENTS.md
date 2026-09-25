@@ -69,7 +69,9 @@ To have Speechform call an agent instead, choose **Jev** under the Deciding butt
 | `GET /state` | everything the app shows, including each phrase's full reasoning under `why` |
 | `GET /memory` | everything said in the app, newest first |
 | `POST /say` `{"text": "...", "speaker": "A"}` | a typed phrase, classified like speech (add `"test": true` so it stays out of memory) |
-| `POST /intake` `{"microphone": true}` | microphone on or off (`{"action": "reset"}` starts a new session) |
+| `POST /start` | opens TouchDesigner if needed, then listens |
+| `POST /stop` | stops listening |
+| `POST /intake` `{"action": "reset"}` | starts a new session |
 | `POST /settings` `{"provider": "claude", "key": "...", "model": "...", "every": 3}` | who decides (the key is saved locally and never returned) |
 | `POST /settings/test` | asks the chosen provider once |
 

@@ -27,6 +27,22 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .live { position: absolute; top: 9px; left: 10px; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .live.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
 
+/* the icons across the top, as in Oral Histories */
+.tools { display: flex; justify-content: center; align-items: center; gap: 4px; flex: 0 0 auto; }
+.tools .gap { width: 14px; }
+.tool { position: relative; display: grid; place-items: center; width: 38px; height: 36px; padding: 0; background: none; border: none; color: var(--ink);
+  cursor: pointer; opacity: .55; transition: opacity .18s, color .18s, transform .14s, filter .18s; }
+.tool svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tool:hover { opacity: 1; color: var(--amber); transform: translateY(-1px); }
+.tool:active { transform: scale(.9); }
+.tool.on { opacity: 1; color: var(--amber); filter: drop-shadow(0 0 6px rgba(255,201,74,.45)); }
+.tool.live { opacity: 1; color: var(--red); filter: drop-shadow(0 0 6px rgba(255,90,74,.55)); animation: rec 1.4s ease-in-out infinite; }
+.tool.live svg { fill: currentColor; }
+.tool.idle { opacity: .22; pointer-events: none; }
+.tool.waking { opacity: 1; color: var(--amber); animation: rec 1s ease-in-out infinite; }
+.tool .badge { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+.tool .badge.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
+@keyframes rec { 50% { opacity: .45; } }
 /* the controls: each says what it is and what it is doing */
 .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; flex: 0 0 auto; }
 .pill { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--faint);
@@ -156,22 +172,18 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 </head>
 <body>
 <div class="app">
+  <nav class="tools" id="tools">
+    <button class="tool on" data-page="0" aria-label="transcript" title="transcript"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10.5h14M5 15h14M5 19.5h8"/></svg></button>
+    <button class="tool" data-page="1" aria-label="classifier" title="classifier"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><circle cx="19" cy="12" r="2"/><path d="M6.6 10.6l3.8-3.6M6.6 13.4l3.8 3.6M13.6 7l3.8 3.6M13.6 17l3.8-3.6"/></svg></button>
+    <button class="tool" data-page="2" aria-label="memory" title="memory"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></button>
+    <span class="gap"></span>
+    <button class="tool act" id="start" aria-label="start" title="start"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><i class="badge"></i></button>
+    <button class="tool act" id="stop" aria-label="stop" title="stop"><svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
+    <button class="tool act" id="fresh" aria-label="new session" title="new session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="tool act" id="keyBtn" aria-label="key" title="key"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.6"/><path d="M10.6 12.4L19 4M15.5 7.5l2.6 2.6M13.3 9.7l2 2"/></svg></button>
+  </nav>
   <div class="screen" id="screen">
     <img id="loom" alt="The image your speech is growing">
-  </div>
-
-  <div class="controls">
-    <button class="pill" id="tdBtn" title="TouchDesigner draws the image"><i class="dot"></i><span>TouchDesigner</span></button>
-    <button class="pill" id="mic" title="The microphone"><i class="dot"></i><span>Start listening</span></button>
-    <button class="pill wide" id="who" title="Who decides how the image grows"><i class="dot"></i><span>Deciding: the stand-in</span></button>
-    <button class="pill" id="fresh" title="Begin a new session. Memory keeps everything already said.">New session</button>
-  </div>
-  <div class="bar">
-    <div class="tabs">
-      <button class="tab on" data-page="0">transcript</button>
-      <button class="tab" data-page="1">classifier</button>
-      <button class="tab" data-page="2">memory</button>
-    </div>
   </div>
 
   <div class="lower" id="lower">
@@ -180,7 +192,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
         <div class="scroll" id="lines"></div>
         <form class="say" id="say">
           <button type="button" class="spk" id="spk" title="Who is speaking">A</button>
-          <input id="words" placeholder="press ● and speak, or type a phrase" autocomplete="off">
+          <input id="words" placeholder="" autocomplete="off">
           <button type="submit">say</button>
         </form>
       </section>
@@ -203,31 +215,28 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
         </div>
       </section>
       <section class="page">
-        <div class="mem-head"><input id="find" placeholder="search everything you have said" autocomplete="off"><span id="memCount"></span></div>
+        <div class="mem-head"><input id="find" placeholder="search" autocomplete="off"><span id="memCount"></span></div>
         <div class="scroll" id="mem"></div>
       </section>
     </div>
-    <div class="hint" id="hint">Tap a phrase to watch it being classified again. Swipe to change screens.</div>
+    
   </div>
 </div>
 
 <div class="sheet" id="sheet" hidden>
   <form class="card" id="settings">
-    <h3>Who decides</h3>
-    <p>The stand-in always runs, deciding from the transcript by simple rules. Choose a provider and it is also asked every few seconds; its decisions steer the image. Your key is kept on this Mac only, in ~/.config/speechform, and is never sent anywhere but the provider you choose.</p>
     <label>Provider
       <select id="provider">
-        <option value="stand-in">stand-in only</option>
+        <option value="stand-in">none</option>
         <option value="jev">Jev</option>
         <option value="claude">Claude (Anthropic)</option>
         <option value="local">a local model (Ollama or llama.cpp)</option>
       </select>
     </label>
     <label id="lEndpoint">Endpoint <input id="endpoint" placeholder="https://…"></label>
-    <label>Key <input id="key" type="password" placeholder="kept on this Mac only" autocomplete="off"></label>
+    <label>Key <input id="key" type="password" autocomplete="off"></label>
     <label>Model <input id="model" placeholder="optional"></label>
     <label>Ask every (seconds) <input id="every" type="number" min="1" max="30" step="1" value="3"></label>
-    <p id="keyNote"></p>
     <p id="testNote" style="color:var(--ink)"></p>
     <div class="row"><button type="button" class="btn" id="close">close</button><button type="button" class="btn" id="test">test</button><button type="submit" class="btn cta">save</button></div>
   </form>
@@ -252,60 +261,47 @@ let S = null, page = 0, selected = null, speaker = 'A', lastCount = 0;
 function go(i) {
   page = Math.max(0, Math.min(2, i));
   $('#track').style.transform = `translateX(${-100 / 3 * page}%)`;
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+  document.querySelectorAll('.tool[data-page]').forEach(t => t.classList.toggle('on', +t.dataset.page === page));
   if (page === 1) drawWhy();
   if (page === 2) drawMemory();
 }
-document.querySelectorAll('.tab').forEach(t => t.onclick = () => go(+t.dataset.page));
+document.querySelectorAll('.tool[data-page]').forEach(t => t.onclick = () => go(+t.dataset.page));
 document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') go(page + 1); if (e.key === 'ArrowLeft') go(page - 1); });
 let sx = null;
 $('#lower').addEventListener('pointerdown', e => { sx = e.clientX; });
 $('#lower').addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; if (Math.abs(dx) > 60) go(page + (dx < 0 ? 1 : -1)); sx = null; });
 $('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) go(page + (e.deltaX > 0 ? 1 : -1)); }, { passive: true });
-setTimeout(() => $('#hint').style.opacity = 0, 6000);
 
 /* ── controls ── */
 const post = (p, b) => fetch(p, { method: 'POST', body: JSON.stringify(b) }).then(r => r.json()).catch(() => null);
-$('#mic').onclick = () => post('/intake', { microphone: !(S && S.microphone), speaker }).then(poll);
-$('#tdBtn').onclick = () => { if (S && S.status && S.status.touchdesigner) return;
-  $('#tdBtn span').textContent = 'Opening TouchDesigner…';
-  post('/touchdesigner', {}).then(r => { if (r && !r.ok) { $('#tdBtn span').textContent = r.error; $('#tdBtn').className = 'pill bad'; } }); };
+let waking = false;
+$('#start').onclick = () => { waking = true; post('/start', { speaker }).then(poll); };
+$('#stop').onclick = () => { waking = false; post('/stop', {}).then(poll); };
 function drawControls() {
   const st = S.status || {};
-  const td = $('#tdBtn');
-  if (st.touchdesigner) { td.className = 'pill ok'; td.querySelector('span').textContent = 'TouchDesigner is drawing'; }
-  else if (!/Opening|not installed/.test(td.querySelector('span').textContent)) { td.className = 'pill cta'; td.querySelector('span').textContent = 'Open TouchDesigner'; }
-  const m = $('#mic'); m.className = 'pill ' + (S.microphone ? 'live' : '');
-  m.querySelector('span').textContent = S.microphone ? 'Listening · tap to stop' : 'Start listening';
-  const p = st.provider || {}, ps = st.provider_status || {}, w = $('#who');
-  let label = 'Deciding: the stand-in', cls = 'pill ok';
-  if (p.provider && p.provider !== 'stand-in') {
-    label = `Deciding: ${st.provider_name}${st.model ? ' · ' + st.model : ''}`;
-    if (p.provider !== 'local' && !p.has_key) { label += ' · no key yet'; cls = 'pill warn'; }
-    else if (ps.state === 'error') { label += ' · not answering'; cls = 'pill bad'; }
-    else if (ps.state === 'ok') { label += ` · answered in ${ps.latency}s`; cls = 'pill ok'; }
-    else { label += ' · waiting for speech'; cls = 'pill warn'; }
-  }
-  if (st.directed_by && st.directed_by !== 'director') { label = 'Deciding: Jev (posting directly)'; cls = 'pill ok'; }
-  w.className = cls; w.querySelector('span').textContent = label;
+  const listening = !!S.microphone && st.touchdesigner;
+  if (listening || (waking && !st.touchdesigner && !S.microphone)) waking = waking && !listening;
+  $('#start').className = 'tool act ' + (listening ? 'live' : waking ? 'waking' : '');
+  $('#start .badge').classList.toggle('on', !!st.touchdesigner);
+  $('#stop').className = 'tool act ' + (S.microphone ? '' : 'idle');
 }
 $('#fresh').onclick = () => { selected = null; post('/intake', { action: 'reset' }); };
 $('#spk').onclick = () => { speaker = speaker === 'A' ? 'B' : 'A'; $('#spk').textContent = speaker; if (S && S.microphone) post('/intake', { microphone: true, speaker }); };
 $('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim(); if (!t) return; post('/say', { text: t, speaker }); $('#words').value = ''; };
 
 /* ── settings ── */
-$('#who').onclick = () => { const p = S ? S.provider : {}; $('#provider').value = p.provider || 'stand-in'; $('#endpoint').value = p.endpoint || '';
+$('#keyBtn').onclick = () => { const p = S ? S.provider : {}; $('#provider').value = p.provider || 'stand-in'; $('#endpoint').value = p.endpoint || '';
   $('#model').value = p.model || ''; $('#every').value = p.every || 3; $('#key').value = '';
-  $('#keyNote').textContent = p.has_key ? 'A key is saved on this Mac. Leave the key field empty to keep it.' : 'No key is saved yet.';
+  $('#key').placeholder = p.has_key ? 'saved' : '';
   sync(); $('#sheet').hidden = false; };
 const sync = () => { const v = $('#provider').value; $('#lEndpoint').style.display = (v === 'jev' || v === 'local') ? '' : 'none';
-  $('#endpoint').placeholder = v === 'local' ? 'http://127.0.0.1:11434/v1' : 'https://… your Jev endpoint'; };
+  $('#endpoint').placeholder = v === 'local' ? 'http://127.0.0.1:11434/v1' : 'https://'; };
 $('#provider').onchange = sync;
 $('#close').onclick = () => $('#sheet').hidden = true;
-$('#test').onclick = async () => { $('#testNote').textContent = 'Asking…';
+$('#test').onclick = async () => { $('#testNote').textContent = '…';
   await post('/settings', { provider: $('#provider').value, endpoint: $('#endpoint').value.trim(), model: $('#model').value.trim(), every: +$('#every').value || 3, key: $('#key').value.trim() || undefined });
   const r = await post('/settings/test', {});
-  $('#testNote').textContent = !r ? 'The server did not answer.' : r.ok ? `It answered${r.seconds ? ' in ' + r.seconds + ' seconds' : ''}: ${typeof r.said === 'string' ? r.said : JSON.stringify(r.said)}` : 'It did not answer: ' + r.error; };
+  $('#testNote').textContent = !r ? '✕' : r.ok ? `✓ ${r.seconds ? r.seconds + 's' : ''}` : '✕ ' + r.error; };
 $('#settings').onsubmit = e => { e.preventDefault();
   post('/settings', { provider: $('#provider').value, endpoint: $('#endpoint').value.trim(), model: $('#model').value.trim(),
     every: +$('#every').value || 3, key: $('#key').value.trim() || undefined }).then(() => { $('#sheet').hidden = true; poll(); }); };
@@ -319,7 +315,7 @@ const ago = t => { const s = Math.max(0, Math.round((S.now - t))); return s < 60
 function drawLines() {
   const box = $('#lines');
   const T = S.transcript;
-  if (!T.length) { box.innerHTML = '<div class="empty">Press ● and speak, or type a phrase below. Every phrase appears here with the kind of speech it was heard as and the image it grows. Everything you say is also kept in memory.</div>'; lastCount = 0; return; }
+  if (!T.length) { box.innerHTML = ''; lastCount = 0; return; }
   const titles = Object.fromEntries(S.ideas.map(i => [i.id, i]));
   const seen = new Set();
   box.innerHTML = T.map(e => {
@@ -493,7 +489,7 @@ async function drawMemory(force) {
   const q = $('#find').value.trim().toLowerCase();
   const list = q ? MEM.filter(m => (m.text || '').toLowerCase().includes(q) || (m.form || '').includes(q) || (m.idea || '').toLowerCase().includes(q)) : MEM;
   $('#memCount').textContent = `${list.length} of ${MEM.length}`;
-  if (!MEM.length) { $('#mem').innerHTML = '<div class="empty">Nothing is remembered yet. Everything you say or type in Speechform is kept here, on this Mac, across every session.</div>'; return; }
+  if (!MEM.length) { $('#mem').innerHTML = ''; return; }
   let day = '', h = '';
   list.forEach(m => { const d = new Date(m.at * 1000).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     if (d !== day) { day = d; h += `<div class="day">${esc(d)}</div>`; }
