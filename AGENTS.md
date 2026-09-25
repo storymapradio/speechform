@@ -10,7 +10,7 @@ This guide is for Claude Code, Codex, or any agent working with Speechform. It c
 open -a TouchDesigner Speechform.toe     # the image and the microphone (or POST /touchdesigner)
 ```
 
-Check that it is running with `curl -s 127.0.0.1:9990/status`. The response shows whether TouchDesigner is drawing, whether the worker is alive, whether the microphone is on, and who is deciding.
+Check that it is running with `curl -s 127.0.0.1:9990/status`. The response shows whether TouchDesigner is drawing, whether the worker is alive, and whether the microphone is on.
 
 ## 2. Steer the image (be Jev)
 
@@ -60,7 +60,7 @@ while True:
     time.sleep(3)
 ```
 
-To have Speechform call an agent instead, choose **Jev** under the Deciding button and give an endpoint. Every few seconds, Speechform POSTs the `/listen` payload to that endpoint with `Authorization: Bearer <key>`. It expects the same JSON as `/direct` in reply. Claude (Anthropic API) and any OpenAI-compatible local model are built in as well.
+To have Speechform call an agent instead, choose **Jev** under the key icon and give an endpoint. Every few seconds, Speechform POSTs the `/listen` payload to that endpoint with `Authorization: Bearer <key>`. It expects the same JSON as `/direct` in reply. Claude (Anthropic API) and any OpenAI-compatible local model are built in as well.
 
 ## 3. Other endpoints
 
