@@ -1,0 +1,3 @@
+# the speech worker: sentence embeddings for classifying kinds of speech and matching ideas
+sentence-transformers>=3.0
+numpy>=1.26

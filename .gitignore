@@ -1,0 +1,27 @@
+# everything a person says, and everything the app keeps about them, stays on their Mac
+runtime/
+sessions/
+*.wav
+*.aiff
+# environments, models and builds are made by setup.sh
+.venv/
+.worker/
+models/
+bin/
+__pycache__/
+*.pyc
+mac/Speechform.app/
+imagery/recording.mov
+imagery/loom-demo.mp4
+# the first pass's own files, superseded by Speechform.toe and the app
+Speech Gates*.toe
+Speech Gates*.tox
+Speech Gates Intake.app/
+ControlPanel.swift
+vendor/
+imagery/mac/
+Open the Loom.command
+engine.before-app.py
+CHAT_TRANSCRIPT.md
+.DS_Store
+build_local.sh
