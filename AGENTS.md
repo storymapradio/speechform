@@ -93,6 +93,7 @@ Rules learned the hard way:
 - Script CHOPs do not cook unless something pulls them. The `heartbeat` Execute DAT in the loom cooks the growers, the output and the recorder every frame.
 - Use file paths relative to the project folder, such as `imagery/growers.py`, so the project runs from any folder.
 - To look at the image, run `op('/project1/loom/out').save('/tmp/look.jpg')` and open the file.
+- At start, `td_runtime.configure()` sets thirty frames a second, turns off `/project1/speech_gates/modules`, and opens the perform window on `/project1/loom/out`. To measure cost, read `cpuCookTime` on operators where `cookedThisFrame` is true.
 
 ## 5. Where things are
 

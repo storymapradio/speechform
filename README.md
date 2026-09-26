@@ -40,6 +40,8 @@ A one-minute recording is in [docs/demo.mp4](docs/demo.mp4).
 - **[TouchDesigner](https://derivative.ca/download)**, which draws the image and listens to the microphone. The free Non-Commercial licence is enough. A `.toe` file needs TouchDesigner or TouchPlayer to run. Without TouchDesigner, the transcript, the classifier and the memory still work for typed phrases, and the image screen stays dark.
 - **Python 3.11 or later.**
 
+TouchDesigner opens as one small window showing only the image, in perform mode, at thirty frames a second. Press Esc in that window to see the network. `td_runtime.configure()` applies these settings at every start. It also switches off the first pass's own visuals, which Speechform does not use. Together these took TouchDesigner from about 80% of one core to about 37% on an M-series Mac.
+
 ## Install
 
 ```sh

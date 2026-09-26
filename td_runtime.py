@@ -5,7 +5,9 @@ import numpy as np
 from catalog import WORLDS,FORMS
 import native_controls
 ROOT=Path(__file__).resolve().parent
-STATE={};mtime=0;last_frame=-1;chunks=[];samples=0;level=0.;plate=.5;previous_mic=False;last_audio=0;audio_speaker='A';worker=None;panel_stamp=0;view_stamp=0;tick_time=time.monotonic()
+STATE={};mtime=0;last_frame=-1;configured=False;chunks=[];samples=0;level=0.;plate=.5;previous_mic=False;last_audio=0;audio_speaker='A';worker=None;panel_stamp=0;view_stamp=0;tick_time=time.monotonic()
+try:view_stamp=(ROOT/'runtime/view.json').stat().st_mtime
+except OSError:pass
 
 def command(action,**kw):
  p=ROOT/'runtime'/'inbox'/(f'{time.time_ns()}-'+str(uuid.uuid4())+'.json');p.parent.mkdir(parents=True,exist_ok=True)
@@ -32,6 +34,32 @@ def read_direction():
   stamp=p.stat().st_mtime
   if stamp!=direction_stamp:DIRECTION=json.loads(p.read_text());direction_stamp=stamp
  except (OSError,ValueError):pass
+def configure():
+ """How Speechform runs TouchDesigner, applied at every start so it never depends on a saved project:
+ thirty frames a second, the first pass's own visuals switched off (Speechform draws with the loom),
+ and one small window showing only the image, in perform mode, so the node editor is not drawn."""
+ global configured,view_stamp
+ import td
+ configured=True
+ try:view_stamp=(ROOT/'runtime/view.json').stat().st_mtime
+ except OSError:pass
+ td.project.cookRate=30
+ sg=td.op('/project1/speech_gates')
+ if sg and sg.op('modules'):sg.op('modules').allowCooking=False
+ if sg and sg.op('native_hud'):sg.op('native_hud').bypass=True
+ if sg and sg.op('final'):
+  try:sg.op('final').closeViewer()
+  except Exception:pass
+ for n in ('/project1/geo1',):
+  o=td.op(n)
+  if o is not None and o.isCOMP:o.allowCooking=False
+ w=td.op('/perform'); L=td.op('/project1/loom')
+ if w is not None and L is not None:
+  w.par.winop='/project1/loom/out';w.par.title='Speechform'
+  if 'custom' in w.par.size.menuNames:w.par.size='custom'
+  w.par.winw=320;w.par.winh=320;w.par.justifyh='right';w.par.justifyv='bottom';w.par.winoffsetx=-24;w.par.winoffsety=24
+  w.par.borders=True
+  td.ui.performMode=True
 def ensure_loom():
  """The loom lives in imagery/loom.tox. If the open project does not hold it, it is brought in,
  so the images never depend on the whole project having been saved."""
@@ -60,6 +88,7 @@ def tick(b,frame):
  last_frame=frame
  if frame%3==0:run_inbox()
  if frame%30==0:ensure_loom()
+ if not configured and frame%30==15 and __import__('td').op('/project1/loom') is not None:configure()
  mic=bool(b.par.Microphone.eval());a=b.op('microphone');a.par.active=mic
  if mic:
   a.cook(force=True);data=a.numpyArray()
@@ -99,7 +128,7 @@ def tick(b,frame):
   topics=b.op('ideas');topics.clear();topics.appendRow(['id','title','words','returns'])
   for t in STATE.get('topics',[]):topics.appendRow([t['id'],t['title'],t['words'],t['returns']])
   st=b.op('state');st.text=json.dumps(STATE,ensure_ascii=False)
-  native_controls.update(b,STATE)
+  if b.op('modules') is None or b.op('modules').allowCooking:native_controls.update(b,STATE)   # the first pass's visuals, only while they run
  dialogue={'A':0,'B':0}
  for event in STATE.get('events',[]):
   if event.get('form')=='dialogue':dialogue[event['speaker']]=dialogue.get(event['speaker'],0)+len(event['text'].split())
