@@ -114,6 +114,10 @@ microphone ─ TouchDesigner (Audio Device In CHOP) ─ 6-second batches
 
 On the test passages in `tests/passages.py`, the old way (each fragment alone, against one example per kind) was right 41% of the time on fragments. The rolling window is right about 90% of the time, and it turns to a new kind within a phrase or two. Ideas are compared with everything said in the session, and each image grows with every word ever spoken in its kind.
 
+## In a browser and on an iPhone
+
+TouchDesigner cannot run there, but Speechform can: a light web core would do the judging, growing and drawing, with Apple's own speech and language models on the phone. The plan is in [docs/browser-and-iphone.md](docs/browser-and-iphone.md).
+
 ## For agents
 
 Claude Code, Codex, or any agent can read the transcript, steer the image, and change the TouchDesigner network. See [AGENTS.md](AGENTS.md).
