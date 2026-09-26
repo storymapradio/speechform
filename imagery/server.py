@@ -403,6 +403,13 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {'memory': memory(), 'count': len(remembered)})
         if path in ('/', '/index.html'):
             return self._send(200, (APP / 'index.html').read_bytes(), 'text/html; charset=utf-8')
+        if path == '/light' or path.startswith('/light/'):
+            LIGHT = ROOT / 'light'
+            f = (LIGHT / (path[len('/light/'):] or 'index.html')).resolve()
+            if f.is_file() and LIGHT in f.parents:
+                kind = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json'}.get(f.suffix, 'application/octet-stream')
+                return self._send(200, f.read_bytes(), kind)
+            return self._send(404, {'error': 'not here'})
         f = (APP / path.lstrip('/')).resolve()
         if f.is_file() and APP in f.parents:
             kind = {'.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png'}.get(f.suffix, 'application/octet-stream')
