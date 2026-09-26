@@ -40,6 +40,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .tool.live svg { fill: currentColor; }
 .tool.idle { opacity: .22; pointer-events: none; }
 .tool.waking { opacity: 1; color: var(--amber); animation: rec 1s ease-in-out infinite; }
+.tool.idle-press { cursor: default; }
 .tool .badge { position: absolute; top: 5px; right: 6px; width: 6px; height: 6px; border-radius: 50%; background: transparent; }
 .tool .badge.on { background: var(--green); box-shadow: 0 0 6px var(--green); }
 @keyframes rec { 50% { opacity: .45; } }
@@ -138,6 +139,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .wire.lit { background: var(--green-dim); }
 .heat { line-height: 1.9; font-size: 14px; margin: 0 0 4px; }
 .heat span { padding: 1px 2px; border-radius: 3px; transition: background .6s; }
+.heat span.now { text-decoration: underline; text-decoration-color: var(--green); text-underline-offset: 4px; }
 canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px solid var(--faint); border-radius: 10px; background: #020402; }
 .rank { position: relative; }
 .rank .b { position: absolute; left: 0; right: 0; transition: transform .6s cubic-bezier(.2,.8,.2,1), opacity .4s; }
@@ -204,7 +206,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
             <p class="quiet" id="mapNote" style="margin-top:6px"></p></div>
           <div class="step reveal" data-at="3"><h4>compared with each kind</h4><div class="rank" id="rank"></div></div>
           <div class="step reveal" data-at="4"><h4>the choice</h4><p id="choice"></p>
-            <p class="quiet">A new kind is taken at once when it leads by more than 0.07, or after it has led for two phrases. A cue phrase adds 0.16.</p></div>
+            <p class="quiet">Each phrase is heard with the minute of talk before it, up to fifty words. A new kind is taken when it leads by more than 0.04, or after it has led for two phrases.</p></div>
           <div class="step reveal" data-at="5"><h4>the idea</h4><p id="ideaText"></p>
             <div class="thresh"><span class="fill" id="ideaFill"></span><span class="mark" id="ideaMark"></span></div><p class="quiet" id="ideaNote"></p></div>
           <div class="step reveal" data-at="6"><h4>who decides the image</h4><p><span class="who-directs" id="directs"></span></p><p class="quiet" id="provLine"></p>
@@ -275,13 +277,15 @@ $('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math
 /* ── controls ── */
 const post = (p, b) => fetch(p, { method: 'POST', body: JSON.stringify(b) }).then(r => r.json()).catch(() => null);
 let waking = false;
-$('#start').onclick = () => { waking = true; post('/start', { speaker }).then(poll); };
+$('#start').onclick = () => { if ($('#start').classList.contains('idle-press') || (S && S.microphone && S.status && S.status.touchdesigner)) return; waking = true; post('/start', { speaker }).then(poll); };
 $('#stop').onclick = () => { waking = false; post('/stop', {}).then(poll); };
 function drawControls() {
   const st = S.status || {};
   const listening = !!S.microphone && st.touchdesigner;
-  if (listening || (waking && !st.touchdesigner && !S.microphone)) waking = waking && !listening;
-  $('#start').className = 'tool act ' + (listening ? 'live' : waking ? 'waking' : '');
+  const opening = !!st.opening || (waking && !st.touchdesigner);
+  if (listening) waking = false;
+  /* TouchDesigner opens once: while it is opening the start icon waits and cannot be pressed again */
+  $('#start').className = 'tool act ' + (listening ? 'live' : opening ? 'waking idle-press' : '');
   $('#start .badge').classList.toggle('on', !!st.touchdesigner);
   $('#stop').className = 'tool act ' + (S.microphone ? '' : 'idle');
 }
@@ -359,8 +363,9 @@ function drawHeard(e, fresh) {
   if (!e) { $('#heat').innerHTML = '<span class="quiet">Nothing has been said in this session yet.</span>'; $('#heardMeta').textContent = ''; return; }
   const sal = (w && w.saliency) || e.text.split(/\s+/).map(t => [t, 0]);
   const hue = col(S.form_to_register[e.form] || 'kelp');
-  $('#heat').innerHTML = sal.map(([t, v]) => `<span title="${(v * 100).toFixed(0)}% of the pull" style="background:color-mix(in srgb, ${hue} ${Math.round(v * 70)}%, transparent)">${esc(t)}</span>`).join(' ');
-  $('#heardMeta').innerHTML = `${esc(e.speaker)} · ${esc(e.source || '')} · ${ago(e.at)} ago. The brighter a word, the more it pulled the phrase toward ${esc(e.form)}.` +
+  const mine = e.text.split(/\s+/).length, from = sal.length - mine;
+  $('#heat').innerHTML = sal.map(([t, v], i) => `<span class="${i >= from ? 'now' : ''}" title="${(v * 100).toFixed(0)}% of the pull" style="background:color-mix(in srgb, ${hue} ${Math.round(v * 70)}%, transparent)">${esc(t)}</span>`).join(' ');
+  $('#heardMeta').innerHTML = `The last ${w && w.window_words ? w.window_words : mine} words, heard together; the newest phrase is underlined. The brighter a word, the more it pulled toward ${esc(e.form)}.` +
     (selected ? ' <a href="#" id="latest" style="color:var(--green)">follow the latest</a>' : '');
   const l = $('#latest'); if (l) l.onclick = ev => { ev.preventDefault(); selected = null; drawLines(); focusNow(true); };
 }
@@ -369,13 +374,14 @@ function drawRank(e) {
   if (!w) { box.innerHTML = ''; box.style.height = '0'; return; }
   const cues = Object.fromEntries((w.cues || []).map(c => [c.form, c.cue]));
   const top = Math.max(w.scores[0].similarity, .01), RH = 17;
+  Object.keys(ranks).forEach(k => { if (!w.scores.some(s => s.form === k)) { ranks[k].remove(); delete ranks[k]; } });
   box.style.height = (w.scores.length * RH + 6) + 'px';
   w.scores.forEach((sc, i) => {
     let row = ranks[sc.form];
     if (!row) { row = document.createElement('div'); row.className = 'b'; row.innerHTML = '<span class="nm"></span><span class="track2"><span class="fill"></span></span><span class="v"></span>'; box.appendChild(row); ranks[sc.form] = row; }
     row.style.transform = `translateY(${i * RH}px)`;
     row.classList.toggle('top', i === 0);
-    row.querySelector('.nm').innerHTML = esc(sc.form) + (cues[sc.form] ? ` <span class="cue">+“${esc(cues[sc.form])}”</span>` : '');
+    row.querySelector('.nm').innerHTML = esc(sc.form) + (cues[sc.form] ? ` <span class="cue">+${esc(cues[sc.form])}</span>` : '');
     const f = row.querySelector('.fill'); f.style.width = pct(sc.similarity / top);
     f.style.background = i < 4 ? col(S.form_to_register[sc.form] || 'kelp') : '';
     row.querySelector('.v').textContent = sc.similarity.toFixed(2);

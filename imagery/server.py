@@ -205,7 +205,7 @@ def stand_in(s, prev):
         reasons.append('variation %d for the idea "%s"' % (seed, topic.get('title', '')))
     ease = lambda a, b: round(a + (b - a) * 0.35, 3)   # every decision arrives gently
     return {'warmth': ease(prev.get('warmth', target), target), 'tempo': ease(prev.get('tempo', tempo), tempo),
-            'memory': ease(prev.get('memory', memory), memory), 'seed': seed, 'drift': 1.0, 'saturation': 0.55}, reasons
+            'memory': ease(prev.get('memory', memory), memory), 'seed': seed, 'drift': 0.3, 'saturation': 0.55}, reasons
 
 # ── providers: Jev, Claude, or a local model ──────────────────────────────────────
 
@@ -255,8 +255,12 @@ def ask_provider(cfg, payload):
 def director():
     global current
     last_ask = 0.0
+    beat = 0
     while True:
         time.sleep(1.0)
+        beat += 1
+        if beat % 10 == 0:
+            ensure_worker()                      # a worker that stops is started again
         s = read_json(STATE, {})
         remember(s)
         with lock:
@@ -303,17 +307,30 @@ PROVIDER_NAMES = {'stand-in': 'the stand-in', 'jev': 'Jev', 'claude': 'Claude', 
 def status():
     s = read_json(STATE, {})
     cfg = public_settings()
-    return {'touchdesigner': td_up(), 'worker': time.time() - float(s.get('heartbeat', 0)) < 12,
+    up = td_up()
+    if up:
+        _opening['until'] = 0.0
+    return {'touchdesigner': up, 'opening': not up and (time.time() < _opening['until'] or td_running()), 'worker': time.time() - float(s.get('heartbeat', 0)) < 12,
             'microphone': bool(read_json(PANEL, {}).get('microphone')), 'provider': cfg,
             'provider_name': PROVIDER_NAMES.get(cfg['provider'], cfg['provider']),
             'model': cfg.get('model') or {'claude': 'claude-haiku-4-5', 'local': 'gemma3:1b'}.get(cfg['provider'], ''),
             'provider_status': provider_status, 'directed_by': 'jev (posted)' if time.time() - last_jev < 8 else 'director'}
 
+_opening = {'until': 0.0}
+
+def td_running():
+    import subprocess
+    return subprocess.run(['pgrep', '-f', 'TouchDesigner.app/Contents/MacOS/TouchDesigner'], capture_output=True).returncode == 0
+
 def open_touchdesigner():
+    """opens TouchDesigner once: never while it is opening or already open"""
     toe = ROOT / 'Speechform.toe'
+    if td_running() or time.time() < _opening['until']:
+        return {'ok': True, 'already': True}
     if not Path('/Applications/TouchDesigner.app').exists():
         return {'ok': False, 'error': 'TouchDesigner is not installed. The free Non-Commercial licence is enough: derivative.ca/download'}
     import subprocess
+    _opening['until'] = time.time() + 60
     subprocess.Popen(['open', '-g', '-a', 'TouchDesigner', str(toe)])
     return {'ok': True}
 

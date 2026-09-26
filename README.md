@@ -2,7 +2,7 @@
 
 Speechform listens while you talk. It hears what kind of speech you are making, and it grows an image of that speech as you go. A story lays down a winding path with lanterns, and a poem opens a flower. Scenery raises ridgelines, and a reflection grows one still kelp whose branches are your ideas. Everything grows from what you say, and none of it is text.
 
-Below the image, you can watch the decision being made: the words that pushed it, where the phrase lands among twenty kinds of speech, the scores, the choice and its reason, and who is steering the image. Everything you say is kept in a memory on your own Mac.
+Below the image, you can watch the decision being made: the words that pushed it, where the talk lands among nineteen kinds of speech, the scores, the choice and its reason, and who is steering the image. Everything you say is kept in a memory on your own Mac.
 
 ![The ten images](docs/registers.jpg)
 
@@ -10,12 +10,12 @@ A one-minute recording is in [docs/demo.mp4](docs/demo.mp4).
 
 ## What you see
 
-- **The image (top).** TouchDesigner draws it in a 720 by 720 square, sized for the top half of a phone. Each kind of speech has its own image, and each grows with the words spoken in it. When two kinds are nearly tied, both images share the square.
+- **The image (top).** TouchDesigner draws it in a 720 by 720 square, sized for the top half of a phone. Each kind of speech has its own image, and each grows with the words spoken in it. Images never overlap. The kind you are speaking now takes the square, and the images your talk grew earlier stand in a row of small tiles beneath it, in the order they appeared.
 - **Transcript.** Each phrase you say or type appears with the kind of speech it was heard as and the image it grows. A phrase that returns to an earlier idea is marked with ↺.
 - **Classifier.** Each phrase travels a pipeline: listen, words, embed, compare, choose, idea, direct, grow. Each stage lights as the phrase passes through it. The screen also shows the following:
   - **Word heat** lights each word by how much it pulled the phrase toward its kind.
-  - **The map** lays out the twenty kinds of speech. The phrase lands among them, with lines drawn to its nearest kinds and a trail of the talk so far.
-  - **The scores** are twenty bars that re-sort as each phrase is weighed, with the winning margin marked.
+  - **The map** lays out the nineteen kinds of speech. The talk lands among them, with lines drawn to its nearest kinds and a trail of the talk so far.
+  - **The scores** are nineteen bars that re-sort as each phrase is weighed, with the winning margin marked.
   - **The choice** is stated with its reason, such as "a clear margin of 0.21" or "held until it is heard again".
   - **The idea** shows whether the phrase starts a new idea or returns to one, measured against a threshold.
   - **The direction** shows who is steering the image and every value they set, with a log of each decision and its reasons.
@@ -24,7 +24,7 @@ A one-minute recording is in [docs/demo.mp4](docs/demo.mp4).
 | Kind of speech | Image | What grows |
 | --- | --- | --- |
 | Poetry | bloom | Petals open in a golden-angle spiral. |
-| Story, prose, character | path | A winding trail with lanterns climbs toward the horizon. |
+| Story, reading aloud, character | path | A winding trail with lanterns climbs toward the horizon. |
 | Scenery | land | Ridgelines rise one behind another. |
 | Lore, myth | hive | Hexagons are laid ring by ring. |
 | Cosmology | orrery | Bodies join a sun on widening orbits. |
@@ -32,7 +32,7 @@ A one-minute recording is in [docs/demo.mp4](docs/demo.mp4).
 | Instruction, lecture, lesson | stack | Stones build into a cairn. |
 | Reflection, stream of consciousness, thinking aloud | kelp | One still stalk grows a branch for each idea. A return lengthens that branch. |
 | Dialogue | tide | Two tides meet where the speakers' share of the talk balances. |
-| Song, lyrics, prosody | waves | Ribbons swell with the voice. |
+| Song, lyrics | waves | Ribbons swell with the voice. |
 
 ## What you need
 
@@ -90,19 +90,27 @@ Speechform needs no account and connects to none. Your speech is transcribed on 
 ```
 microphone ─ TouchDesigner (Audio Device In CHOP) ─ 6-second batches
     └─ worker.py ─ Apple SpeechAnalyzer (bin/transcribe) ─ phrases
-         └─ engine.py ─ MiniLM embedding ─ compared with 20 kinds of speech ─ the choice, the idea, the reasons
+         └─ engine.py ─ the last minute of talk ─ MiniLM ─ 19 kinds of speech ─ the choice, the idea, the reasons
               └─ runtime/state.json ─┬─ imagery/server.py ─ the app, the memory, the decision link (port 9990)
                                      │     └─ direction.json ◄─ the stand-in, Jev, Claude or a local model
                                      └─ TouchDesigner /project1/loom ─ growers ─ the image (frames on port 9983)
 ```
 
-- `engine.py` classifies each phrase and keeps ideas. For every phrase it records all twenty scores, the cues that fired, the margin, the reason, the idea match, a position on the map and the word saliency.
+- `engine.py` classifies each phrase and keeps ideas. For every phrase it records all nineteen scores, the window of talk it was heard with, the cues that fired, the margin, the reason, the idea match, a position on the map and the word saliency.
 - `imagery/growers.py` holds the rules of growth: where every petal, stone, branch and bead stands. TouchDesigner instances native geometry from it, renders it, and keeps a feedback canvas of what moved.
 - `imagery/loom.tox` is the image network. `td_runtime.py` loads it into the project if the project lacks it.
 - `imagery/server.py` serves the app and links it all, using only the Python standard library.
 - `mac/Speechform.swift` is the Mac app, a native window around the page.
 
-Each kind of speech is judged on each phrase. A new kind is taken when it leads by more than 0.07, or after it has led for two phrases. Ideas are compared with everything said in the session, and each image grows with every word ever spoken in its kind.
+**How a kind of speech is judged.** A few words say little, so each phrase is heard with the minute of talk before it, up to sixty words. The rules are these:
+
+- Each phrase is compared with several examples of every kind (`forms.py`). The examples are on unrelated subjects, so what they share is the form of the speech: commands and steps, questions and turns, memory, narration, refrain.
+- Kinds that sit close to almost anything have their general pull taken off.
+- Structural signals are added (`signals.py`): commands and "you" for instruction, hedges for thinking aloud, past tense and "she" or "they" for story.
+- The phrase's scores are averaged with those of the phrases before it, with the newest words counting most. The kind therefore follows the passage without topic leaking from one passage into the next.
+- A new kind is taken when it leads by more than 0.03, or after it has led for two phrases.
+
+On the test passages in `tests/passages.py`, the old way (each fragment alone, against one example per kind) was right 41% of the time on fragments. The rolling window is right about 90% of the time, and it turns to a new kind within a phrase or two. Ideas are compared with everything said in the session, and each image grows with every word ever spoken in its kind.
 
 ## For agents
 

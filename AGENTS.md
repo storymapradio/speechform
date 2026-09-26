@@ -101,7 +101,8 @@ Rules learned the hard way:
 | `Speechform.toe` | the TouchDesigner project: microphone intake, the first-pass visual worlds, and the loom |
 | `imagery/loom.tox`, `imagery/growers.py` | the image network and its rules of growth |
 | `imagery/server.py`, `imagery/app/index.html` | the server and the app page |
-| `engine.py`, `catalog.py`, `worker.py` | classification, the twenty kinds of speech, and the worker process |
+| `forms.py`, `signals.py`, `engine.py`, `worker.py` | the kinds of speech and their examples, the structural signals, classification over the last minute, and the worker process |
+| `tests/passages.py` | passages for measuring the classifier on form rather than topic |
 | `Transcribe.swift` | Apple on-device transcription (built to `bin/transcribe`) |
 | `td_runtime.py` | TouchDesigner's link to the worker, the direction file and the exec channel |
 | `mac/` | the Mac app |
@@ -111,4 +112,4 @@ To add a kind of image, write a grower in `growers.py`, then add its Script CHOP
 
 ## 6. Contributing
 
-Keep everything local by default and never commit anything from `runtime/`, `sessions/`, `models/` or `~/.config/speechform`. Run `.worker/bin/python -m unittest tests.test_engine` before sending a change.
+Keep everything local by default and never commit anything from `runtime/`, `sessions/`, `models/` or `~/.config/speechform`. Run `.worker/bin/python -m unittest tests.test_engine tests.test_forms` before sending a change. To add or change a kind of speech, edit `forms.py`: give it examples on varied subjects, and check the test passages still pass.

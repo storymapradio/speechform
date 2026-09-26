@@ -13,7 +13,7 @@ import math, re
 REGISTERS = ['bloom', 'path', 'land', 'hive', 'orrery', 'rings', 'stack', 'kelp', 'tide', 'waves']
 FORM_TO_REGISTER = {
     'poetry': 'bloom',
-    'story': 'path', 'prose': 'path', 'character development': 'path',
+    'story': 'path', 'reading aloud': 'path', 'prose': 'path', 'character development': 'path',
     'scenery': 'land',
     'lore': 'hive', 'myth': 'hive',
     'cosmology': 'orrery',
@@ -21,7 +21,7 @@ FORM_TO_REGISTER = {
     'instruction': 'stack', 'lecture': 'stack', 'lesson': 'stack',
     'reflective monologue': 'kelp', 'stream of consciousness': 'kelp', 'thinking aloud': 'kelp',
     'dialogue': 'tide',
-    'song': 'waves', 'lyrics': 'waves', 'prosody': 'waves',
+    'song': 'waves', 'lyrics': 'waves', 'prosody': 'waves',   # prose and prosody remain only for older sessions
 }
 # each register's own light: (r, g, b) at warmth 0 and at warmth 1
 PALETTE = {
@@ -72,36 +72,64 @@ def growth(state, direction):
     return g
 
 def active(state, direction):
-    """the one register most strongly heard (for the omega gate)"""
-    m = mix(state, direction)
-    return max(m, key=m.get)
+    """the image in front: the one Jev names or mixes most, or the kind of speech now"""
+    d = direction or {}
+    if d.get('register') in REGISTERS:
+        return d['register']
+    if isinstance(d.get('mix'), dict) and d['mix']:
+        best = max(d['mix'], key=lambda r: d['mix'][r])
+        if best in REGISTERS and d['mix'][best] > 0:
+            return best
+    return FORM_TO_REGISTER.get((state or {}).get('form'), 'kelp')
+
+def order(state, direction):
+    """every image the talk has grown so far, in the order it first appeared"""
+    seen = []
+    for ev in (state or {}).get('events', []):
+        r = FORM_TO_REGISTER.get(ev.get('form'), 'kelp')
+        if r not in seen:
+            seen.append(r)
+    for r in ((direction or {}).get('mix') or {}):
+        if r in REGISTERS and r not in seen and (direction['mix'][r] or 0) > 0:
+            seen.append(r)
+    return seen
+
+TILES = 4
+def layout(state, direction):
+    """where each image stands, so that no two overlap: the image in front takes the square,
+    and the images the talk grew before it stand in a row of small tiles along the bottom,
+    in the order they first appeared. Returns {register: (cx, cy, scale)}."""
+    lead = active(state, direction)
+    before = [r for r in order(state, direction) if r != lead][-TILES:]
+    if not before:
+        return {lead: (0.0, 0.0, 1.0)}
+    place = {lead: (0.0, 0.2, 0.78)}
+    n = len(before)
+    for i, r in enumerate(before):
+        place[r] = (-1 + (i + 0.5) * 2.0 / TILES + (TILES - n) / TILES, -0.8, 0.19)
+    return place
 
 def mix(state, direction):
-    """how strongly each register is heard right now, 0..1. Several can stand at once:
-    the classifier's near-tied speech forms each raise their own image, and Jev can set
-    the mix outright ({"mix": {"path": 0.7, "land": 0.5}}) or name one register."""
+    """how present each image is: the one in front whole, the earlier ones a little dimmer, the rest gone"""
     w = {r: 0.0 for r in REGISTERS}
-    d = direction or {}
-    if isinstance(d.get('mix'), dict) and d['mix']:
-        for r, v in d['mix'].items():
-            if r in w:
-                w[r] = max(0.0, min(1.0, float(v)))
-    else:
-        scores = (state or {}).get('scores') or []
-        if scores:
-            top = scores[0].get('similarity', 0)
-            for sc in scores:
-                r = FORM_TO_REGISTER.get(sc.get('form'))
-                if r:
-                    # within 0.12 of the strongest form, a register shares the square
-                    w[r] = max(w[r], max(0.0, min(1.0, 1 - (top - sc.get('similarity', 0)) / 0.12)))
-        cur = FORM_TO_REGISTER.get((state or {}).get('form'), 'kelp')
-        w[cur] = 1.0
-    if d.get('register') in w:
-        w[d['register']] = 1.0
-    if not any(w.values()):
-        w['kelp'] = 1.0
+    for r in layout(state, direction):
+        w[r] = 1.0
+    lead = active(state, direction)
+    for r in w:
+        if w[r] and r != lead:
+            w[r] = 0.8
     return w
+
+_at = {}
+def _glide(register, target):
+    """an image moves to its new place over about a second rather than jumping"""
+    cur = _at.get(register)
+    if cur is None:
+        _at[register] = list(target)
+        return target
+    for j in range(3):
+        cur[j] += (target[j] - cur[j]) * 0.07
+    return tuple(cur)
 
 def _emit(rows, x, y, z, s, rz, col, a):
     rows.append((x, y, z, s, rz, col[0], col[1], col[2], a))
@@ -361,9 +389,11 @@ def fill(scriptOp, register, weight=1.0):
     rows = GROWERS[register](c, g) or [(0, 0, 0, 0, 0, 0, 0, 0, 0)]
     scriptOp.clear()
     scriptOp.numSamples = len(rows)
-    # a register arriving swells out of the middle; one leaving sinks back and dims
+    # a register arriving swells out of its place; one leaving sinks back and dims
     ease = weight * weight * (3 - 2 * weight)
-    rows = [(r[0] * (0.6 + 0.4 * ease), r[1] * (0.6 + 0.4 * ease), r[2], r[3] * ease, r[4], r[5], r[6], r[7], r[8] * ease) for r in rows]
+    cx, cy, sc = _glide(register, layout(state, direction).get(register, _at.get(register, (0.0, 0.0, 1.0))))
+    k = sc * (0.6 + 0.4 * ease)
+    rows = [(cx + r[0] * k, cy + r[1] * k, r[2], r[3] * sc * ease, r[4], r[5], r[6], r[7], r[8] * ease) for r in rows]
     names = ['tx', 'ty', 'tz', 's', 'rz', 'cr', 'cg', 'cb', 'ca']
     for j, nm in enumerate(names):
         ch = scriptOp.appendChan(nm)

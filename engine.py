@@ -1,17 +1,31 @@
-"""Local semantic routing. Immutable utterances, stable topics, explicit provenance."""
+"""Local semantic routing. Each phrase is heard within the last minute of talk; ideas keep stable identities; every decision keeps its reasons."""
 import re, time, uuid, math
 from collections import Counter
 import numpy as np
-from catalog import FORMS
+from catalog import FORMS as CATALOG
+from forms import KINDS, SIGNALS
+from signals import signals
 STOP=set('a an the this that these those is are was were be been being to of and or in on at for with as i you he she it we they my your our their me us them but if then so from by have has had do does did will would can could should just very all some about into how what when where which who its let not'.split())
 def words(text): return re.findall(r"[\w]+(?:['’][\w]+)?",text.lower())
 def keywords(text): return [w for w in words(text) if w not in STOP and len(w)>2]
 def cos(a,b): return float(np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b)+1e-9))
 class Engine:
+ WINDOW_SECONDS=60;WINDOW_WORDS=60;RECENCY=16.0   # a phrase's weight halves roughly every 11 words back
  def __init__(self,model):
-  self.model=model;self.labels=list(FORMS)
-  self.prototypes=model.encode([FORMS[k][1] for k in self.labels],normalize_embeddings=True)
-  # the map of speech: the twenty prototypes laid flat by their two strongest directions
+  self.model=model;self.labels=list(KINDS)
+  # every example of every kind, and which kind it belongs to
+  ex=[(k,t) for k in self.labels for t in KINDS[k][1]]
+  self.examples=model.encode([t for _,t in ex],normalize_embeddings=True)
+  self.owner=np.array([self.labels.index(k) for k,_ in ex])
+  # some kinds sit close to almost anything; their pull on the other kinds' examples is measured once and taken off
+  pull=np.zeros(len(self.labels))
+  for i in range(len(self.labels)):
+   others=self.examples[self.owner!=i]
+   pull[i]=np.mean([self.kind_scores(v)[i] for v in others])
+  self.bias=0.6*(pull-pull.mean())
+  # the map of speech: each kind at the centre of its examples, laid flat by the two strongest directions
+  self.prototypes=np.array([self.examples[self.owner==i].mean(axis=0) for i in range(len(self.labels))])
+  self.prototypes/=np.linalg.norm(self.prototypes,axis=1,keepdims=True)
   self.mean=self.prototypes.mean(axis=0)
   _,_,vt=np.linalg.svd(self.prototypes-self.mean,full_matrices=False)
   self.axes=vt[:2]
@@ -19,75 +33,110 @@ class Engine:
   self.scale=float(np.abs(flat).max()) or 1.0
   self.form_xy=[{'form':k,'x':round(float(x/self.scale),3),'y':round(float(y/self.scale),3)} for k,(x,y) in zip(self.labels,flat)]
   self.reset()
+ def kind_scores(self,v,topk=2):
+  s=self.examples@v;out=np.zeros(len(self.labels))
+  for i in range(len(self.labels)):out[i]=np.sort(s[self.owner==i])[-topk:].mean()
+  return out
+ def classify(self,text):
+  """the kind of a passage: nearest examples, less each kind's general pull, plus how the passage is built"""
+  v=self.model.encode([text],normalize_embeddings=True)[0]
+  base=self.kind_scores(v)-self.bias
+  sg=signals(text);scores=base.copy();fired=[]
+  for k,w in SIGNALS.items():
+   add=sum(sg[f]*wt for f,wt in w.items())
+   if add>0.005:
+    scores[self.labels.index(k)]+=add
+    top=max(w,key=lambda f:sg[f]*w[f])
+    fired.append({'form':k,'cue':top,'add':round(add,3)})
+  return v,scores,fired,sg
+ def window(self,text,now):
+  """the phrases a phrase is heard with: the last minute of talk, up to sixty words, ending with this one"""
+  recent=[e for e in self.state['events'] if now-float(e.get('at',0))<self.WINDOW_SECONDS]
+  out=[];n=len(text.split())
+  for e in reversed(recent):
+   k=len(e['text'].split())
+   if n+k>self.WINDOW_WORDS:break
+   out.insert(0,e);n+=k
+  return out
+ def heard_with(self,text,recent):
+  """each phrase is scored on its own, then the scores are averaged, the newest words counting most,
+  so the kind follows the passage without topic leaking between different passages"""
+  v,s,fired,sg=self.classify(text)
+  acc=s*len(text.split());wsum=float(len(text.split()));age=len(text.split());vec=v*len(text.split())
+  for e in reversed(recent):
+   k=len(e['text'].split());w=np.exp(-age/self.RECENCY)*k
+   ps=self.phrase_scores.get(e['id'])
+   if ps is None:continue
+   acc=acc+w*ps;wsum+=w;vec=vec+w*self.phrase_vecs[e['id']];age+=k
+  vec=vec/(np.linalg.norm(vec)+1e-9)
+  return v,s,acc/wsum,vec,fired
  def reset(self):
-  self.state={'session':str(uuid.uuid4()),'started':time.time(),'revision':0,'status':'Ready for speech.','form':'thinking aloud','world':'scrolls','scores':[], 'topics':[],'events':[],'words':{},'active_topic':None,'speaker_words':{'A':0,'B':0},'speaker':'A','conclusion_at':0,'radius':.85,'gate_at':0,'gate_from':'','error':'','model':'MiniLM semantic prototype classifier','source':'Ready','processing':False,'map':{'forms':self.form_xy,'ideas':[]}}
-  self.vectors={};self.last_match={};self.candidate=None;self.candidate_count=0;self.seen=set()
+  self.state={'session':str(uuid.uuid4()),'started':time.time(),'revision':0,'status':'Ready for speech.','form':'thinking aloud','world':'scrolls','scores':[], 'topics':[],'events':[],'words':{},'active_topic':None,'speaker_words':{'A':0,'B':0},'speaker':'A','conclusion_at':0,'radius':.85,'gate_at':0,'gate_from':'','error':'','model':'MiniLM, nearest examples over the last minute','source':'Ready','processing':False,'map':{'forms':self.form_xy,'ideas':[]}}
+  self.vectors={};self.phrase_scores={};self.phrase_vecs={};self.phrase_heat={};self.last_match={};self.candidate=None;self.candidate_count=0;self.seen=set()
  def ingest(self,text,speaker='A',source='Typed',event_id=None,start=None,end=None,form_override=None):
   text=text.strip()
   if not text:return
   event_id=event_id or str(uuid.uuid4())
   if event_id in self.seen:return
   self.seen.add(event_id)
-  vector=self.model.encode([text],normalize_embeddings=True)[0]
-  scores=self.prototypes@vector
-  # Cues supplement the semantic model; scores remain similarities, not probabilities.
-  cue={
-   'instruction':r'\b(first|step one|next step|follow these|make sure|place each)\b',
-   'thinking aloud':r'\b(let me think|what if|maybe i|wait,|think this through)\b',
-   'reflective monologue':r'\b(looking back|i realize|i remember|returning to|i felt)\b',
-   'dialogue':r'\b(you said|i agree|what do you think|let me respond|your question)\b',
-   'argument':r'\b(the point of all|my central point|in conclusion|what i mean is|therefore)\b'}
-  fired=[]
-  for label,pattern in cue.items():
-   m=re.search(pattern,text,re.I)
-   if m:scores[self.labels.index(label)]+=.16;fired.append({'form':label,'cue':m.group(0)})
+  now=time.time()
+  recent=self.window(text,now)
+  passage=' '.join([e['text'] for e in recent]+[text])
+  vector,own,scores,wvec,fired=self.heard_with(text,recent)
+  self.phrase_scores[event_id]=own;self.phrase_vecs[event_id]=vector
   ranked=sorted(zip(self.labels,map(float,scores)),key=lambda x:-x[1]);candidate=ranked[0][0]
   old=self.state['form'];margin=ranked[0][1]-ranked[1][1]
   if candidate==self.candidate:self.candidate_count+=1
   else:self.candidate=candidate;self.candidate_count=1
-  if form_override in FORMS:new=form_override;why='the speaker named the form'
-  elif not self.state['events']:new=candidate;why='the first phrase sets the form'
-  elif candidate==old:new=old;why='it continues the same form'
-  elif margin>.07:new=candidate;why='a clear margin of %.2f over the next form'%margin
-  elif self.candidate_count>=2:new=candidate;why='heard for two phrases in a row'
-  else:new=old;why='held at %s until %s is heard again (margin only %.2f)'%(old,candidate,margin)
+  nwords=len(passage.split())
+  if form_override in KINDS:new=form_override;why='the speaker named the kind'
+  elif not self.state['events']:new=candidate;why='the first phrase sets the kind'
+  elif candidate==old:new=old;why='the last minute of talk still reads as %s'%old
+  elif margin>.03:new=candidate;why='over the last %d words it leads by %.2f'%(nwords,margin)
+  elif self.candidate_count>=2:new=candidate;why='it has led for two phrases in a row'
+  else:new=old;why='held at %s until %s leads again (margin only %.2f)'%(old,candidate,margin)
   if new!=old:
-   self.state.update(gate_from=old,gate_at=time.time())
-  topic=self.match_topic(text,vector)
+   self.state.update(gate_from=old,gate_at=now)
+  # a very short phrase is matched to an idea together with the phrase before it
+  prev=self.state['events'][-1]['text'] if self.state['events'] else ''
+  idea_text=text if len(text.split())>=10 or not prev else prev+' '+text
+  idea_vec=vector if idea_text==text else self.model.encode([idea_text],normalize_embeddings=True)[0]
+  topic=self.match_topic(idea_text,idea_vec)
   idea=dict(self.last_match)
-  event={'id':event_id,'text':text,'speaker':speaker,'source':source,'topic':topic['id'],'form':new,'at':time.time(),'start':start,'end':end,
+  event={'id':event_id,'text':text,'speaker':speaker,'source':source,'topic':topic['id'],'form':new,'at':now,'start':start,'end':end,
    'why':{'scores':[{'form':k,'similarity':round(v,3)} for k,v in ranked],'cues':fired,'candidate':candidate,'margin':round(margin,3),
-          'held':self.candidate_count,'from':old,'form':new,'reason':why,'idea':idea}}
-  topic['events'].append(event_id);topic['words']+=len(words(text));topic['updated']=time.time()
+          'held':self.candidate_count,'from':old,'form':new,'reason':why,'idea':idea,'window':passage,'window_words':nwords}}
+  topic['events'].append(event_id);topic['words']+=len(words(text));topic['updated']=now
   self.state['events'].append(event)
   self.state['words']=dict(Counter(self.state['words'])+Counter(words(text)))
   self.state['speaker_words'][speaker]=self.state['speaker_words'].get(speaker,0)+len(words(text))
   conclusion=bool(re.search(r'\b(the point of (all of )?this is|in conclusion|my central point|what it comes down to|the answer is)\b',text,re.I))
-  if conclusion:self.state['conclusion_at']=time.time()
-  # Radar distance is semantic distance to the first utterance, with an explicit conclusion cue.
+  if conclusion:self.state['conclusion_at']=now
+  # the rings: how far the talk has come from where it began, closing at a stated conclusion
   anchor=self.state['events'][0]['text']
   anchor_vector=self.model.encode([anchor],normalize_embeddings=True)[0]
   radius=0 if conclusion else max(.12,min(.95,1-cos(vector,anchor_vector)))
-  self.state.update(form=new,world=FORMS[new][0],scores=[{'form':k,'similarity':round(v,3)} for k,v in ranked],active_topic=topic['id'],speaker=speaker,source=source,radius=radius,revision=self.state['revision']+1,status='Following your speech.',error='')
-  # where this phrase lands on the map, and where every idea stands now
-  event['why']['xy']=self.xy(vector)
+  self.state.update(form=new,world=CATALOG.get(new,('scrolls',))[0],scores=[{'form':k,'similarity':round(v,3)} for k,v in ranked],active_topic=topic['id'],speaker=speaker,source=source,radius=radius,revision=self.state['revision']+1,status='Following your speech.',error='')
+  # where the passage lands on the map, and where every idea stands now
+  event['why']['xy']=self.xy(wvec)
   self.state['map']={'forms':self.form_xy,'ideas':[{'id':t['id'],**self.xy(self.vectors[t['id']])} for t in self.state['topics']]}
-  event['why']['saliency']=self.saliency(text,new,scores[self.labels.index(new)])
+  own_heat=self.saliency(text,new)
+  self.phrase_heat[event_id]=own_heat
+  event['why']['saliency']=[w for e in recent for w in self.phrase_heat.get(e['id'],[[t,0.0] for t in e['text'].split()])]+own_heat
   return event
  def xy(self,v):
   f=(v-self.mean)@self.axes.T/self.scale
   return {'x':round(float(max(-1.4,min(1.4,f[0]))),3),'y':round(float(max(-1.4,min(1.4,f[1]))),3)}
- def saliency(self,text,form,base):
-  """how much each word pushed the phrase toward the chosen form: take it away and see the score fall"""
+ def saliency(self,text,form):
+  """how much each word of the passage pulled it toward the chosen kind: take the word away and see the score fall"""
   toks=text.split()
-  if len(toks)<2 or len(toks)>48:return [[t,0.0] for t in toks]
-  proto=self.prototypes[self.labels.index(form)]
-  without=[' '.join(toks[:i]+toks[i+1:]) for i in range(len(toks))]
-  vecs=self.model.encode(without,normalize_embeddings=True,batch_size=48)
-  base=float(np.dot(self.model.encode([text],normalize_embeddings=True)[0],proto))
-  drops=[base-float(np.dot(v,proto)) for v in vecs]
+  if len(toks)<2 or len(toks)>64:return [[t,0.0] for t in toks]
+  i=self.labels.index(form)
+  base=self.kind_scores(self.model.encode([text],normalize_embeddings=True)[0])[i]
+  vecs=self.model.encode([' '.join(toks[:j]+toks[j+1:]) for j in range(len(toks))],normalize_embeddings=True,batch_size=64)
+  drops=[base-self.kind_scores(v)[i] for v in vecs]
   top=max(max(drops),1e-6)
-  return [[t,round(max(0.0,d)/top,3)] for t,d in zip(toks,drops)]
+  return [[t,round(max(0.0,float(d))/top,3)] for t,d in zip(toks,drops)]
  def match_topic(self,text,vector):
   kw=set(keywords(text));candidates=[]
   for t in self.state['topics']:
