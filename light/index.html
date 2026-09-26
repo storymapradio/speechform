@@ -200,13 +200,35 @@ function remember(p) {
         localStorage.setItem(MEM_KEY, JSON.stringify(m.slice(-3000))); } catch (e) { /* storage may be full or blocked */ }
 }
 
-/* ── hearing: the browser's own speech recognition ── */
+/* ── hearing: only ever on this device ──
+   1. the browser's own recognition, asked to run on the device (Chrome downloads its model once, then keeps it local)
+   2. otherwise this Mac's Apple transcription, through the Speechform server beside this page
+   Speech is never sent to a cloud service: if neither is available, start stays off. */
 const Rec = window.SpeechRecognition || window.webkitSpeechRecognition;
-let rec = null, listening = false, interim = '', audio = null, level = 0;
-function start() {
-  if (!Rec || listening) return;
+let rec = null, listening = false, interim = '', audio = null, level = 0, hearing = null;
+async function onDeviceRecognition(lang) {
+  if (!Rec || !Rec.available) return false;
+  try {
+    let a = await Rec.available({ langs: [lang], processLocally: true });
+    if (a === 'downloadable' || a === 'downloading') { await Rec.install({ langs: [lang], processLocally: true }); a = await Rec.available({ langs: [lang], processLocally: true }); }
+    return a === 'available';
+  } catch (e) { return false; }
+}
+async function macTranscription() {
+  try { const r = await fetch('/status', { cache: 'no-store' }); return r.ok; } catch (e) { return false; }
+}
+async function start() {
+  if (listening) return;
   listening = true; paintControls();
-  rec = new Rec(); rec.continuous = true; rec.interimResults = true; rec.lang = navigator.language || 'en-US';
+  const lang = navigator.language || 'en-US';
+  if (await onDeviceRecognition(lang)) { hearing = 'this device (the browser, on-device)'; startBrowser(lang); }
+  else if (await macTranscription()) { hearing = "this Mac (Apple's on-device transcription)"; startMac(); }
+  else { listening = false; hearing = null; noHearing = true; paintControls(); return; }
+  startLevel();
+}
+let noHearing = false;
+function startBrowser(lang) {
+  rec = new Rec(); rec.continuous = true; rec.interimResults = true; rec.lang = lang; rec.processLocally = true;
   rec.onresult = ev => {
     interim = '';
     for (let i = ev.resultIndex; i < ev.results.length; i++) {
@@ -215,10 +237,47 @@ function start() {
     }
     drawLines();
   };
-  rec.onend = () => { if (listening) try { rec.start(); } catch (e) {} };
-  rec.onerror = e => { if (e.error === 'not-allowed' || e.error === 'service-not-allowed') stop(); };
+  rec.onend = () => { if (listening && rec) try { rec.start(); } catch (e) {} };
+  rec.onerror = e => { if (/not-allowed|service-not-allowed|language-not-supported/.test(e.error)) stop(); };
   try { rec.start(); } catch (e) {}
-  /* the voice's loudness, so the waves and the bloom answer the voice itself */
+}
+/* the Mac path: the page cuts the voice into phrases at pauses and the Mac transcribes each one */
+let mac = null;
+function startMac() {
+  navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+    const ac = new (window.AudioContext || window.webkitAudioContext)(), src = ac.createMediaStreamSource(stream);
+    const node = ac.createScriptProcessor(4096, 1, 1); src.connect(node); node.connect(ac.destination);
+    let chunks = [], voiced = 0, quiet = 0;
+    node.onaudioprocess = e => {
+      if (!listening) return;
+      const d = new Float32Array(e.inputBuffer.getChannelData(0)); let sum = 0; for (const v of d) sum += v * v;
+      const rms = Math.sqrt(sum / d.length), secs = d.length / ac.sampleRate;
+      chunks.push(d);
+      if (rms > .012) { voiced += secs; quiet = 0; } else quiet += secs;
+      const length = chunks.length * secs;
+      /* a phrase ends at a pause of a second after some speech, or after twelve seconds */
+      if ((voiced > .4 && quiet > 1.0) || length > 12) { if (voiced > .4) send(chunks, ac.sampleRate); chunks = []; voiced = 0; quiet = 0; }
+      else if (!voiced && length > 3) chunks = [];
+    };
+    mac = { stream, ac, node };
+  }).catch(() => stop());
+}
+function send(chunks, rate) {
+  interim = '…'; drawLines();
+  const wav = toWav(chunks, rate, 16000);
+  fetch('/transcribe', { method: 'POST', body: wav }).then(r => r.json()).then(j => { interim = ''; if (j.ok && j.text) ingest(j.text, 'Microphone'); drawLines(); }).catch(() => { interim = ''; drawLines(); });
+}
+function toWav(chunks, from, to) {
+  const all = new Float32Array(chunks.reduce((a, c) => a + c.length, 0)); let o = 0; for (const c of chunks) { all.set(c, o); o += c.length; }
+  const n = Math.floor(all.length * to / from), pcm = new Int16Array(n);
+  for (let i = 0; i < n; i++) { const v = all[Math.min(all.length - 1, Math.floor(i * from / to))]; pcm[i] = Math.max(-1, Math.min(1, v)) * 32767; }
+  const buf = new ArrayBuffer(44 + pcm.byteLength), v = new DataView(buf), w = (p, t) => [...t].forEach((ch, i) => v.setUint8(p + i, ch.charCodeAt(0)));
+  w(0, 'RIFF'); v.setUint32(4, 36 + pcm.byteLength, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+  v.setUint32(24, to, true); v.setUint32(28, to * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, pcm.byteLength, true);
+  new Int16Array(buf, 44).set(pcm); return new Blob([buf], { type: 'audio/wav' });
+}
+/* the voice's loudness, so the waves and the bloom answer the voice itself */
+function startLevel() {
   navigator.mediaDevices && navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const ac = new (window.AudioContext || window.webkitAudioContext)(), an = ac.createAnalyser(); an.fftSize = 512;
     ac.createMediaStreamSource(stream).connect(an); const buf = new Float32Array(an.fftSize);
@@ -227,12 +286,13 @@ function start() {
 }
 function stop() {
   listening = false; interim = '';
-  if (rec) { try { rec.stop(); } catch (e) {} rec = null; }
+  if (rec) { const r = rec; rec = null; try { r.stop(); } catch (e) {} }
+  if (mac) { mac.stream.getTracks().forEach(t => t.stop()); mac.ac.close(); mac = null; }
   if (audio) { audio.stream.getTracks().forEach(t => t.stop()); audio.ac.close(); audio = null; }
   paintControls(); drawLines();
 }
 function paintControls() {
-  $('#start').className = 'tool ' + (listening ? 'live' : Rec ? '' : 'idle');
+  $('#start').className = 'tool ' + (listening ? 'live' : noHearing ? 'idle' : '');
   $('#stop').className = 'tool ' + (listening ? '' : 'idle');
 }
 $('#start').onclick = start; $('#stop').onclick = stop;
@@ -292,7 +352,7 @@ function drawWhy(p) {
     return esc(t).replace(/\u0001/g, `<span class="hit" style="background:color-mix(in srgb, ${col(p.image)} 45%, transparent)">`).replace(/\u0002/g, '</span>');
   };
   $('#heat').innerHTML = (p.window || []).map(t => lit(t)).join(' ') + ' <span class="now">' + lit(p.text) + '</span>';
-  $('#heardMeta').textContent = `The minute of talk this phrase was heard with; the newest phrase is underlined, and the lit words earned points for ${p.kind}.`;
+  $('#heardMeta').textContent = `The minute of talk this phrase was heard with; the newest phrase is underlined, and the lit words earned points for ${p.kind}.` + (hearing && p.source === 'Microphone' ? ` Transcribed on ${hearing}.` : '');
   const shp = p.structure || {};
   $('#shape').innerHTML = Object.entries({ commands: shp.imperative, 'you': shp.you, questions: shp.question, 'I': shp.i, 'past tense': shp.past, 'he, she, they': shp.third, 'run-on': shp.runon, refrain: shp.refrain })
     .map(([k, v]) => `<div class="g">${k}<span class="v">${(v || 0).toFixed(2)}</span><span class="line2"><i style="width:${Math.round((v || 0) * 100)}%"></i></span></div>`).join('');

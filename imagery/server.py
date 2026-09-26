@@ -20,6 +20,7 @@ the transcript, the classifier at work, and the memory of everything said. Behin
   GET  /status    is TouchDesigner drawing, is the speech worker alive, is the microphone on,
                   who decides and whether a key is saved (the key itself is never sent)
   POST /touchdesigner   opens Speechform.toe in TouchDesigner
+  POST /transcribe  a WAV file in, its words out: this Mac's on-device Apple transcription
   POST /start     opens TouchDesigner if it is not running, then listens through the microphone
   POST /stop      stops listening; the image holds where it is
   POST /settings/test   asks the chosen provider once and reports how it went
@@ -322,6 +323,33 @@ def td_running():
     import subprocess
     return subprocess.run(['pgrep', '-f', 'TouchDesigner.app/Contents/MacOS/TouchDesigner'], capture_output=True).returncode == 0
 
+def transcribe(wav):
+    """this Mac's own transcription: Apple's on-device SpeechAnalyzer, through bin/transcribe; nothing leaves the Mac"""
+    import subprocess, tempfile
+    helper = ROOT / 'bin' / 'transcribe'
+    if not helper.exists():
+        return {'ok': False, 'error': 'bin/transcribe is not built; run ./setup.sh'}
+    with tempfile.NamedTemporaryFile(suffix='.wav', dir=str(ROOT / 'runtime'), delete=False) as f:
+        f.write(wav); name = f.name
+    try:
+        out = subprocess.run([str(helper), name], capture_output=True, text=True, timeout=60).stdout
+        parts = []
+        for line in out.splitlines():
+            try:
+                j = json.loads(line)
+            except ValueError:
+                continue
+            if j.get('text'):
+                parts.append(j['text'].strip())
+        return {'ok': True, 'text': ' '.join(p for p in parts if p)}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)[:200]}
+    finally:
+        try:
+            os.remove(name)
+        except OSError:
+            pass
+
 def open_touchdesigner():
     """opens TouchDesigner once: never while it is opening or already open"""
     toe = ROOT / 'Speechform.toe'
@@ -419,6 +447,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         global last_jev, current
         path = self.path.split('?')[0]
+        if path == '/transcribe':
+            return self._send(200, transcribe(self.rfile.read(int(self.headers.get('Content-Length', 0)))))
         d = self._body()
         if d is None:
             return self._send(400, {'error': 'not JSON'})

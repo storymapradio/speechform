@@ -116,7 +116,7 @@ On the test passages in `tests/passages.py`, the old way (each fragment alone, a
 
 ## Speechform Light
 
-[light/](light/) is a second, light version. It runs in any browser from three small files, with no model, no TouchDesigner, no Python and no key. It judges speech by an algorithm of marker words and sentence shapes, and every point is traceable to a word. On the test passages it gets the kind right 80% of the time and the image right 83% of the time, against about 90% for the model version. See [light/README.md](light/README.md).
+[light/](light/) is a second, light version. It runs in any browser from three small files, with no model, no TouchDesigner, no Python and no key. It hears on the device only (the browser's on-device recognition, or the Mac's own), and judges speech by an algorithm of marker words and sentence shapes, with every point traceable to a word. On the test passages it gets the kind right 80% of the time and the image right 83% of the time, against about 90% for the model version. See [light/README.md](light/README.md).
 
 ## In a browser and on an iPhone
 
