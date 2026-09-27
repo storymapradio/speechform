@@ -118,6 +118,10 @@ On the test passages in `tests/passages.py`, the old way (each fragment alone, a
 
 [light/](light/) is a second, light version. It runs in any browser from three small files, with no model, no TouchDesigner, no Python and no key. It hears on the device only (the browser's on-device recognition, or the Mac's own), and judges speech by an algorithm of marker words and sentence shapes, with every point traceable to a word. On the test passages it gets the kind right 80% of the time and the image right 83% of the time, against about 90% for the model version. See [light/README.md](light/README.md).
 
+## Speechform Heavy
+
+[heavy/](heavy/) is the heavy version. Jev builds the image as you speak, over your own camera: layers move in over the feed, and your silhouette looms over the scene when the talk is a story. Moving in front of the camera throws sparks and grows the image. Every moment is saved as a sequence. When a pause breaks the streak, the next words build on a saved image, either the one you pick or the one Jev picks. There are six styles. No image is ever violent, gory or profane. Generated images are kept in a bank and reused, so tokens are spent on new scenes only. Jev's token is entered on your side and never reaches the page. See [heavy/README.md](heavy/README.md).
+
 ## In a browser and on an iPhone
 
 TouchDesigner cannot run there, but Speechform can: a light web core would do the judging, growing and drawing, with Apple's own speech and language models on the phone. The plan is in [docs/browser-and-iphone.md](docs/browser-and-iphone.md).

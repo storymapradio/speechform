@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Speechform Heavy</title>
+<style>
+:root {
+  --bg: #000; --panel: #070907; --ink: #e8f5e4; --muted: #7d9a78; --faint: #2a3a28;
+  --green: #39ff14; --green-dim: rgba(57,255,20,.35); --green-faint: rgba(57,255,20,.09);
+  --amber: #ffc94a; --red: #ff5a4a; --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --r-bloom: #d77cff; --r-path: #ffc25a; --r-land: #8fd0dc; --r-hive: #b8ff5a; --r-orrery: #a9b8ff;
+  --r-rings: #5af0f0; --r-stack: #9dffb4; --r-kelp: #5affa8; --r-tide: #7fa8ff; --r-waves: #ff9ae0;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--mono); font-size: 13px; }
+body { display: flex; justify-content: center; overflow: hidden; }
+.app { width: 100%; max-width: 560px; height: 100%; display: flex; flex-direction: column; padding: max(8px, env(safe-area-inset-top)) 10px max(8px, env(safe-area-inset-bottom)); gap: 8px; }
+.tools { display: flex; justify-content: center; align-items: center; gap: 1px; flex: 0 0 auto; flex-wrap: nowrap; }
+.tools .gap { width: 10px; }
+.tool { position: relative; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; background: none; border: none; color: var(--ink);
+  cursor: pointer; opacity: .55; transition: opacity .18s, color .18s, transform .14s, filter .18s; }
+.tool svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tool:hover { opacity: 1; color: var(--amber); }
+.tool:active { transform: scale(.9); }
+.tool.on { opacity: 1; color: var(--amber); filter: drop-shadow(0 0 6px rgba(255,201,74,.45)); }
+.tool.live { opacity: 1; color: var(--red); filter: drop-shadow(0 0 6px rgba(255,90,74,.55)); animation: rec 1.4s ease-in-out infinite; }
+.tool.live svg { fill: currentColor; }
+.tool.idle { opacity: .22; pointer-events: none; }
+@keyframes rec { 50% { opacity: .45; } }
+.screen { position: relative; width: 100%; aspect-ratio: 1 / 1; flex: 0 0 auto; max-height: 52vh; margin: 0 auto;
+  border: 2px solid var(--green-dim); border-radius: 14px; overflow: hidden; background: #000; }
+.screen canvas { width: 100%; height: 100%; display: block; }
+.streak { position: absolute; left: 10px; bottom: 9px; display: flex; gap: 3px; }
+.streak i { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); opacity: .85; box-shadow: 0 0 6px rgba(255,201,74,.6); }
+.streak.broken i { background: var(--faint); box-shadow: none; }
+.styles { display: none; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.styles.open { display: flex; }
+.chip { font: inherit; font-size: 11px; padding: 4px 10px; border-radius: 99px; border: 1px solid var(--faint); background: none; color: var(--muted); cursor: pointer; }
+.chip.on { color: var(--amber); border-color: var(--amber); }
+.lower { position: relative; flex: 1 1 auto; min-height: 0; border: 2px solid var(--green-dim); border-radius: 14px; overflow: hidden; background: var(--panel); }
+.track { display: flex; width: 400%; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.24,1); }
+.page { width: 25%; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.scroll { flex: 1; overflow-y: auto; padding: 12px 12px 6px; scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
+.line { padding: 7px 6px; border-radius: 8px; cursor: pointer; }
+.line:hover { background: rgba(255,255,255,.03); }
+.line.interim { color: var(--muted); font-style: italic; cursor: default; }
+.said { line-height: 1.5; font-size: 13.5px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag { font-size: 10.5px; padding: 2px 7px; border-radius: 99px; border: 1px solid currentColor; opacity: .85; }
+.tag.idea { color: var(--muted); } .tag.back { color: var(--amber); }
+.say { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--faint); }
+.say input, .field { flex: 1; min-width: 0; background: #000; color: var(--ink); border: 1px solid var(--faint); border-radius: 10px; padding: 9px 10px; font: inherit; }
+.say input:focus, .field:focus { outline: none; border-color: var(--green-dim); }
+.say button, .btn { border-radius: 10px; border: 1px solid var(--green-dim); background: var(--green-faint); color: var(--green); font: inherit; padding: 8px 12px; cursor: pointer; }
+.step { border-left: 2px solid var(--faint); padding: 2px 0 12px 12px; margin-left: 4px; position: relative; }
+.step::before { content: ''; position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+.step h4 { margin: 0 0 6px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--green); font-weight: 500; }
+.step p { margin: 0 0 6px; line-height: 1.5; }
+.quiet { color: var(--muted); }
+.heat { line-height: 1.9; font-size: 14px; }
+.heat .hit { border-radius: 3px; padding: 1px 2px; }
+.heat .now { text-decoration: underline; text-decoration-color: var(--green); text-underline-offset: 4px; }
+.rank { position: relative; }
+.b { display: grid; grid-template-columns: 150px 1fr 38px; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.rank .b { position: absolute; left: 0; right: 0; transition: transform .6s cubic-bezier(.2,.8,.2,1); }
+.b > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.b .track2 { display: block; height: 7px; background: #0d130c; border-radius: 4px; overflow: hidden; }
+.b .fill { display: block; height: 100%; border-radius: 4px; background: var(--muted); transition: width .5s ease; }
+.b.top { color: var(--ink); }
+.film { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; }
+.film img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px; border: 1px solid var(--faint); cursor: pointer; display: block; }
+.film img.base { border: 2px solid var(--amber); box-shadow: 0 0 10px rgba(255,201,74,.4); }
+.film .brk { grid-column: 1 / -1; height: 1px; background: var(--faint); margin: 4px 0; }
+.day { color: var(--green); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; margin: 14px 4px 4px; }
+.sheet { position: fixed; inset: 0; background: rgba(0,0,0,.72); display: grid; place-items: center; padding: 16px; z-index: 10; }
+.sheet[hidden] { display: none; }
+.card { width: 100%; max-width: 420px; background: #050805; border: 2px solid var(--green-dim); border-radius: 14px; padding: 16px; display: grid; gap: 10px; }
+.card label { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }
+.row { display: flex; gap: 8px; justify-content: flex-end; }
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="tools">
+    <button class="tool on" data-page="0" title="transcript" aria-label="transcript"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10.5h14M5 15h14M5 19.5h8"/></svg></button>
+    <button class="tool" data-page="1" title="classifier" aria-label="classifier"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><circle cx="19" cy="12" r="2"/><path d="M6.6 10.6l3.8-3.6M6.6 13.4l3.8 3.6M13.6 7l3.8 3.6M13.6 17l3.8-3.6"/></svg></button>
+    <button class="tool" data-page="2" title="sequence" aria-label="sequence"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9h17M3.5 15h17M8 5v4M12 5v4M16 5v4M8 15v4M12 15v4M16 15v4"/></svg></button>
+    <button class="tool" data-page="3" title="memory" aria-label="memory"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></button>
+    <span class="gap"></span>
+    <button class="tool" id="start" title="start" aria-label="start"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></button>
+    <button class="tool idle" id="stop" title="stop" aria-label="stop"><svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
+    <button class="tool" id="fresh" title="new session" aria-label="new session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="tool" id="cam" title="camera" aria-label="camera"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="13" height="10" rx="2"/><path d="M16 11l5-3v8l-5-3"/></svg></button>
+    <button class="tool" id="styleBtn" title="style" aria-label="style"><svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.4 0 1.9-1 1.5-2-.5-1.2.3-2.5 1.6-2.5H17a3.5 3.5 0 0 0 3.5-3.5c0-5-3.8-9-8.5-9z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10.5" cy="7.5" r="1.2"/><circle cx="15" cy="8" r="1.2"/></svg></button>
+    <button class="tool" id="keyBtn" title="Jev" aria-label="Jev"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.6"/><path d="M10.6 12.4L19 4M15.5 7.5l2.6 2.6M13.3 9.7l2 2"/></svg></button>
+  </nav>
+  <div class="styles" id="styles"></div>
+  <div class="screen"><canvas id="scene"></canvas><div class="streak" id="streak"></div></div>
+  <div class="lower" id="lower">
+    <div class="track" id="track">
+      <section class="page"><div class="scroll" id="lines"></div>
+        <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit">say</button></form></section>
+      <section class="page"><div class="scroll">
+        <div class="step"><h4>heard</h4><p class="heat" id="heat"></p></div>
+        <div class="step"><h4>points for each kind</h4><div class="rank" id="rank"></div></div>
+        <div class="step"><h4>the choice</h4><p id="choice"></p></div>
+        <div class="step"><h4>the camera</h4><p id="camNote" class="quiet"></p></div>
+        <div class="step"><h4>the image</h4><p id="jevNote"></p><p id="prompt" class="quiet"></p></div>
+      </div></section>
+      <section class="page"><div class="scroll"><div class="film" id="film"></div></div></section>
+      <section class="page"><div class="scroll" id="mem"></div></section>
+    </div>
+  </div>
+</div>
+<div class="sheet" id="sheet" hidden>
+  <form class="card" id="jevForm">
+    <label>Jev endpoint <input class="field" id="endpoint" autocomplete="off" placeholder="https://"></label>
+    <label>Jev token <input class="field" id="token" type="password" autocomplete="off"></label>
+    <label>Image endpoint <input class="field" id="imageEndpoint" autocomplete="off" placeholder="same as Jev"></label>
+    <p id="jevState" class="quiet" style="margin:0"></p>
+    <div class="row"><button type="button" class="btn" id="close">close</button><button type="button" class="btn" id="test">test</button><button type="submit" class="btn">save</button></div>
+  </form>
+</div>
+<script src="../light/classify.js"></script>
+<script src="../light/growers.js"></script>
+<script type="module" src="heavy.js"></script>
+</body>
+</html>

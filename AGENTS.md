@@ -62,6 +62,8 @@ while True:
 
 To have Speechform call an agent instead, choose **Jev** under the key icon and give an endpoint. Every few seconds, Speechform POSTs the `/listen` payload to that endpoint with `Authorization: Bearer <key>`. It expects the same JSON as `/direct` in reply. Claude (Anthropic API) and any OpenAI-compatible local model are built in as well.
 
+For Speechform Heavy, the same endpoint also receives `{"task": "image", ...}` and `{"task": "choose", ...}`. The contract is in [heavy/README.md](heavy/README.md), and `tests/mock_jev.py` implements all three tasks.
+
 ## 3. Other endpoints
 
 | Call | Does |
@@ -74,6 +76,10 @@ To have Speechform call an agent instead, choose **Jev** under the key icon and 
 | `POST /intake` `{"action": "reset"}` | starts a new session |
 | `POST /settings` `{"provider": "claude", "key": "...", "model": "...", "every": 3}` | who decides (the key is saved locally and never returned) |
 | `POST /settings/test` | asks the chosen provider once |
+| `POST /imagine` `{"scene": {"text", "register", "kind", "style", "camera"}}` | an image for the moment, from the bank or from Jev |
+| `POST /choose` `{"text", "candidates"}` | which saved image to build on |
+| `POST /frame`, `GET /sequences`, `GET /bank` | the saved sequence and the image bank |
+| `POST /transcribe` (a WAV body) | this Mac's on-device transcription |
 
 ## 4. Change the TouchDesigner network
 

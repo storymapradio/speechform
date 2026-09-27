@@ -45,6 +45,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import growers  # the same rules TouchDesigner uses, so the app shows what the Loom does
+import heavy    # Speechform Heavy: safe prompts, the image bank, sequences, Jev's tasks
 
 STATE = ROOT / 'runtime' / 'state.json'
 DIRECTION = ROOT / 'runtime' / 'direction.json'
@@ -125,7 +126,7 @@ def settings():
 
 def save_settings(new):
     s = settings()
-    for k in ('provider', 'endpoint', 'model', 'every'):
+    for k in ('provider', 'endpoint', 'image_endpoint', 'model', 'every'):
         if k in new and new[k] is not None:
             s[k] = new[k]
     if new.get('key'):
@@ -139,7 +140,7 @@ def save_settings(new):
 
 def public_settings(s=None):
     s = s or settings()
-    return {'provider': s.get('provider', 'stand-in'), 'endpoint': s.get('endpoint', ''), 'model': s.get('model', ''),
+    return {'provider': s.get('provider', 'stand-in'), 'endpoint': s.get('endpoint', ''), 'image_endpoint': s.get('image_endpoint', ''), 'model': s.get('model', ''),
             'every': s.get('every', 3), 'has_key': bool(s.get('key'))}
 
 def command(action, **kw):
@@ -234,7 +235,7 @@ def ask_provider(cfg, payload):
         if not cfg.get('endpoint'):
             raise RuntimeError('no Jev endpoint set')
         headers = {'Authorization': 'Bearer ' + cfg['key']} if cfg.get('key') else {}
-        return _post(cfg['endpoint'], payload, headers)
+        return _post(cfg['endpoint'], {'task': 'direct', **payload}, headers)
     if p == 'claude':
         if not cfg.get('key'):
             raise RuntimeError('no Anthropic key set')
@@ -431,6 +432,27 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {'memory': memory(), 'count': len(remembered)})
         if path in ('/', '/index.html'):
             return self._send(200, (APP / 'index.html').read_bytes(), 'text/html; charset=utf-8')
+        if path == '/bank':
+            return self._send(200, {'bank': heavy.bank_list()})
+        if path.startswith('/bank/'):
+            f = (heavy.BANK / path[6:]).resolve()
+            if f.is_file() and heavy.BANK in f.parents:
+                return self._send(200, f.read_bytes(), {'.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.png': 'image/png'}.get(f.suffix, 'application/octet-stream'))
+            return self._send(404, {'error': 'not here'})
+        if path == '/sequences':
+            return self._send(200, {'sequences': heavy.sequences()})
+        if path.startswith('/seq/'):
+            f = (heavy.SEQUENCES / path[5:]).resolve()
+            if f.is_file() and heavy.SEQUENCES in f.parents:
+                return self._send(200, f.read_bytes(), 'image/jpeg')
+            return self._send(404, {'error': 'not here'})
+        if path == '/heavy' or path.startswith('/heavy/'):
+            HEAVY = ROOT / 'heavy'
+            f = (HEAVY / (path[len('/heavy/'):] or 'index.html')).resolve()
+            if f.is_file() and HEAVY in f.parents:
+                kind = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript'}.get(f.suffix, 'application/octet-stream')
+                return self._send(200, f.read_bytes(), kind)
+            return self._send(404, {'error': 'not here'})
         if path == '/light' or path.startswith('/light/'):
             LIGHT = ROOT / 'light'
             f = (LIGHT / (path[len('/light/'):] or 'index.html')).resolve()
@@ -483,6 +505,21 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {'ok': True})
         if path == '/settings':
             return self._send(200, save_settings(d))
+        if path == '/imagine':
+            try:
+                return self._send(200, heavy.imagine(settings(), d.get('scene') or {}))
+            except Exception as e:
+                return self._send(200, {'ok': False, 'error': str(e)[:300]})
+        if path == '/choose':
+            return self._send(200, heavy.choose(settings(), str(d.get('text', '')), d.get('candidates') or []))
+        if path == '/frame':
+            import base64
+            jpeg = base64.b64decode(str(d.get('jpeg', '')).split(',', 1)[-1] or b'')
+            if not jpeg:
+                return self._send(400, {'error': 'no image'})
+            return self._send(200, heavy.save_frame(d.get('session'), d.get('streak', 0), d.get('meta') or {}, jpeg))
+        if path == '/mask':
+            return self._send(200, {'text': heavy.mask(str(d.get('text', '')))})
         if path == '/settings/test':
             return self._send(200, test_provider())
         if path == '/touchdesigner':

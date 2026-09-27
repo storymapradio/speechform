@@ -165,8 +165,9 @@
   }
 
   /* the canvas: shapes in additive light over a fading trail, with a soft glow laid over them */
-  function Renderer(canvas, size) {
-    const S = size || 480;
+  /* opts.transparent: draw over whatever lies beneath (a camera feed) instead of over black */
+  function Renderer(canvas, size, opts) {
+    const S = size || 480, clear = !!(opts && opts.transparent);
     canvas.width = canvas.height = S;
     const out = canvas.getContext('2d');
     const layer = document.createElement('canvas'); layer.width = layer.height = S;
@@ -191,6 +192,7 @@
       const now = ctxState.now ?? performance.now(); const dt = ctxState.dt ?? Math.min(.1, (now - (last || now)) / 1000); last = now;
       /* the trail: the last frame fades, so what moved leaves a faint wake */
       ctx.globalCompositeOperation = 'source-over';
+      if (clear) ctx.globalCompositeOperation = 'destination-out';
       ctx.fillStyle = `rgba(0,0,0,${(.34 - .16 * ctxState.c.memory).toFixed(3)})`; ctx.fillRect(0, 0, S, S);
       ctx.globalCompositeOperation = 'lighter';
       const place = layout(ctxState.order, ctxState.lead);
@@ -212,7 +214,8 @@
         for (let i = 0; i < 160; i++) { const a = (-50 + 280 * i / 159) / 57.3 + Math.PI / 2; shape('dot', Math.cos(a) * .55 * grow, (Math.sin(a) * .55 + .1) * grow, .0065, 0, [1, .93, .7], fade); }
       }
       /* the glow: a soft copy under the sharp one */
-      out.globalCompositeOperation = 'source-over'; out.fillStyle = '#000'; out.fillRect(0, 0, S, S);
+      out.globalCompositeOperation = 'source-over';
+      if (clear) out.clearRect(0, 0, S, S); else { out.fillStyle = '#000'; out.fillRect(0, 0, S, S); }
       out.globalCompositeOperation = 'lighter';
       out.filter = `blur(${Math.round(S / 60)}px)`; out.globalAlpha = .75; out.drawImage(layer, 0, 0);
       out.filter = 'none'; out.globalAlpha = 1; out.drawImage(layer, 0, 0);
