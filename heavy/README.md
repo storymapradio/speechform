@@ -31,11 +31,25 @@ The lists are in `imagery/heavy.py` and `heavy/heavy.js`.
 
 Every image Jev makes is kept in `runtime/bank/`, with its style, image and keywords. Before Jev is asked, the bank is searched. If an image of the same kind and style shares at least half its keywords with the moment, it is reused at no cost. Jev is asked at most once every fifteen seconds. The bank therefore grows with new scenes only, and reuse becomes more common the longer Speechform is used.
 
-## Jev: the token and the contract
+## The token
 
-Tap the key icon and enter Jev's endpoint and token (and, if images come from somewhere else, the image endpoint). They are saved on your Mac in `~/.config/speechform/settings.json`, which only you can read. The page never sees the token: the Speechform server calls Jev on your behalf.
+Tap the key icon and paste your token. That is all Speechform needs for keys from the three services it knows. It recognises the key by how it begins and fills in the service's address itself:
 
-Every call is a `POST` to the endpoint with `Authorization: Bearer <token>`, and a `task`:
+| The key begins | Service | What it does here |
+| --- | --- | --- |
+| `sk-` or `sk-proj-` | OpenAI | makes the images (gpt-image-1) and picks which image to build on |
+| `AIza` | Google Gemini | makes the images (Gemini 2.5 Flash Image) and picks which image to build on |
+| `sk-ant-` | Anthropic Claude | picks which image to build on; Claude cannot make images, so the growing images carry the scene |
+
+**Test** makes one small, nearly free call, not an image, and says whether the service accepted the token. If it did not, it says why: for example, that the key was refused because it is mistyped, expired, or out of credit.
+
+Any other token belongs to a custom Jev service. Open **custom Jev service** and enter the address that came with the token (and an image address, if images come from somewhere else).
+
+The token is saved on your Mac in `~/.config/speechform/settings.json`, which only you can read. The page never sees it: the Speechform server makes the calls.
+
+## A custom Jev service
+
+Every call is a `POST` to its address with `Authorization: Bearer <token>`, and a `task`:
 
 | Task | Speechform sends | Jev answers |
 | --- | --- | --- |

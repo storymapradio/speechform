@@ -130,7 +130,10 @@ def save_settings(new):
         if k in new and new[k] is not None:
             s[k] = new[k]
     if new.get('key'):
-        s['key'] = new['key']
+        s['key'] = new['key'].strip()
+    if s.get('provider') == 'auto':
+        # the token says whose it is; a custom Jev address, if given, wins
+        s['provider'] = 'jev' if s.get('endpoint') else (heavy.detect(s.get('key', '')) or 'stand-in')
     if new.get('clear_key'):
         s.pop('key', None)
     SETTINGS.parent.mkdir(parents=True, exist_ok=True)
@@ -141,6 +144,7 @@ def save_settings(new):
 def public_settings(s=None):
     s = s or settings()
     return {'provider': s.get('provider', 'stand-in'), 'endpoint': s.get('endpoint', ''), 'image_endpoint': s.get('image_endpoint', ''), 'model': s.get('model', ''),
+            'service': heavy.describe(s),
             'every': s.get('every', 3), 'has_key': bool(s.get('key'))}
 
 def command(action, **kw):
@@ -244,6 +248,8 @@ def ask_provider(cfg, payload):
                    'messages': [{'role': 'user', 'content': PROMPT + lines}]},
                   {'x-api-key': cfg['key'], 'anthropic-version': '2023-06-01'})
         return _json_in(r['content'][0]['text'])
+    if p in ('openai', 'gemini'):
+        return _json_in(heavy.ask_text(cfg, PROMPT + lines))
     if p == 'local':
         base = (cfg.get('endpoint') or 'http://127.0.0.1:11434/v1').rstrip('/')
         headers = {'Authorization': 'Bearer ' + cfg['key']} if cfg.get('key') else {}
@@ -520,6 +526,22 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, heavy.save_frame(d.get('session'), d.get('streak', 0), d.get('meta') or {}, jpeg))
         if path == '/mask':
             return self._send(200, {'text': heavy.mask(str(d.get('text', '')))})
+        if path == '/jev/test':
+            cfg = settings(); svc = heavy.service(cfg)
+            if not svc:
+                return self._send(200, {'ok': False, 'says': 'Paste a token first. Keys from OpenAI (sk-), Anthropic (sk-ant-) and Google Gemini (AIza) are recognised; anything else needs its address under custom Jev service.'})
+            t0 = time.time()
+            try:
+                if svc == 'jev':
+                    heavy.jev(cfg, {'task': 'choose', 'text': 'test', 'candidates': [{'id': 'test', 'kind': 'story', 'keywords': []}]}, timeout=15)
+                else:
+                    heavy.ask_text(cfg, 'Reply with the single word OK.', timeout=15)
+                return self._send(200, {'ok': True, 'says': f"Connected to {heavy.SERVICES[svc]['name']} in {time.time() - t0:.1f} s. " + heavy.describe(cfg)['says']})
+            except Exception as e:
+                msg = str(e)
+                if msg.startswith('401') or msg.startswith('403'):
+                    msg = 'the service refused the token (it may be mistyped, expired, or without credit)'
+                return self._send(200, {'ok': False, 'says': f"{heavy.SERVICES[svc]['name']} did not answer: {msg}"})
         if path == '/settings/test':
             return self._send(200, test_provider())
         if path == '/touchdesigner':

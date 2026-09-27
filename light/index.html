@@ -48,6 +48,9 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .say input, .find { flex: 1; min-width: 0; background: #000; color: var(--ink); border: 1px solid var(--faint); border-radius: 10px; padding: 9px 10px; font: inherit; }
 .say input:focus, .find:focus { outline: none; border-color: var(--green-dim); }
 .say button { border-radius: 10px; border: 1px solid var(--green-dim); background: var(--green-faint); color: var(--green); font: inherit; padding: 0 12px; cursor: pointer; }
+.say .mic { width: 44px; padding: 0; display: grid; place-items: center; }
+.say .mic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.say .mic.live { color: var(--red); border-color: var(--red); background: rgba(255,90,74,.1); animation: rec 1.4s ease-in-out infinite; }
 .step { border-left: 2px solid var(--faint); padding: 2px 0 12px 12px; margin-left: 4px; position: relative; }
 .step::before { content: ''; position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
 .step h4 { margin: 0 0 6px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--green); font-weight: 500; }
@@ -88,7 +91,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
     <div class="track" id="track">
       <section class="page">
         <div class="scroll" id="lines"></div>
-        <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit">say</button></form>
+        <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit" class="mic" id="micBtn" title="speak, or send what is typed" aria-label="record"><svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button></form>
       </section>
       <section class="page">
         <div class="scroll" id="why">
@@ -294,10 +297,12 @@ function stop() {
 function paintControls() {
   $('#start').className = 'tool ' + (listening ? 'live' : noHearing ? 'idle' : '');
   $('#stop').className = 'tool ' + (listening ? '' : 'idle');
+  $('#micBtn').classList.toggle('live', listening);
 }
 $('#start').onclick = start; $('#stop').onclick = stop;
 $('#fresh').onclick = () => { fresh(); drawLines(); drawWhy(); };
-$('#say').onsubmit = e => { e.preventDefault(); ingest($('#words').value, 'Typed'); $('#words').value = ''; };
+$('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim();
+  if (t) { ingest(t, 'Typed'); $('#words').value = ''; } else if (listening) stop(); else start(); };
 paintControls();
 
 /* ── the image ── */

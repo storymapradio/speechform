@@ -53,6 +53,9 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .say { display: flex; gap: 6px; padding: 8px; border-top: 1px solid var(--faint); }
 .say input, .field { flex: 1; min-width: 0; background: #000; color: var(--ink); border: 1px solid var(--faint); border-radius: 10px; padding: 9px 10px; font: inherit; }
 .say input:focus, .field:focus { outline: none; border-color: var(--green-dim); }
+.say .mic { width: 44px; padding: 0; display: grid; place-items: center; }
+.say .mic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.say .mic.live { color: var(--red); border-color: var(--red); background: rgba(255,90,74,.1); animation: rec 1.4s ease-in-out infinite; }
 .say button, .btn { border-radius: 10px; border: 1px solid var(--green-dim); background: var(--green-faint); color: var(--green); font: inherit; padding: 8px 12px; cursor: pointer; }
 .step { border-left: 2px solid var(--faint); padding: 2px 0 12px 12px; margin-left: 4px; position: relative; }
 .step::before { content: ''; position: absolute; left: -6px; top: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
@@ -101,7 +104,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
   <div class="lower" id="lower">
     <div class="track" id="track">
       <section class="page"><div class="scroll" id="lines"></div>
-        <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit">say</button></form></section>
+        <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit" class="mic" id="micBtn" title="speak, or send what is typed" aria-label="record"><svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button></form></section>
       <section class="page"><div class="scroll">
         <div class="step"><h4>heard</h4><p class="heat" id="heat"></p></div>
         <div class="step"><h4>points for each kind</h4><div class="rank" id="rank"></div></div>
@@ -116,10 +119,13 @@ body { display: flex; justify-content: center; overflow: hidden; }
 </div>
 <div class="sheet" id="sheet" hidden>
   <form class="card" id="jevForm">
-    <label>Jev endpoint <input class="field" id="endpoint" autocomplete="off" placeholder="https://"></label>
-    <label>Jev token <input class="field" id="token" type="password" autocomplete="off"></label>
-    <label>Image endpoint <input class="field" id="imageEndpoint" autocomplete="off" placeholder="same as Jev"></label>
-    <p id="jevState" class="quiet" style="margin:0"></p>
+    <label>Token <input class="field" id="token" type="password" autocomplete="off" placeholder="paste your key here"></label>
+    <p id="detected" style="margin:0;line-height:1.5"></p>
+    <details id="custom"><summary class="quiet" style="cursor:pointer">custom Jev service</summary>
+      <label style="margin-top:8px">Address <input class="field" id="endpoint" autocomplete="off" placeholder="https://"></label>
+      <label style="margin-top:8px">Image address <input class="field" id="imageEndpoint" autocomplete="off" placeholder="same as above"></label>
+    </details>
+    <p id="jevState" style="margin:0;line-height:1.5"></p>
     <div class="row"><button type="button" class="btn" id="close">close</button><button type="button" class="btn" id="test">test</button><button type="submit" class="btn">save</button></div>
   </form>
 </div>

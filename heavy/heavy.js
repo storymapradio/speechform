@@ -126,7 +126,7 @@ async function pickBase(text) {
   const cands = S.frames.slice(-12).map(f => ({ id: f.id, kind: f.kind, keywords: f.keywords || [], at: f.at }));
   if (!cands.length) return;
   const r = await post('/choose', { text, candidates: cands });
-  if (r && r.id) setBase(r.id, false, r.by === 'jev' ? 'Jev picked this image to build on: ' + (r.why || '') : 'Building on the saved image that ' + r.why + '.');
+  if (r && r.id) setBase(r.id, false, r.by !== 'rule' ? 'Jev picked this image to build on: ' + (r.why || '') : 'Building on the saved image that ' + r.why + '.');
 }
 function setBase(id, manual, why) {
   if (!id) { S.base = null; S.baseId = null; S.manualBase = false; drawFilm(); return; }
@@ -206,12 +206,14 @@ function paint() {
   $('#start').className = 'tool ' + (listening ? 'live' : '');
   $('#stop').className = 'tool ' + (listening ? '' : 'idle');
   $('#cam').className = 'tool ' + (cam.on ? 'on' : '');
+  $('#micBtn').classList.toggle('live', listening);
 }
 const cam = new Camera();
 $('#start').onclick = start; $('#stop').onclick = stop;
 $('#cam').onclick = async () => { if (cam.on) cam.stop(); else await cam.start().catch(() => {}); paint(); };
 $('#fresh').onclick = () => { fresh(); drawLines(); drawFilm(); drawWhy(); };
-$('#say').onsubmit = e => { e.preventDefault(); ingest($('#words').value, 'Typed'); $('#words').value = ''; };
+$('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim();
+  if (t) { ingest(t, 'Typed'); $('#words').value = ''; } else if (listening) stop(); else start(); };
 
 /* ── the scene ── */
 const scene = $('#scene'), SIZE = 540;
@@ -350,21 +352,40 @@ function drawMemory() {
   $('#mem').innerHTML = h;
 }
 
-/* ── Jev's token, on this Mac only ── */
+/* ── Jev's token, on this Mac only: paste it, and Speechform recognises whose it is ── */
+const WHO = t => t.startsWith('sk-ant-') ? ['claude', 'Anthropic Claude', false] : t.startsWith('sk-') ? ['openai', 'OpenAI', true] : t.startsWith('AIza') ? ['gemini', 'Google Gemini', true] : null;
+function explain() {
+  const t = $('#token').value.trim(), custom = $('#endpoint').value.trim();
+  const d = $('#detected');
+  if (custom) { d.textContent = 'This token will be sent to the custom Jev service at the address below.'; d.style.color = 'var(--ink)'; return; }
+  if (!t) { d.textContent = $('#token').placeholder === 'saved' ? '' : 'Keys from OpenAI (they begin sk-), Anthropic (sk-ant-) and Google Gemini (AIza) are recognised, and need nothing else. Any other token needs its service address under custom Jev service.'; d.style.color = 'var(--muted)'; return; }
+  const w = WHO(t);
+  if (w) { d.textContent = `Recognised: ${w[1]}. Nothing else to fill in. ` + (w[2] ? 'It will make images and pick which image to build on.' : 'It will pick which image to build on; it cannot make images, so the growing images carry the scene.'); d.style.color = 'var(--green)'; }
+  else { d.textContent = 'This token is not from OpenAI, Anthropic or Google. Open custom Jev service and enter the address that came with it.'; d.style.color = 'var(--amber)'; $('#custom').open = true; }
+}
+$('#token').addEventListener('input', explain); $('#endpoint').addEventListener('input', explain);
 $('#keyBtn').onclick = async () => {
   const st = await fetch('/status').then(r => r.json()).catch(() => ({}));
   const p = st.provider || {};
   $('#endpoint').value = p.provider === 'jev' ? p.endpoint || '' : ''; $('#imageEndpoint').value = p.image_endpoint || '';
-  $('#token').value = ''; $('#token').placeholder = p.provider === 'jev' && p.has_key ? 'saved' : '';
-  $('#jevState').textContent = ''; $('#sheet').hidden = false;
+  $('#custom').open = p.provider === 'jev';
+  $('#token').value = ''; $('#token').placeholder = p.has_key ? 'saved' : 'paste your key here';
+  explain();
+  $('#jevState').textContent = p.service && p.service.says ? 'Now: ' + p.service.says : ''; $('#jevState').style.color = 'var(--muted)';
+  $('#sheet').hidden = false;
 };
 $('#close').onclick = () => $('#sheet').hidden = true;
-const saveJev = () => post('/settings', { provider: $('#endpoint').value.trim() ? 'jev' : 'stand-in', endpoint: $('#endpoint').value.trim(),
-  image_endpoint: $('#imageEndpoint').value.trim(), key: $('#token').value.trim() || undefined });
+const saveJev = () => {
+  const custom = $('#endpoint').value.trim();
+  return post('/settings', { provider: custom ? 'jev' : 'auto', endpoint: custom, image_endpoint: $('#imageEndpoint').value.trim(), key: $('#token').value.trim() || undefined });
+};
 $('#jevForm').onsubmit = async e => { e.preventDefault(); await saveJev(); $('#sheet').hidden = true; };
-$('#test').onclick = async () => { $('#jevState').textContent = '…'; await saveJev();
-  const r = await post('/imagine', { scene: { text: 'a quiet test of the bank', register: 'bloom', kind: 'poetry', style } });
-  $('#jevState').textContent = !r ? '✕' : r.item ? `✓ ${r.from}` : r.error ? '✕ ' + r.error : '· ' + (r.why || ''); };
+$('#test').onclick = async () => {
+  $('#jevState').textContent = 'Testing…'; $('#jevState').style.color = 'var(--muted)';
+  await saveJev(); const r = await post('/jev/test', {});
+  $('#jevState').textContent = r ? (r.ok ? '✓ ' : '✕ ') + r.says : '✕ The Speechform server is not answering.';
+  $('#jevState').style.color = r && r.ok ? 'var(--green)' : 'var(--red)';
+};
 
 paint(); drawLines();
 

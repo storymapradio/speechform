@@ -92,6 +92,9 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .say input { flex: 1; min-width: 0; background: #000; color: var(--ink); border: 1px solid var(--faint); border-radius: 10px; padding: 9px 10px; font: inherit; }
 .say input:focus { outline: none; border-color: var(--green-dim); }
 .say button { border-radius: 10px; border: 1px solid var(--green-dim); background: var(--green-faint); color: var(--green); font: inherit; padding: 0 12px; cursor: pointer; }
+.say .mic { width: 44px; padding: 0; display: grid; place-items: center; }
+.say .mic svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.say .mic.live { color: var(--red); border-color: var(--red); background: rgba(255,90,74,.1); animation: rec 1.4s ease-in-out infinite; }
 .say .spk { color: var(--muted); border-color: var(--faint); background: none; width: 34px; padding: 0; }
 
 /* decisions */
@@ -195,7 +198,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
         <form class="say" id="say">
           <button type="button" class="spk" id="spk" title="Who is speaking">A</button>
           <input id="words" placeholder="" autocomplete="off">
-          <button type="submit">say</button>
+          <button type="submit" class="mic" id="micBtn" title="speak, or send what is typed" aria-label="record"><svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>
         </form>
       </section>
       <section class="page">
@@ -288,10 +291,12 @@ function drawControls() {
   $('#start').className = 'tool act ' + (listening ? 'live' : opening ? 'waking idle-press' : '');
   $('#start .badge').classList.toggle('on', !!st.touchdesigner);
   $('#stop').className = 'tool act ' + (S.microphone ? '' : 'idle');
+  $('#micBtn').classList.toggle('live', !!S.microphone);
 }
 $('#fresh').onclick = () => { selected = null; post('/intake', { action: 'reset' }); };
 $('#spk').onclick = () => { speaker = speaker === 'A' ? 'B' : 'A'; $('#spk').textContent = speaker; if (S && S.microphone) post('/intake', { microphone: true, speaker }); };
-$('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim(); if (!t) return; post('/say', { text: t, speaker }); $('#words').value = ''; };
+$('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim();
+  if (t) { post('/say', { text: t, speaker }); $('#words').value = ''; } else if (S && S.microphone) $('#stop').click(); else $('#start').click(); };
 
 /* ── settings ── */
 $('#keyBtn').onclick = () => { const p = S ? S.provider : {}; $('#provider').value = p.provider || 'stand-in'; $('#endpoint').value = p.endpoint || '';

@@ -12,7 +12,7 @@ Jev is reached through one endpoint with the person's own token (kept in
 Images are generated only when the bank has nothing close enough, and at most once every
 IMAGE_EVERY seconds, so tokens are spent on new scenes only.
 """
-import base64, hashlib, json, re, time, urllib.request
+import base64, hashlib, json, re, time, urllib.error, urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -128,17 +128,103 @@ def to_bank(register, style, words, prompt, image):
 def bank_list():
     return sorted(_index(), key=lambda i: -i['at'])
 
-# ── Jev ───────────────────────────────────────────────────────────────────────────
+# ── Jev: a token from a known service, or a custom Jev service ────────────────────
+# A token's first characters say whose it is, and each service's address is fixed, so a person
+# only ever pastes their token. A custom Jev service is the one case that needs an address.
+SERVICES = {
+    'openai': {'name': 'OpenAI', 'images': True, 'text_model': 'gpt-4o-mini', 'image_model': 'gpt-image-1'},
+    'gemini': {'name': 'Google Gemini', 'images': True, 'text_model': 'gemini-2.5-flash', 'image_model': 'gemini-2.5-flash-image'},
+    'claude': {'name': 'Anthropic Claude', 'images': False, 'text_model': 'claude-haiku-4-5-20251001'},
+    'jev':    {'name': 'a custom Jev service', 'images': True},
+}
+
+def detect(token):
+    t = (token or '').strip()
+    if t.startswith('sk-ant-'):
+        return 'claude'
+    if t.startswith('sk-'):
+        return 'openai'
+    if t.startswith('AIza'):
+        return 'gemini'
+    return None
+
+def service(cfg):
+    """which service the saved settings point at"""
+    p = cfg.get('provider')
+    if p == 'jev' and (cfg.get('endpoint') or cfg.get('image_endpoint')):
+        return 'jev'
+    if p in ('openai', 'gemini', 'claude') and cfg.get('key'):
+        return p
+    return None
+
+def _call(url, body, headers, timeout=60):
+    req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={'content-type': 'application/json', **headers})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode('utf-8', 'replace')[:300]
+        raise RuntimeError(f'{e.code}: {detail}')
+
 def jev(cfg, body, timeout=45):
-    endpoint = cfg.get('image_endpoint') or cfg.get('endpoint')
+    """a custom Jev service: every call is a POST with a task (see heavy/README.md)"""
+    endpoint = (cfg.get('image_endpoint') if body.get('task') == 'image' else None) or cfg.get('endpoint')
     if not endpoint:
-        raise RuntimeError('no Jev endpoint set')
-    headers = {'content-type': 'application/json'}
-    if cfg.get('key'):
-        headers['Authorization'] = 'Bearer ' + cfg['key']
-    req = urllib.request.Request(endpoint, data=json.dumps(body).encode(), headers=headers)
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read())
+        raise RuntimeError('no Jev address set')
+    headers = {'Authorization': 'Bearer ' + cfg['key']} if cfg.get('key') else {}
+    return _call(endpoint, body, headers, timeout)
+
+def make_image(cfg, prompt, negative, style, seed, scene):
+    """one image from whichever service the token belongs to; returns a data: or https: address"""
+    svc = service(cfg); key = cfg.get('key', '')
+    if svc == 'jev':
+        got = jev(cfg, {'task': 'image', 'prompt': prompt, 'negative': negative, 'style': style, 'size': [768, 768], 'seed': seed, 'scene': scene})
+        return got.get('image') if isinstance(got, dict) else None
+    full = f'{prompt}. Avoid: {negative}.'
+    if svc == 'openai':
+        got = _call('https://api.openai.com/v1/images/generations',
+                    {'model': cfg.get('image_model') or SERVICES['openai']['image_model'], 'prompt': full, 'size': '1024x1024', 'n': 1},
+                    {'Authorization': 'Bearer ' + key}, timeout=120)
+        d = (got.get('data') or [{}])[0]
+        return 'data:image/png;base64,' + d['b64_json'] if d.get('b64_json') else d.get('url')
+    if svc == 'gemini':
+        model = cfg.get('image_model') or SERVICES['gemini']['image_model']
+        got = _call(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+                    {'contents': [{'parts': [{'text': full}]}], 'generationConfig': {'responseModalities': ['IMAGE']}},
+                    {'x-goog-api-key': key}, timeout=120)
+        for part in ((got.get('candidates') or [{}])[0].get('content') or {}).get('parts', []):
+            inline = part.get('inlineData') or part.get('inline_data')
+            if inline and inline.get('data'):
+                return f"data:{inline.get('mimeType') or inline.get('mime_type') or 'image/png'};base64,{inline['data']}"
+        return None
+    return None
+
+def ask_text(cfg, prompt, timeout=20):
+    """a short answer in words from whichever service the token belongs to"""
+    svc = service(cfg); key = cfg.get('key', '')
+    if svc == 'openai':
+        got = _call('https://api.openai.com/v1/chat/completions', {'model': cfg.get('model') or SERVICES['openai']['text_model'],
+                    'messages': [{'role': 'user', 'content': prompt}]}, {'Authorization': 'Bearer ' + key}, timeout)
+        return got['choices'][0]['message']['content']
+    if svc == 'gemini':
+        model = cfg.get('model') or SERVICES['gemini']['text_model']
+        got = _call(f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent',
+                    {'contents': [{'parts': [{'text': prompt}]}]}, {'x-goog-api-key': key}, timeout)
+        return ''.join(p.get('text', '') for p in got['candidates'][0]['content']['parts'])
+    if svc == 'claude':
+        got = _call('https://api.anthropic.com/v1/messages', {'model': cfg.get('model') or SERVICES['claude']['text_model'], 'max_tokens': 200,
+                    'messages': [{'role': 'user', 'content': prompt}]}, {'x-api-key': key, 'anthropic-version': '2023-06-01'}, timeout)
+        return got['content'][0]['text']
+    raise RuntimeError('no service')
+
+def describe(cfg):
+    """what the saved token is, in plain words, for the key screen"""
+    svc = service(cfg)
+    if not svc:
+        return {'service': None, 'images': False, 'says': ''}
+    info = SERVICES[svc]
+    can = 'makes images and picks which image to build on' if info['images'] else 'picks which image to build on; it cannot make images, so the growing images carry the scene'
+    return {'service': svc, 'images': info['images'], 'says': f"{info['name']}: {can}."}
 
 _last_made = {'at': 0.0}
 
@@ -149,26 +235,35 @@ def imagine(cfg, scene):
     hit, score = from_bank(register, style, words)
     if hit:
         return {'ok': True, 'from': 'bank', 'item': hit, 'likeness': round(score, 2)}
-    if cfg.get('provider') != 'jev' or not (cfg.get('endpoint') or cfg.get('image_endpoint')):
-        return {'ok': True, 'from': None, 'why': 'no Jev token yet; the procedural layers carry the scene', 'prompt': prompt}
+    svc = service(cfg)
+    if not svc:
+        return {'ok': True, 'from': None, 'why': 'no token yet; the growing images carry the scene', 'prompt': prompt}
+    if not SERVICES[svc]['images']:
+        return {'ok': True, 'from': None, 'why': SERVICES[svc]['name'] + ' cannot make images; the growing images carry the scene', 'prompt': prompt}
     if time.time() - _last_made['at'] < IMAGE_EVERY:
         return {'ok': True, 'from': None, 'why': 'waiting before asking Jev again', 'prompt': prompt}
     _last_made['at'] = time.time()
-    got = jev(cfg, {'task': 'image', 'prompt': prompt, 'negative': NEGATIVE, 'style': style, 'size': [768, 768],
-                    'seed': int(hashlib.sha1(prompt.encode()).hexdigest()[:6], 16), 'scene': {k: scene.get(k) for k in ('kind', 'register', 'camera')}})
-    image = got.get('image') if isinstance(got, dict) else None
+    image = make_image(cfg, prompt, NEGATIVE, style, int(hashlib.sha1(prompt.encode()).hexdigest()[:6], 16),
+                       {k: scene.get(k) for k in ('kind', 'register', 'camera')})
     if not image:
-        return {'ok': False, 'error': 'Jev answered without an image'}
-    return {'ok': True, 'from': 'jev', 'item': to_bank(register, style, words, prompt, image)}
+        return {'ok': False, 'error': SERVICES[svc]['name'] + ' answered without an image'}
+    return {'ok': True, 'from': svc, 'item': to_bank(register, style, words, prompt, image)}
 
 def choose(cfg, text, candidates):
     """which saved image to keep building on: Jev's pick, or the one sharing the most words"""
     words = set(keywords(text, 12))
-    if cfg.get('provider') == 'jev' and cfg.get('endpoint') and candidates:
+    svc = service(cfg)
+    if svc and candidates:
         try:
-            got = jev(cfg, {'task': 'choose', 'text': mask(text), 'candidates': candidates}, timeout=10)
+            if svc == 'jev':
+                got = jev(cfg, {'task': 'choose', 'text': mask(text), 'candidates': candidates}, timeout=10)
+            else:
+                listing = '\n'.join(f"{c['id']}: {c.get('kind', '')}; {', '.join(c.get('keywords', []))}" for c in candidates)
+                answer = ask_text(cfg, 'Someone is speaking and an image is being built from their words. They now say: "' + mask(text)
+                                  + '". Which saved image fits best to keep building on? Reply with ONLY JSON {"id": "...", "why": "..."}.\n' + listing, timeout=12)
+                m = re.search(r'\{.*\}', answer, re.S); got = json.loads(m.group(0)) if m else {}
             if got.get('id') in {c['id'] for c in candidates}:
-                return {'id': got['id'], 'by': 'jev', 'why': got.get('why', '')}
+                return {'id': got['id'], 'by': svc, 'why': got.get('why', '')}
         except Exception:
             pass
     best, score = None, -1.0
