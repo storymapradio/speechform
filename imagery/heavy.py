@@ -132,6 +132,7 @@ def bank_list():
 # A token's first characters say whose it is, and each service's address is fixed, so a person
 # only ever pastes their token. A custom Jev service is the one case that needs an address.
 SERVICES = {
+    'typesafe': {'name': 'Jev (TypeSafe)', 'images': False, 'model': 'jev-latest'},
     'openai': {'name': 'OpenAI', 'images': True, 'text_model': 'gpt-4o-mini', 'image_model': 'gpt-image-1'},
     'gemini': {'name': 'Google Gemini', 'images': True, 'text_model': 'gemini-2.5-flash', 'image_model': 'gemini-2.5-flash-image'},
     'claude': {'name': 'Anthropic Claude', 'images': False, 'text_model': 'claude-haiku-4-5-20251001'},
@@ -140,6 +141,8 @@ SERVICES = {
 
 def detect(token):
     t = (token or '').strip()
+    if t.startswith('apikey_') or t.startswith('tsk_'):
+        return 'typesafe'
     if t.startswith('sk-ant-'):
         return 'claude'
     if t.startswith('sk-'):
@@ -153,9 +156,50 @@ def service(cfg):
     p = cfg.get('provider')
     if p == 'jev' and (cfg.get('endpoint') or cfg.get('image_endpoint')):
         return 'jev'
-    if p in ('openai', 'gemini', 'claude') and cfg.get('key'):
+    if p in ('typesafe', 'openai', 'gemini', 'claude') and cfg.get('key'):
         return p
     return None
+
+def image_service(cfg):
+    """who makes the images: an image key of its own if one is saved, otherwise the main key if it can"""
+    ik = cfg.get('image_key')
+    if ik and detect(ik) in ('openai', 'gemini'):
+        return detect(ik), ik
+    svc = service(cfg)
+    if svc and SERVICES[svc]['images']:
+        return svc, cfg.get('key', '')
+    return None, None
+
+# ── Jev by TypeSafe: a decision model that answers choices, scores and true-or-false with probabilities ──
+TYPESAFE = 'https://api.typesafe.ai'
+KIND_CRITERIA = {
+    'instruction': 'steps or commands telling someone how to do something', 'lecture': 'explaining a subject, research or evidence to an audience',
+    'lesson': 'teaching a class, asking learners to try and answer', 'dialogue': 'two people talking, questions and replies',
+    'reflective monologue': 'looking back on one\'s own life and what it meant', 'thinking aloud': 'working a problem out loud, hesitating, trying options',
+    'stream of consciousness': 'a run-on drift of images and thoughts', 'reading aloud': 'written prose read from a book',
+    'song': 'singing, chorus, la la', 'lyrics': 'song words, rhymed lines to someone', 'poetry': 'a poem, images and metaphor in short lines',
+    'story': 'telling what happened to characters, one event after another', 'character development': 'how a character feels, changes, fears or wants',
+    'scenery': 'describing a place or landscape', 'lore': 'the customs, orders and history of an invented world', 'myth': 'gods, origins, why the world is as it is',
+    'cosmology': 'the universe, stars, space and time', 'mystery': 'a puzzle, clues, who did it', 'argument': 'making a claim and supporting it',
+}
+
+def typesafe(cfg, state, questions, timeout=15):
+    got = _call(TYPESAFE + '/v1/systemone', {'state': state[:4000], 'model': cfg.get('model') or 'jev-latest', 'questions': questions},
+                {'Authorization': 'Bearer ' + cfg.get('key', '')}, timeout)
+    return got.get('answers', {})
+
+def jev_hear(cfg, text):
+    """Jev's reading of the last minute of talk: its kind, its warmth and pace, and whether it is safe to draw"""
+    a = typesafe(cfg, mask(text), {
+        'kind': {'type': 'choice', 'instructions': 'What kind of speech is this passage?', 'criteria': KIND_CRITERIA},
+        'warmth': {'type': 'score', 'instructions': 'How warm is the feeling of this passage?', 'criteria': ['cool, blue, night, distant', 'neutral', 'warm, golden, home, close']},
+        'tempo': {'type': 'score', 'instructions': 'How lively is the pace of this passage?', 'criteria': ['slow and still', 'steady', 'quick and lively']},
+        'unsafe': {'type': 'noul', 'instructions': 'Does this passage describe violence, gore or cruelty, or use profanity?'},
+    })
+    k = a.get('kind', {})
+    return {'kind': k.get('choice'), 'confidence': k.get('confidence'), 'probabilities': k.get('probabilities', {}),
+            'warmth': (a.get('warmth', {}).get('score', 1) or 0) / 2, 'tempo': (a.get('tempo', {}).get('score', 1) or 0) / 2,
+            'unsafe': a.get('unsafe', {}).get('noul', 0)}
 
 def _call(url, body, headers, timeout=60):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={'content-type': 'application/json', **headers})
@@ -175,8 +219,10 @@ def jev(cfg, body, timeout=45):
     return _call(endpoint, body, headers, timeout)
 
 def make_image(cfg, prompt, negative, style, seed, scene):
-    """one image from whichever service the token belongs to; returns a data: or https: address"""
+    """one image from whichever service can make it; returns a data: or https: address"""
     svc = service(cfg); key = cfg.get('key', '')
+    if svc != 'jev':
+        svc, key = image_service(cfg)
     if svc == 'jev':
         got = jev(cfg, {'task': 'image', 'prompt': prompt, 'negative': negative, 'style': style, 'size': [768, 768], 'seed': seed, 'scene': scene})
         return got.get('image') if isinstance(got, dict) else None
@@ -223,8 +269,12 @@ def describe(cfg):
     if not svc:
         return {'service': None, 'images': False, 'says': ''}
     info = SERVICES[svc]
-    can = 'makes images and picks which image to build on' if info['images'] else 'picks which image to build on; it cannot make images, so the growing images carry the scene'
-    return {'service': svc, 'images': info['images'], 'says': f"{info['name']}: {can}."}
+    if svc == 'typesafe':
+        img = image_service(cfg)[0]
+        can = 'decides the kind of speech, the warmth and pace, and which image to build on; ' + (f"images come from {SERVICES[img]['name']}" if img else 'add an OpenAI or Gemini key under Images for generated images')
+    else:
+        can = 'makes images and picks which image to build on' if info['images'] else 'picks which image to build on; it cannot make images, so the growing images carry the scene'
+    return {'service': svc, 'images': bool(image_service(cfg)[0]), 'says': f"{info['name']}: {can}."}
 
 _last_made = {'at': 0.0}
 
@@ -236,10 +286,11 @@ def imagine(cfg, scene):
     if hit:
         return {'ok': True, 'from': 'bank', 'item': hit, 'likeness': round(score, 2)}
     svc = service(cfg)
-    if not svc:
-        return {'ok': True, 'from': None, 'why': 'no token yet; the growing images carry the scene', 'prompt': prompt}
-    if not SERVICES[svc]['images']:
-        return {'ok': True, 'from': None, 'why': SERVICES[svc]['name'] + ' cannot make images; the growing images carry the scene', 'prompt': prompt}
+    img_svc = 'jev' if svc == 'jev' else image_service(cfg)[0]
+    if not img_svc:
+        why = (SERVICES[svc]['name'] + ' decides but does not make images; add an OpenAI or Gemini key under Images') if svc else 'no token yet'
+        return {'ok': True, 'from': None, 'why': why + '; the growing images carry the scene', 'prompt': prompt}
+    svc = img_svc
     if time.time() - _last_made['at'] < IMAGE_EVERY:
         return {'ok': True, 'from': None, 'why': 'waiting before asking Jev again', 'prompt': prompt}
     _last_made['at'] = time.time()
@@ -257,6 +308,14 @@ def choose(cfg, text, candidates):
         try:
             if svc == 'jev':
                 got = jev(cfg, {'task': 'choose', 'text': mask(text), 'candidates': candidates}, timeout=10)
+            elif svc == 'typesafe':
+                names = {f'image {i + 1}': c for i, c in enumerate(candidates[-10:])}
+                a = typesafe(cfg, 'Someone is speaking while an image is built from their words. They now say: ' + mask(text),
+                             {'build_on': {'type': 'choice', 'instructions': 'Which saved image fits best to keep building on?',
+                                           'criteria': {n: f"{c.get('kind', '')}: {', '.join(c.get('keywords', [])) or 'no words'}" for n, c in names.items()}}}, timeout=12)
+                pick = a.get('build_on', {})
+                c = names.get(pick.get('choice'))
+                got = {'id': c['id'], 'why': f"it fits what you are saying now ({round((pick.get('confidence') or 0) * 100)}% sure)"} if c else {}
             else:
                 listing = '\n'.join(f"{c['id']}: {c.get('kind', '')}; {', '.join(c.get('keywords', []))}" for c in candidates)
                 answer = ask_text(cfg, 'Someone is speaking and an image is being built from their words. They now say: "' + mask(text)

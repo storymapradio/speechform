@@ -83,22 +83,35 @@ async function ingest(raw, source) {
   const own = C.scorePhrase(text), heard = C.hear(S.phrases, text, t);
   const top = heard.ranked[0][0]; S.streakOf = top === S.candidate ? S.streakOf + 1 : 1; S.candidate = top;
   const choice = C.decide(S.kind, heard.ranked, S.streakOf);
-  const idea = matchIdea(text), kind = choice.kind, image = C.IMAGE[kind], words = text.split(/\s+/).length;
+  const heardByJev = await jevHear(S.phrases.slice(-6).map(p => p.text).concat(text).join(' '));
+  let kind = choice.kind, reason = choice.reason;
+  if (heardByJev && heardByJev.kind && heardByJev.confidence > .55) { reason = heardByJev.kind === kind ? `Jev agrees (${Math.round(heardByJev.confidence * 100)}% sure)` : `Jev hears ${heardByJev.kind}, ${Math.round(heardByJev.confidence * 100)}% sure`; kind = heardByJev.kind; }
+  if (heardByJev) { S.dir.warmth += (heardByJev.warmth - S.dir.warmth) * .5; S.dir.speed += (.6 + heardByJev.tempo - S.dir.speed) * .5; }
+  const idea = matchIdea(text), image = C.IMAGE[kind], words = text.split(/\s+/).length;
   if (image !== S.lead || S.phrases.length === 0) S.gateAt = performance.now();
   S.kind = kind; S.lead = image;
   S.growth[image] = (S.growth[image] || 0) + words;
   if (!S.order.includes(image)) S.order.push(image);
   if (/\b(the point of (all of )?this is|in conclusion|what it comes down to)\b/i.test(text)) S.conclusionAt = t;
   const p = { id: 'p' + Date.now().toString(36), text, at: t, source, kind, image, idea: idea.id, ranked: heard.ranked,
-              because: own.because, structure: own.structure, window: heard.recent.map(r => r.text), reason: choice.reason, streak: S.streak };
-  S.phrases.push(p); direct(); remember(p);
+              because: own.because, structure: own.structure, window: heard.recent.map(r => r.text), reason, jev: heardByJev, streak: S.streak };
+  S.phrases.push(p); if (!heardByJev) direct(); remember(p);
   drawLines(); if (page === 1) drawWhy();
   /* the streak broke: build on the saved image that fits what is being said now */
   if (broke && !S.manualBase) await pickBase(text);
-  imagine(text);
+  if (heardByJev && heardByJev.unsafe > .5) { S.jev = 'Jev judged this passage unsafe to draw, so no image was asked for.'; }
+  else imagine(text);
   snapshotSoon(1800);
 }
 
+/* Jev (TypeSafe) reads the last minute of talk: its kind, warmth, pace, and whether it is safe to draw */
+let jevOn = null;
+async function jevHear(text) {
+  if (jevOn === false) return null;
+  const r = await post('/jev/hear', { text });
+  if (!r || !r.ok) { if (r && !r.error) jevOn = false; return null; }
+  jevOn = true; return r;
+}
 /* Jev (or the bank) makes an image for this moment; it moves in over the scene as a new layer */
 let asking = false;
 async function imagine(text) {
@@ -328,7 +341,8 @@ function drawWhy() {
     row.querySelector('.nm').textContent = k + (why ? ' · ' + why : '');
     const f = row.querySelector('.fill'); f.style.width = Math.round(100 * Math.max(0, v) / top) + '%'; f.style.background = i < 4 ? col(C.IMAGE[k]) : '';
     row.querySelector('.v').textContent = v.toFixed(2); });
-  $('#choice').innerHTML = `The kind is <b>${esc(p.kind)}</b>, because ${esc(p.reason)}. It grows <b style="color:${col(p.image)}">${p.image}</b>, in the ${STYLES[style].name} style. Streak ${p.streak}.`;
+  const J = p.jev ? ` Jev's reading: ${Object.entries(p.jev.probabilities || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${esc(k)} ${Math.round(v * 100)}%`).join(', ')}.` : '';
+  $('#choice').innerHTML = `The kind is <b>${esc(p.kind)}</b>, because ${esc(p.reason)}.${J} It grows <b style="color:${col(p.image)}">${p.image}</b>, in the ${STYLES[style].name} style. Streak ${p.streak}.`;
 }
 /* the sequence: every saved moment, streak by streak; tap one to build on it, tap it again to return to the camera */
 async function drawFilm(fetchAll) {
@@ -353,15 +367,15 @@ function drawMemory() {
 }
 
 /* ── Jev's token, on this Mac only: paste it, and Speechform recognises whose it is ── */
-const WHO = t => t.startsWith('sk-ant-') ? ['claude', 'Anthropic Claude', false] : t.startsWith('sk-') ? ['openai', 'OpenAI', true] : t.startsWith('AIza') ? ['gemini', 'Google Gemini', true] : null;
+const WHO = t => (t.startsWith('apikey_') || t.startsWith('tsk_')) ? ['typesafe', 'Jev (TypeSafe)', false] : t.startsWith('sk-ant-') ? ['claude', 'Anthropic Claude', false] : t.startsWith('sk-') ? ['openai', 'OpenAI', true] : t.startsWith('AIza') ? ['gemini', 'Google Gemini', true] : null;
 function explain() {
   const t = $('#token').value.trim(), custom = $('#endpoint').value.trim();
   const d = $('#detected');
   if (custom) { d.textContent = 'This token will be sent to the custom Jev service at the address below.'; d.style.color = 'var(--ink)'; return; }
-  if (!t) { d.textContent = $('#token').placeholder === 'saved' ? '' : 'Keys from OpenAI (they begin sk-), Anthropic (sk-ant-) and Google Gemini (AIza) are recognised, and need nothing else. Any other token needs its service address under custom Jev service.'; d.style.color = 'var(--muted)'; return; }
+  if (!t) { d.textContent = $('#token').placeholder === 'saved' ? '' : 'Keys from Jev (they begin apikey_), OpenAI (sk-), Anthropic (sk-ant-) and Google Gemini (AIza) are recognised, and need nothing else. Any other token needs its service address under custom Jev service.'; d.style.color = 'var(--muted)'; return; }
   const w = WHO(t);
-  if (w) { d.textContent = `Recognised: ${w[1]}. Nothing else to fill in. ` + (w[2] ? 'It will make images and pick which image to build on.' : 'It will pick which image to build on; it cannot make images, so the growing images carry the scene.'); d.style.color = 'var(--green)'; }
-  else { d.textContent = 'This token is not from OpenAI, Anthropic or Google. Open custom Jev service and enter the address that came with it.'; d.style.color = 'var(--amber)'; $('#custom').open = true; }
+  if (w) { d.textContent = `Recognised: ${w[1]}. Nothing else to fill in. ` + (w[0] === 'typesafe' ? 'Jev will decide the kind of speech, the warmth and pace, and which image to build on. For generated images, add an OpenAI or Gemini key under Images.' : w[2] ? 'It will make images and pick which image to build on.' : 'It will pick which image to build on; it cannot make images, so the growing images carry the scene.'); d.style.color = 'var(--green)'; }
+  else { d.textContent = 'This token is not from Jev, OpenAI, Anthropic or Google. Open custom Jev service and enter the address that came with it.'; d.style.color = 'var(--amber)'; $('#custom').open = true; }
 }
 $('#token').addEventListener('input', explain); $('#endpoint').addEventListener('input', explain);
 $('#keyBtn').onclick = async () => {
@@ -370,6 +384,7 @@ $('#keyBtn').onclick = async () => {
   $('#endpoint').value = p.provider === 'jev' ? p.endpoint || '' : ''; $('#imageEndpoint').value = p.image_endpoint || '';
   $('#custom').open = p.provider === 'jev';
   $('#token').value = ''; $('#token').placeholder = p.has_key ? 'saved' : 'paste your key here';
+  $('#imageToken').value = ''; $('#imageToken').placeholder = p.has_image_key ? 'saved' : 'optional: an OpenAI or Gemini key';
   explain();
   $('#jevState').textContent = p.service && p.service.says ? 'Now: ' + p.service.says : ''; $('#jevState').style.color = 'var(--muted)';
   $('#sheet').hidden = false;
@@ -377,7 +392,8 @@ $('#keyBtn').onclick = async () => {
 $('#close').onclick = () => $('#sheet').hidden = true;
 const saveJev = () => {
   const custom = $('#endpoint').value.trim();
-  return post('/settings', { provider: custom ? 'jev' : 'auto', endpoint: custom, image_endpoint: $('#imageEndpoint').value.trim(), key: $('#token').value.trim() || undefined });
+  jevOn = null;
+  return post('/settings', { provider: custom ? 'jev' : 'auto', endpoint: custom, image_endpoint: $('#imageEndpoint').value.trim(), key: $('#token').value.trim() || undefined, image_key: $('#imageToken').value.trim() || undefined });
 };
 $('#jevForm').onsubmit = async e => { e.preventDefault(); await saveJev(); $('#sheet').hidden = true; };
 $('#test').onclick = async () => {

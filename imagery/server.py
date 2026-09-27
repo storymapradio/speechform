@@ -131,6 +131,8 @@ def save_settings(new):
             s[k] = new[k]
     if new.get('key'):
         s['key'] = new['key'].strip()
+    if new.get('image_key'):
+        s['image_key'] = new['image_key'].strip()
     if s.get('provider') == 'auto':
         # the token says whose it is; a custom Jev address, if given, wins
         s['provider'] = 'jev' if s.get('endpoint') else (heavy.detect(s.get('key', '')) or 'stand-in')
@@ -144,7 +146,7 @@ def save_settings(new):
 def public_settings(s=None):
     s = s or settings()
     return {'provider': s.get('provider', 'stand-in'), 'endpoint': s.get('endpoint', ''), 'image_endpoint': s.get('image_endpoint', ''), 'model': s.get('model', ''),
-            'service': heavy.describe(s),
+            'service': heavy.describe(s), 'has_image_key': bool(s.get('image_key')),
             'every': s.get('every', 3), 'has_key': bool(s.get('key'))}
 
 def command(action, **kw):
@@ -250,6 +252,13 @@ def ask_provider(cfg, payload):
         return _json_in(r['content'][0]['text'])
     if p in ('openai', 'gemini'):
         return _json_in(heavy.ask_text(cfg, PROMPT + lines))
+    if p == 'typesafe':
+        h = heavy.jev_hear(cfg, ' '.join(e['text'] or '' for e in payload['transcript'][-8:]))
+        out = {'warmth': round(h['warmth'], 3), 'tempo': round(0.6 + h['tempo'], 3)}
+        if h['kind'] and (h['confidence'] or 0) > .5:
+            out['register'] = growers.FORM_TO_REGISTER.get(h['kind'], 'kelp')
+        out['why'] = f"Jev hears {h['kind']} ({round((h['confidence'] or 0) * 100)}% sure)"
+        return out
     if p == 'local':
         base = (cfg.get('endpoint') or 'http://127.0.0.1:11434/v1').rstrip('/')
         headers = {'Authorization': 'Bearer ' + cfg['key']} if cfg.get('key') else {}
@@ -516,6 +525,14 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, heavy.imagine(settings(), d.get('scene') or {}))
             except Exception as e:
                 return self._send(200, {'ok': False, 'error': str(e)[:300]})
+        if path == '/jev/hear':
+            cfg = settings()
+            if heavy.service(cfg) != 'typesafe':
+                return self._send(200, {'ok': False})
+            try:
+                return self._send(200, {'ok': True, **heavy.jev_hear(cfg, str(d.get('text', '')))})
+            except Exception as e:
+                return self._send(200, {'ok': False, 'error': str(e)[:200]})
         if path == '/choose':
             return self._send(200, heavy.choose(settings(), str(d.get('text', '')), d.get('candidates') or []))
         if path == '/frame':
@@ -532,14 +549,18 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {'ok': False, 'says': 'Paste a token first. Keys from OpenAI (sk-), Anthropic (sk-ant-) and Google Gemini (AIza) are recognised; anything else needs its address under custom Jev service.'})
             t0 = time.time()
             try:
-                if svc == 'jev':
+                if svc == 'typesafe':
+                    req = urllib.request.Request(heavy.TYPESAFE + '/v1/models', headers={'Authorization': 'Bearer ' + cfg['key']})
+                    with urllib.request.urlopen(req, timeout=15) as r:
+                        json.loads(r.read())
+                elif svc == 'jev':
                     heavy.jev(cfg, {'task': 'choose', 'text': 'test', 'candidates': [{'id': 'test', 'kind': 'story', 'keywords': []}]}, timeout=15)
                 else:
                     heavy.ask_text(cfg, 'Reply with the single word OK.', timeout=15)
                 return self._send(200, {'ok': True, 'says': f"Connected to {heavy.SERVICES[svc]['name']} in {time.time() - t0:.1f} s. " + heavy.describe(cfg)['says']})
             except Exception as e:
                 msg = str(e)
-                if msg.startswith('401') or msg.startswith('403'):
+                if '401' in msg[:40] or '403' in msg[:40]:
                     msg = 'the service refused the token (it may be mistyped, expired, or without credit)'
                 return self._send(200, {'ok': False, 'says': f"{heavy.SERVICES[svc]['name']} did not answer: {msg}"})
         if path == '/settings/test':

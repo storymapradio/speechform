@@ -230,19 +230,14 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 
 <div class="sheet" id="sheet" hidden>
   <form class="card" id="settings">
-    <label>Provider
-      <select id="provider">
-        <option value="stand-in">none</option>
-        <option value="jev">Jev</option>
-        <option value="claude">Claude (Anthropic)</option>
-        <option value="local">a local model (Ollama or llama.cpp)</option>
-      </select>
-    </label>
-    <label id="lEndpoint">Endpoint <input id="endpoint" placeholder="https://…"></label>
-    <label>Key <input id="key" type="password" autocomplete="off"></label>
-    <label>Model <input id="model" placeholder="optional"></label>
-    <label>Ask every (seconds) <input id="every" type="number" min="1" max="30" step="1" value="3"></label>
-    <p id="testNote" style="color:var(--ink)"></p>
+    <label>Token <input id="key" type="password" autocomplete="off" placeholder="paste your key here"></label>
+    <p id="detected" style="margin:0;line-height:1.5"></p>
+    <details id="custom"><summary style="cursor:pointer;color:var(--muted)">custom service</summary>
+      <label style="margin-top:8px">It is <select id="kind"><option value="jev">a custom Jev service</option><option value="local">a local model (Ollama or llama.cpp)</option></select></label>
+      <label style="margin-top:8px">Address <input id="endpoint" placeholder="https://"></label>
+      <label style="margin-top:8px">Model <input id="model" placeholder="optional"></label>
+    </details>
+    <p id="testNote" style="margin:0;line-height:1.5"></p>
     <div class="row"><button type="button" class="btn" id="close">close</button><button type="button" class="btn" id="test">test</button><button type="submit" class="btn cta">save</button></div>
   </form>
 </div>
@@ -299,21 +294,31 @@ $('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim
   if (t) { post('/say', { text: t, speaker }); $('#words').value = ''; } else if (S && S.microphone) $('#stop').click(); else $('#start').click(); };
 
 /* ── settings ── */
-$('#keyBtn').onclick = () => { const p = S ? S.provider : {}; $('#provider').value = p.provider || 'stand-in'; $('#endpoint').value = p.endpoint || '';
-  $('#model').value = p.model || ''; $('#every').value = p.every || 3; $('#key').value = '';
-  $('#key').placeholder = p.has_key ? 'saved' : '';
-  sync(); $('#sheet').hidden = false; };
-const sync = () => { const v = $('#provider').value; $('#lEndpoint').style.display = (v === 'jev' || v === 'local') ? '' : 'none';
-  $('#endpoint').placeholder = v === 'local' ? 'http://127.0.0.1:11434/v1' : 'https://'; };
-$('#provider').onchange = sync;
+/* the key: paste a token and Speechform recognises whose it is; only a custom service needs an address */
+const WHO = t => (t.startsWith('apikey_') || t.startsWith('tsk_')) ? ['Jev (TypeSafe)', 'Jev will decide the kind of speech and steer the warmth and pace of the image.'] : t.startsWith('sk-ant-') ? ['Anthropic Claude', 'It will steer the image.'] : t.startsWith('sk-') ? ['OpenAI', 'It will steer the image and, in Heavy, make images.'] : t.startsWith('AIza') ? ['Google Gemini', 'It will steer the image and, in Heavy, make images.'] : null;
+function explain() {
+  const t = $('#key').value.trim(), custom = $('#endpoint').value.trim(), d = $('#detected');
+  if (custom) { d.textContent = $('#kind').value === 'local' ? 'The local model at the address below will steer the image.' : 'This token will be sent to the custom Jev service at the address below.'; d.style.color = 'var(--ink)'; return; }
+  if (!t) { d.textContent = $('#key').placeholder === 'saved' ? '' : 'Keys from Jev (apikey_), OpenAI (sk-), Anthropic (sk-ant-) and Google Gemini (AIza) need nothing else.'; d.style.color = 'var(--muted)'; return; }
+  const w = WHO(t);
+  if (w) { d.textContent = `Recognised: ${w[0]}. Nothing else to fill in. ${w[1]}`; d.style.color = 'var(--green)'; }
+  else { d.textContent = 'This token is not from Jev, OpenAI, Anthropic or Google. Open custom service and enter the address that came with it.'; d.style.color = 'var(--amber)'; $('#custom').open = true; }
+}
+['#key', '#endpoint'].forEach(s => $(s).addEventListener('input', explain)); $('#kind').onchange = explain;
+$('#keyBtn').onclick = () => { const p = (S && S.provider) || {};
+  const custom = p.provider === 'jev' || p.provider === 'local';
+  $('#kind').value = p.provider === 'local' ? 'local' : 'jev'; $('#endpoint').value = custom ? p.endpoint || '' : ''; $('#model').value = p.model || '';
+  $('#custom').open = custom; $('#key').value = ''; $('#key').placeholder = p.has_key ? 'saved' : 'paste your key here';
+  explain(); $('#testNote').textContent = p.service && p.service.says ? 'Now: ' + p.service.says : ''; $('#testNote').style.color = 'var(--muted)';
+  $('#sheet').hidden = false; };
+const saveKey = () => { const custom = $('#endpoint').value.trim();
+  return post('/settings', { provider: custom ? $('#kind').value : 'auto', endpoint: custom, model: $('#model').value.trim(), key: $('#key').value.trim() || undefined }); };
 $('#close').onclick = () => $('#sheet').hidden = true;
-$('#test').onclick = async () => { $('#testNote').textContent = '…';
-  await post('/settings', { provider: $('#provider').value, endpoint: $('#endpoint').value.trim(), model: $('#model').value.trim(), every: +$('#every').value || 3, key: $('#key').value.trim() || undefined });
-  const r = await post('/settings/test', {});
-  $('#testNote').textContent = !r ? '✕' : r.ok ? `✓ ${r.seconds ? r.seconds + 's' : ''}` : '✕ ' + r.error; };
-$('#settings').onsubmit = e => { e.preventDefault();
-  post('/settings', { provider: $('#provider').value, endpoint: $('#endpoint').value.trim(), model: $('#model').value.trim(),
-    every: +$('#every').value || 3, key: $('#key').value.trim() || undefined }).then(() => { $('#sheet').hidden = true; poll(); }); };
+$('#test').onclick = async () => { $('#testNote').textContent = 'Testing…'; $('#testNote').style.color = 'var(--muted)';
+  await saveKey(); const r = await post($('#kind').value === 'local' && $('#endpoint').value.trim() ? '/settings/test' : '/jev/test', {});
+  const ok = r && r.ok; $('#testNote').textContent = !r ? '✕ The Speechform server is not answering.' : (ok ? '✓ ' : '✕ ') + (r.says || (r.seconds ? 'answered in ' + r.seconds + ' s' : r.error || ''));
+  $('#testNote').style.color = ok ? 'var(--green)' : 'var(--red)'; };
+$('#settings').onsubmit = e => { e.preventDefault(); saveKey().then(() => { $('#sheet').hidden = true; poll(); }); };
 
 /* ── drawing ── */
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

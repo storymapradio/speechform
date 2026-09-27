@@ -33,19 +33,26 @@ Every image Jev makes is kept in `runtime/bank/`, with its style, image and keyw
 
 ## The token
 
-Tap the key icon and paste your token. That is all Speechform needs for keys from the three services it knows. It recognises the key by how it begins and fills in the service's address itself:
+Tap the key icon and paste your token. That is all Speechform needs for keys from the services it knows. It recognises the key by how it begins and fills in the service's address itself:
 
 | The key begins | Service | What it does here |
 | --- | --- | --- |
+| `apikey_` or `tsk_` | Jev, by [TypeSafe](https://docs.typesafe.ai) | decides as you speak: the kind of speech (a choice among the nineteen, with its confidence), the warmth and pace (scores), whether a passage is safe to draw (true or false), and which saved image to build on. Jev is a decision model and makes no images; for generated images, add an OpenAI or Gemini key under **Images** |
 | `sk-` or `sk-proj-` | OpenAI | makes the images (gpt-image-1) and picks which image to build on |
 | `AIza` | Google Gemini | makes the images (Gemini 2.5 Flash Image) and picks which image to build on |
 | `sk-ant-` | Anthropic Claude | picks which image to build on; Claude cannot make images, so the growing images carry the scene |
+
+**Images** takes an optional second key, from OpenAI or Gemini, used only to make images, so Jev can decide while another service draws.
 
 **Test** makes one small, nearly free call, not an image, and says whether the service accepted the token. If it did not, it says why: for example, that the key was refused because it is mistyped, expired, or out of credit.
 
 Any other token belongs to a custom Jev service. Open **custom Jev service** and enter the address that came with the token (and an image address, if images come from somewhere else).
 
 The token is saved on your Mac in `~/.config/speechform/settings.json`, which only you can read. The page never sees it: the Speechform server makes the calls.
+
+## Speechform Keys
+
+`keys/add-key.sh`, wrapped as the Speechform Keys app, is one place to add a key for every version. It takes the key in a Mac dialog, saves it for Speechform, adds it to the login Keychain as `speechform` for anything else on the Mac (`security find-generic-password -s speechform -w`), and tests it.
 
 ## A custom Jev service
 
