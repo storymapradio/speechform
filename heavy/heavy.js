@@ -57,9 +57,9 @@ function matchIdea(text) {
     const shared = k.filter(w => idea.keys.has(w)).length / Math.max(1, Math.min(k.length, idea.keys.size));
     if (shared > score) { score = shared; best = idea; }
   }
-  if (best && score >= .3) { if (prev && prev.idea !== best.id) best.returns++; k.forEach(w => best.keys.add(w)); best.words += text.split(/\s+/).length; return best; }
+  if (best && score >= .3) { if (prev && prev.idea !== best.id) best.returns++; k.forEach(w => best.keys.add(w)); best.words += text.split(/\s+/).length; best.n = (best.n || 1) + 1; return best; }
   if (!k.length && prev) { const p = S.ideas.find(i => i.id === prev.idea); if (p) return p; }
-  const idea = { id: 'i' + S.ideas.length, title: k.slice(0, 3).join(' ') || 'a thought', keys: new Set(k), words: text.split(/\s+/).length, returns: 0 };
+  const idea = { id: 'i' + S.ideas.length, title: k.slice(0, 3).join(' ') || 'a thought', keys: new Set(k), words: text.split(/\s+/).length, returns: 0, n: 1 };
   S.ideas.push(idea); return idea;
 }
 const WARM = new Set('sun fire flame gold golden home hearth grandmother mother love warm summer bread honey light lantern amber red heart dawn morning'.split(' '));

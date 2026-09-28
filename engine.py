@@ -40,12 +40,13 @@ class Engine:
  def classify(self,text):
   """the kind of a passage: nearest examples, less each kind's general pull, plus how the passage is built"""
   v=self.model.encode([text],normalize_embeddings=True)[0]
-  base=self.kind_scores(v)-self.bias
+  match=self.kind_scores(v);base=match-self.bias
   sg=signals(text);scores=base.copy();fired=[]
+  self.last_parts={'match':match,'signals':np.zeros(len(self.labels)),'sg':sg}
   for k,w in SIGNALS.items():
    add=sum(sg[f]*wt for f,wt in w.items())
    if add>0.005:
-    scores[self.labels.index(k)]+=add
+    scores[self.labels.index(k)]+=add;self.last_parts['signals'][self.labels.index(k)]+=add
     top=max(w,key=lambda f:sg[f]*w[f])
     fired.append({'form':k,'cue':top,'add':round(add,3)})
   return v,scores,fired,sg
@@ -63,11 +64,15 @@ class Engine:
   so the kind follows the passage without topic leaking between different passages"""
   v,s,fired,sg=self.classify(text)
   acc=s*len(text.split());wsum=float(len(text.split()));age=len(text.split());vec=v*len(text.split())
+  weights=[{'id':None,'text':text,'w':float(len(text.split()))}]
   for e in reversed(recent):
    k=len(e['text'].split());w=np.exp(-age/self.RECENCY)*k
    ps=self.phrase_scores.get(e['id'])
    if ps is None:continue
    acc=acc+w*ps;wsum+=w;vec=vec+w*self.phrase_vecs[e['id']];age+=k
+   weights.insert(0,{'id':e['id'],'text':e['text'],'w':float(w)})
+  # each phrase's share of the verdict, oldest first, this phrase last
+  self.last_weights=[{**x,'w':round(x['w']/wsum,3)} for x in weights]
   vec=vec/(np.linalg.norm(vec)+1e-9)
   return v,s,acc/wsum,vec,fired
  def reset(self):
@@ -105,7 +110,9 @@ class Engine:
   idea=dict(self.last_match)
   event={'id':event_id,'text':text,'speaker':speaker,'source':source,'topic':topic['id'],'form':new,'at':now,'start':start,'end':end,
    'why':{'scores':[{'form':k,'similarity':round(v,3)} for k,v in ranked],'cues':fired,'candidate':candidate,'margin':round(margin,3),
-          'held':self.candidate_count,'from':old,'form':new,'reason':why,'idea':idea,'window':passage,'window_words':nwords}}
+          'held':self.candidate_count,'from':old,'form':new,'reason':why,'idea':idea,'window':passage,'window_words':nwords,
+          'own':{k:round(float(v),3) for k,v in zip(self.labels,own)},'weights':self.last_weights,
+          'parts':self.parts(ranked),'signals':{k:round(float(v),3) for k,v in self.last_parts['sg'].items()}}}
   topic['events'].append(event_id);topic['words']+=len(words(text));topic['updated']=now
   self.state['events'].append(event)
   self.state['words']=dict(Counter(self.state['words'])+Counter(words(text)))
@@ -124,6 +131,13 @@ class Engine:
   self.phrase_heat[event_id]=own_heat
   event['why']['saliency']=[w for e in recent for w in self.phrase_heat.get(e['id'],[[t,0.0] for t in e['text'].split()])]+own_heat
   return event
+ def parts(self,ranked):
+  """how this phrase's own score was built for the leading kinds: nearest examples, less the kind's general pull, plus its signals"""
+  P=self.last_parts;out={}
+  for k,_ in ranked[:5]:
+   i=self.labels.index(k)
+   out[k]={'match':round(float(P['match'][i]),3),'bias':round(float(-self.bias[i]),3),'signals':round(float(P['signals'][i]),3)}
+  return out
  def xy(self,v):
   f=(v-self.mean)@self.axes.T/self.scale
   return {'x':round(float(max(-1.4,min(1.4,f[0]))),3),'y':round(float(max(-1.4,min(1.4,f[1]))),3)}

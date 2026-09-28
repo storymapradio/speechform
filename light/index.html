@@ -71,6 +71,15 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .g .line2 { display: block; height: 3px; background: #0d130c; border-radius: 2px; margin-top: 4px; overflow: hidden; }
 .g .line2 i { display: block; height: 100%; background: var(--amber); transition: width .6s ease; }
 .day { color: var(--green); font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; margin: 14px 4px 4px; }
+.vbar { display: flex; justify-content: center; gap: 2px; padding: 6px 8px 2px; flex: 0 0 auto; border-bottom: 1px solid var(--faint); }
+.vchip { display: grid; place-items: center; width: 36px; height: 30px; padding: 0; background: none; border: none; border-radius: 8px; color: var(--ink); opacity: .45; cursor: pointer; transition: opacity .18s, color .18s, background .18s; }
+.vchip svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.vchip:hover { opacity: 1; color: var(--amber); }
+.vchip.on { opacity: 1; color: var(--green); background: var(--green-faint); }
+.vwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 8px; }
+.vwrap[hidden] { display: none; }
+.vwrap canvas { flex: 1; min-height: 0; width: 100%; display: block; cursor: pointer; }
+.vwrap p { margin: 6px 2px 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
 .mem-head { display: flex; gap: 8px; align-items: center; padding: 10px 12px 4px; }
 .mem-head span { color: var(--muted); font-size: 11px; white-space: nowrap; }
 </style>
@@ -94,6 +103,8 @@ body { display: flex; justify-content: center; overflow: hidden; }
         <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit" class="mic" id="micBtn" title="speak, or send what is typed" aria-label="record"><svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button></form>
       </section>
       <section class="page">
+        <div class="vbar" id="vbar"></div>
+        <div class="vwrap" id="vwrap" hidden><canvas id="vcan"></canvas><p id="vnote"></p></div>
         <div class="scroll" id="why">
           <div class="step"><h4>heard</h4><p class="heat" id="heat"></p><p class="quiet" id="heardMeta"></p></div>
           <div class="step"><h4>how it is built</h4><div class="gauge" id="shape"></div></div>
@@ -112,6 +123,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
 </div>
 <script src="classify.js"></script>
 <script src="growers.js"></script>
+<script src="views.js"></script>
 <script>
 'use strict';
 const C = window.SpeechformClassify, G = window.SpeechformGrowers;
@@ -144,11 +156,11 @@ function matchIdea(text) {
   const line = returning ? .2 : .3;
   if (best && score >= line) {
     if (S.phrases.length && S.phrases[S.phrases.length - 1].idea !== best.id) best.returns++;
-    k.forEach(w => best.keys.add(w)); best.words += text.split(/\s+/).length;
+    k.forEach(w => best.keys.add(w)); best.words += text.split(/\s+/).length; best.n = (best.n || 1) + 1;
     return { idea: best, score, line, result: `returns to "${best.title}"` };
   }
   if (!k.length && prev) { const p = S.ideas.find(i => i.id === prev.idea); if (p) { p.words += text.split(/\s+/).length; return { idea: p, score: 1, line, result: `stays with "${p.title}"` }; } }
-  const idea = { id: 'i' + Date.now().toString(36) + S.ideas.length, title: k.slice(0, 3).join(' ') || 'a thought', keys: new Set(k), words: text.split(/\s+/).length, returns: 0 };
+  const idea = { id: 'i' + Date.now().toString(36) + S.ideas.length, title: k.slice(0, 3).join(' ') || 'a thought', keys: new Set(k), words: text.split(/\s+/).length, returns: 0, n: 1 };
   S.ideas.push(idea);
   return { idea, score, line, result: `a new idea: "${idea.title}"` };
 }
@@ -187,12 +199,13 @@ function ingest(text, source) {
   const k = keys(text); S.firstKeys = S.firstKeys || new Set(k);
   S.radius = S.conclusionAt && now() - S.conclusionAt < 1 ? 0 : Math.max(.12, Math.min(.95, 1 - k.filter(w => S.firstKeys.has(w)).length / Math.max(1, k.length)));
   const p = { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text, at: now(), source, kind, image, idea: idea.idea.id,
-              scores: own.scores, because: own.because, structure: heard.own.structure, ranked: heard.ranked, window: heard.recent.map(r => r.text),
+              scores: own.scores, because: own.because, parts: own.parts, weights: heard.weights, structure: heard.own.structure, ranked: heard.ranked, window: heard.recent.map(r => r.text),
               reason: choice.reason, ideaWhy: { result: idea.result, score: idea.score, line: idea.line } };
   S.phrases.push(p);
   direct();
   remember(p);
   drawLines(); if (page === 1) drawWhy(); if (page === 2) drawMemory();
+  V.set(trace());
 }
 
 /* ── memory: everything said here, kept in this browser ── */
@@ -300,7 +313,7 @@ function paintControls() {
   $('#micBtn').classList.toggle('live', listening);
 }
 $('#start').onclick = start; $('#stop').onclick = stop;
-$('#fresh').onclick = () => { fresh(); drawLines(); drawWhy(); };
+$('#fresh').onclick = () => { fresh(); drawLines(); drawWhy(); V.set(trace()); };
 $('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim();
   if (t) { ingest(t, 'Typed'); $('#words').value = ''; } else if (listening) stop(); else start(); };
 paintControls();
@@ -319,6 +332,14 @@ function frame(t) {
          memory: S.dir.memory, radius: S.radius, point: now() - S.conclusionAt < 7, ideas: S.ideas, activeIdea: last && last.idea, speakers: S.speakers } });
 }
 requestAnimationFrame(frame);
+
+/* ── the classifier's other views: one trace, drawn five more ways ── */
+const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.documentElement).getPropertyValue('--r-' + C.IMAGE[k]).trim() || '#39ff14');
+const trace = () => ({ kinds: C.KINDS, color: colorOf, focus: S.selected, ideas: S.ideas, active: (S.phrases[S.phrases.length - 1] || {}).idea,
+  phrases: S.phrases.map(p => ({ id: p.id, text: p.text, kind: p.kind, ranked: p.ranked, own: p.scores, weights: p.weights, parts: p.parts, signals: p.structure, idea: p.idea })) });
+const V = window.SpeechformViews.mount({ bar: $('#vbar'), canvas: $('#vcan'), note: $('#vnote'),
+  onView: v => { $('#why').hidden = v !== 'now'; $('#vwrap').hidden = v === 'now'; },
+  onPick: id => { S.selected = id; drawLines(); drawWhy(); V.set(trace()); } });
 
 /* ── the lower screens ── */
 let page = 0;
@@ -340,7 +361,7 @@ function drawLines() {
     return `<div class="line ${S.selected === p.id ? 'sel' : ''}" data-id="${p.id}"><div class="said">${esc(p.text)}</div>
       <div class="meta"><span class="chip" style="color:${col(p.image)}">${esc(p.kind)} → ${p.image}</span><span class="chip ${back ? 'back' : 'idea'}">${back ? '↺ ' : ''}${esc(idea.title)}</span></div></div>`;
   }).join('') + (interim ? `<div class="line interim">${esc(interim)}</div>` : '');
-  box.querySelectorAll('.line[data-id]').forEach(l => l.onclick = () => { S.selected = l.dataset.id; drawLines(); go(1); });
+  box.querySelectorAll('.line[data-id]').forEach(l => l.onclick = () => { S.selected = l.dataset.id; drawLines(); go(1); V.set(trace()); });
   box.scrollTop = box.scrollHeight;
 }
 

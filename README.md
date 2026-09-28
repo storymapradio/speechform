@@ -19,20 +19,26 @@ A one-minute recording is in [docs/demo.mp4](docs/demo.mp4).
   - **The choice** is stated with its reason, such as "a clear margin of 0.21" or "held until it is heard again".
   - **The idea** shows whether the phrase starts a new idea or returns to one, measured against a threshold.
   - **The direction** shows who is steering the image and every value they set, with a log of each decision and its reasons.
+- **Five more views of the classifier**, chosen by the icons above it (`light/views.js`, shared by the full app and Light):
+  - **River** shows every kind's share of the points after each phrase as a stream, with the chosen kind in a strip beneath and each switch named. The choice can lag the stream, because a new kind must lead clearly or lead twice.
+  - **Window** shows the minute of talk a phrase was heard with, and the share of the verdict each earlier phrase earned as its words recede.
+  - **Build** shows how the five leading kinds' points were built. In the full app that is the nearest examples, less the kind's general pull, plus the shape of the passage. In Light it is each marker word and each shape.
+  - **Shape** is a radar of how the phrase is built (commands, questions, "I", past tense, run-ons, refrains and more), with the phrases before it fading behind.
+  - **Ideas** shows every idea as a hexagon sized by its words, with every phrase tied to its idea and the returns drawn in amber.
 - **Memory.** Everything you have said in Speechform, across every session, grouped by day and searchable. Tap a phrase to watch it being classified again.
 
 | Kind of speech | Image | What grows |
 | --- | --- | --- |
-| Poetry | bloom | Petals open in a golden-angle spiral. |
-| Story, reading aloud, character | path | A winding trail with lanterns climbs toward the horizon. |
-| Scenery | land | Ridgelines rise one behind another. |
-| Lore, myth | hive | Hexagons are laid ring by ring. |
-| Cosmology | orrery | Bodies join a sun on widening orbits. |
-| Mystery, argument | rings | Rings close in on a point, and the centre blinks at "the point of all of this is". |
-| Instruction, lecture, lesson | stack | Stones build into a cairn. |
-| Reflection, stream of consciousness, thinking aloud | kelp | One still stalk grows a branch for each idea. A return lengthens that branch. |
-| Dialogue | tide | Two tides meet where the speakers' share of the talk balances. |
-| Song, lyrics | waves | Ribbons swell with the voice. |
+| Poetry | bloom | Petals open in a golden-angle spiral around stamens. Each new idea opens a smaller flower in a ring around it. |
+| Story, reading aloud, character | path | A winding trail with lanterns and footprints climbs toward the horizon. Each new idea forks a path off it, and each return lights a lantern on that path. |
+| Scenery | land | Ridgelines rise one behind another, a river winds down from the horizon, and stars come out above. |
+| Lore, myth | hive | Hexagons are laid ring by ring. Each idea buds a comb of its own, and the comb in play glows with honey. |
+| Cosmology | orrery | Bodies join a sun on widening orbits. Each idea is a planet with a moon for every return. |
+| Mystery, argument | rings | Rings close in on a point, and the centre blinks at "the point of all of this is". Each idea ripples from a centre of its own, and the ripples cross. |
+| Instruction, lecture, lesson | stack | Stones build into a cairn of towers, with arched bridges laid between them at every level both reach. |
+| Reflection, stream of consciousness, thinking aloud | kelp | One still stalk grows a branch for each idea. Every return forks the branch, every phrase adds a bud, and bubbles rise. |
+| Dialogue | tide | Two tides meet where the speakers' share of the talk balances, and foam gathers at the line. |
+| Song, lyrics | waves | Ribbons swell with the voice. Each idea adds a ribbon with a rhythm of its own. |
 
 ## What you need
 

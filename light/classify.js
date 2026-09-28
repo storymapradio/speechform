@@ -84,21 +84,21 @@
   function scorePhrase(text) {
     const low = ' ' + text.toLowerCase().replace(/[“”]/g, '"').replace(/’/g, "'") + ' ';
     const n = Math.max((low.match(/[a-z']+/g) || []).length, 1);
-    const scores = {}, because = {};
-    const sg = structure(text);
+    const scores = {}, because = {}, parts = {};
+    const sg = structure(text), soft = 1.5 / Math.sqrt(n);
     for (const k of KINDS) {
-      let s = 0; const why = [];
+      let s = 0; const why = [], built = [];
       for (const [re, w] of MARKERS[k] || []) {
         const hits = low.match(re) || [];
-        if (hits.length) { s += w * hits.length; hits.forEach(h => why.push(h.trim())); }
+        if (hits.length) { s += w * hits.length; hits.forEach(h => { why.push(h.trim()); built.push({ label: h.trim(), add: w * soft, type: 'word' }); }); }
       }
-      s = s / Math.sqrt(n) * 1.5;                       // markers per length, softened for long passages
+      s = s * soft;                                     // markers per length, softened for long passages
       for (const [f, w] of Object.entries(SHAPE[k] || {})) {
-        if (sg[f] > .05) { s += w * sg[f]; why.push(f); }
+        if (sg[f] > .05) { s += w * sg[f]; why.push(f); built.push({ label: f, add: w * sg[f], type: 'shape' }); }
       }
-      scores[k] = s; because[k] = why;
+      scores[k] = s; because[k] = why; parts[k] = built;
     }
-    return { scores, because, structure: sg };
+    return { scores, because, parts, structure: sg };
   }
 
   /* a phrase with the minute before it: each phrase's points averaged, the newest words counting most */
@@ -114,13 +114,16 @@
     }
     const total = {}; KINDS.forEach(k => total[k] = own.scores[k] * text.split(/\s+/).length);
     let wsum = text.split(/\s+/).length, age = wsum;
+    const weights = [{ id: null, text, w: wsum }];
     for (let i = recent.length - 1; i >= 0; i--) {
       const h = recent[i]; const k = h.text.split(/\s+/).length; const w = Math.exp(-age / RECENCY) * k;
       KINDS.forEach(kind => total[kind] += w * (h.scores ? h.scores[kind] : 0)); wsum += w; age += k;
+      weights.unshift({ id: h.id, text: h.text, w });
     }
     KINDS.forEach(k => total[k] /= wsum);
+    weights.forEach(x => x.w /= wsum);                // each phrase's share of the verdict, oldest first
     const ranked = KINDS.map(k => [k, total[k]]).sort((a, b) => b[1] - a[1]);
-    return { ranked, own, words, recent };
+    return { ranked, own, words, recent, weights };
   }
 
   /* the decision: take a new kind when it clearly leads, or after it has led twice */

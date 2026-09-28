@@ -154,6 +154,15 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 .reveal { opacity: .25; transition: opacity .5s ease; }
 .reveal.on { opacity: 1; }
 
+.vbar { display: flex; justify-content: center; gap: 2px; padding: 6px 8px 2px; flex: 0 0 auto; border-bottom: 1px solid var(--faint); }
+.vchip { display: grid; place-items: center; width: 36px; height: 30px; padding: 0; background: none; border: none; border-radius: 8px; color: var(--ink); opacity: .45; cursor: pointer; transition: opacity .18s, color .18s, background .18s; }
+.vchip svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.vchip:hover { opacity: 1; color: var(--amber); }
+.vchip.on { opacity: 1; color: var(--green); background: var(--green-faint); }
+.vwrap { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 8px 10px 8px; }
+.vwrap[hidden] { display: none; }
+.vwrap canvas { flex: 1; min-height: 0; width: 100%; display: block; cursor: pointer; }
+.vwrap p { margin: 6px 2px 0; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
 /* memory */
 .mem-head { display: flex; gap: 8px; align-items: center; padding: 10px 12px 4px; }
 .mem-head input { flex: 1; min-width: 0; background: #000; color: var(--ink); border: 1px solid var(--faint); border-radius: 10px; padding: 8px 10px; font: inherit; }
@@ -203,6 +212,8 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
       </section>
       <section class="page">
         <div class="pipe" id="pipe"></div>
+        <div class="vbar" id="vbar"></div>
+        <div class="vwrap" id="vwrap" hidden><canvas id="vcan"></canvas><p id="vnote"></p></div>
         <div class="scroll" id="why">
           <div class="step reveal" data-at="0"><h4>heard</h4><p class="heat" id="heat"></p><p class="quiet" id="heardMeta"></p></div>
           <div class="step reveal" data-at="2"><h4>where it lands among twenty kinds of speech</h4><canvas class="map" id="map"></canvas>
@@ -242,6 +253,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
   </form>
 </div>
 
+<script src="/light/views.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const FRAME = 'http://127.0.0.1:9983/frame.jpg';
@@ -522,11 +534,26 @@ async function drawMemory(force) {
 }
 $('#find').addEventListener('input', () => drawMemory());
 
+/* ── the classifier's other views: the engine's trace, drawn five more ways ── */
+const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.documentElement).getPropertyValue('--r-' + ((S && S.form_to_register[k]) || 'kelp')).trim() || '#39ff14');
+function trace() {
+  const parts = w => Object.fromEntries(Object.entries(w.parts || {}).map(([k, q]) => {
+    const cue = (w.cues || []).find(c => c.form === k);
+    return [k, [{ label: 'examples', add: q.match, type: 'example' }, { label: 'pull', add: q.bias, type: 'bias' }].concat(q.signals > .001 ? [{ label: cue ? cue.cue : 'shape', add: q.signals, type: 'shape' }] : [])];
+  }));
+  return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea,
+    phrases: S.transcript.filter(e => e.why && e.why.scores).map(e => ({ id: e.id, text: e.text, kind: e.form, idea: e.idea, engine: true,
+      ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: parts(e.why), signals: e.why.signals })) };
+}
+const V = window.SpeechformViews.mount({ bar: $('#vbar'), canvas: $('#vcan'), note: $('#vnote'),
+  onView: v => { $('#why').hidden = v !== 'now'; $('#vwrap').hidden = v === 'now'; },
+  onPick: id => { selected = id; drawLines(); focusNow(true); V.set(trace()); } });
+
 async function poll() {
   try {
     const r = await fetch('/state'); S = await r.json();
     drawControls();
-    drawLines(); focusNow(false);
+    drawLines(); focusNow(false); V.set(trace());
   } catch (e) { /* the server is starting */ }
 }
 poll(); setInterval(poll, 800);

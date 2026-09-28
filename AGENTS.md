@@ -68,7 +68,7 @@ For Speechform Heavy, the same endpoint also receives `{"task": "image", ...}` a
 
 | Call | Does |
 | --- | --- |
-| `GET /state` | everything the app shows, including each phrase's full reasoning under `why` |
+| `GET /state` | everything the app shows, including each phrase's full reasoning under `why`: `scores` (with the minute of talk), `own` (the phrase alone), `weights` (each phrase's share of the verdict), `parts` (examples, general pull and signals for the leading kinds), `signals`, `cues`, `margin`, `reason`, `idea`, `xy` and `saliency` |
 | `GET /memory` | everything said in the app, newest first |
 | `POST /say` `{"text": "...", "speaker": "A"}` | a typed phrase, classified like speech (add `"test": true` so it stays out of memory) |
 | `POST /start` | opens TouchDesigner if needed, then listens |

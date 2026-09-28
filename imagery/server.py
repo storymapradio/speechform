@@ -183,7 +183,7 @@ def listen_payload(n=24):
         'transcript': [{'text': e.get('text'), 'form': e.get('form'), 'speaker': e.get('speaker'),
                         'idea': e.get('topic'), 'at': e.get('at')} for e in events],
         'form': s.get('form'), 'active_idea': s.get('active_topic'),
-        'ideas': [{'id': t['id'], 'title': t.get('title'), 'words': t.get('words'), 'returns': t.get('returns')} for t in s.get('topics', [])],
+        'ideas': [{'id': t['id'], 'title': t.get('title'), 'words': t.get('words'), 'returns': t.get('returns'), 'n': len(t.get('events', []))} for t in s.get('topics', [])],
         'registers': REGISTERS, 'direction': current,
         'directed_by': 'jev' if time.time() - last_jev < 8 else 'director',
     }
@@ -401,7 +401,7 @@ def app_state():
                         'idea': e.get('topic'), 'at': e.get('at'), 'source': e.get('source'), 'why': e.get('why'),
                         'register': growers.FORM_TO_REGISTER.get(e.get('form'), 'kelp')} for e in events],
         'form': s.get('form'), 'scores': s.get('scores', []), 'status': s.get('status'), 'processing': s.get('processing'),
-        'ideas': [{'id': t['id'], 'title': t.get('title'), 'words': t.get('words'), 'returns': t.get('returns')} for t in s.get('topics', [])],
+        'ideas': [{'id': t['id'], 'title': t.get('title'), 'words': t.get('words'), 'returns': t.get('returns'), 'n': len(t.get('events', []))} for t in s.get('topics', [])],
         'active_idea': s.get('active_topic'), 'radius': s.get('radius'), 'conclusion_at': s.get('conclusion_at'),
         'map': s.get('map') or {'forms': [], 'ideas': []},
         'mix': mix, 'growth': grow, 'lead': max(mix, key=mix.get), 'form_to_register': growers.FORM_TO_REGISTER,
