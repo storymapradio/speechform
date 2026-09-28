@@ -72,8 +72,8 @@ body { display: flex; justify-content: center; overflow: hidden; }
 
 /* the bottom screen: two pages side by side, swung left and right */
 .lower { position: relative; flex: 1 1 auto; min-height: 0; border: 2px solid var(--green-dim); border-radius: 14px; overflow: hidden; background: var(--panel); }
-.track { display: flex; width: 300%; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.24,1); }
-.page { width: 33.3334%; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.track { display: flex; width: 400%; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.24,1); }
+.page { width: 25%; height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .scroll { flex: 1; overflow-y: auto; padding: 12px 12px 6px; scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
 
 /* transcript */
@@ -190,6 +190,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
     <button class="tool on" data-page="0" aria-label="transcript" title="transcript"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10.5h14M5 15h14M5 19.5h8"/></svg></button>
     <button class="tool" data-page="1" aria-label="classifier" title="classifier"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><circle cx="19" cy="12" r="2"/><path d="M6.6 10.6l3.8-3.6M6.6 13.4l3.8 3.6M13.6 7l3.8 3.6M13.6 17l3.8-3.6"/></svg></button>
     <button class="tool" data-page="2" aria-label="memory" title="memory"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></button>
+    <button class="tool" data-page="3" aria-label="cards" title="cards"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="11" height="15" rx="2"/><path d="M8.5 21h9a2 2 0 0 0 2-2V7"/></svg></button>
     <span class="gap"></span>
     <button class="tool act" id="start" aria-label="start" title="start"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><i class="badge"></i></button>
     <button class="tool act" id="stop" aria-label="stop" title="stop"><svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
@@ -234,6 +235,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
         <div class="mem-head"><input id="find" placeholder="search" autocomplete="off"><span id="memCount"></span></div>
         <div class="scroll" id="mem"></div>
       </section>
+      <section class="page" id="deckPage"></section>
     </div>
     
   </div>
@@ -254,6 +256,8 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 </div>
 
 <script src="/light/views.js"></script>
+<script src="/light/reading.js"></script>
+<script src="/light/deck.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const FRAME = 'http://127.0.0.1:9983/frame.jpg';
@@ -271,8 +275,8 @@ let S = null, page = 0, selected = null, speaker = 'A', lastCount = 0;
 
 /* ── the bottom screen swings between its two pages ── */
 function go(i) {
-  page = Math.max(0, Math.min(2, i));
-  $('#track').style.transform = `translateX(${-100 / 3 * page}%)`;
+  page = Math.max(0, Math.min(3, i));
+  $('#track').style.transform = `translateX(${-25 * page}%)`;
   document.querySelectorAll('.tool[data-page]').forEach(t => t.classList.toggle('on', +t.dataset.page === page));
   if (page === 1) drawWhy();
   if (page === 2) drawMemory();
@@ -288,7 +292,7 @@ $('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math
 const post = (p, b) => fetch(p, { method: 'POST', body: JSON.stringify(b) }).then(r => r.json()).catch(() => null);
 let waking = false;
 $('#start').onclick = () => { if ($('#start').classList.contains('idle-press') || (S && S.microphone && S.status && S.status.touchdesigner)) return; waking = true; post('/start', { speaker }).then(poll); };
-$('#stop').onclick = () => { waking = false; post('/stop', {}).then(poll); };
+$('#stop').onclick = () => { const was = S && S.microphone; waking = false; post('/stop', {}).then(() => { poll(); if (was) makeCard(true); }); };
 function drawControls() {
   const st = S.status || {};
   const listening = !!S.microphone && st.touchdesigner;
@@ -341,10 +345,10 @@ const ago = t => { const s = Math.max(0, Math.round((S.now - t))); return s < 60
 function drawLines() {
   const box = $('#lines');
   const T = S.transcript;
-  if (!T.length) { box.innerHTML = ''; lastCount = 0; return; }
+  if (!T.length) { box.innerHTML = ''; box._html = ''; lastCount = 0; return; }
   const titles = Object.fromEntries(S.ideas.map(i => [i.id, i]));
   const seen = new Set();
-  box.innerHTML = T.map(e => {
+  const html = T.map(e => {
     const idea = titles[e.idea] || {}; const back = seen.has(e.idea); seen.add(e.idea);
     return `<div class="line ${selected === e.id ? 'sel' : ''}" data-id="${esc(e.id)}">
       <span class="who ${esc(e.speaker)}">${esc(e.speaker)}</span>
@@ -352,7 +356,9 @@ function drawLines() {
       <div class="meta"><span class="chip" style="color:${col(e.register)}">${esc(e.form)} → ${esc(e.register)}</span>
       <span class="chip ${back ? 'back' : 'idea'}">${back ? '↺ ' : ''}${esc(idea.title || 'an idea')}</span></div></div></div>`;
   }).join('');
-  box.querySelectorAll('.line').forEach(l => l.onclick = () => { selected = l.dataset.id; drawLines(); go(1); focusNow(true); });
+  /* redrawn only when it changes, so words selected in it stay selected */
+  if (html === box._html) return; box._html = html; box.innerHTML = html;
+  box.querySelectorAll('.line').forEach(l => l.onclick = () => { if (getSelection().toString()) return; selected = l.dataset.id; drawLines(); go(1); focusNow(true); });
   if (T.length !== lastCount) { box.scrollTop = box.scrollHeight; lastCount = T.length; }
 }
 
@@ -542,18 +548,48 @@ function trace() {
     return [k, [{ label: 'examples', add: q.match, type: 'example' }, { label: 'pull', add: q.bias, type: 'bias' }].concat(q.signals > .001 ? [{ label: cue ? cue.cue : 'shape', add: q.signals, type: 'shape' }] : [])];
   }));
   return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea,
-    phrases: S.transcript.filter(e => e.why && e.why.scores).map(e => ({ id: e.id, text: e.text, kind: e.form, idea: e.idea, engine: true,
+    phrases: S.transcript.filter(e => e.why && e.why.scores).map(e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea, engine: true,
       ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: parts(e.why), signals: e.why.signals })) };
 }
 const V = window.SpeechformViews.mount({ bar: $('#vbar'), canvas: $('#vcan'), note: $('#vnote'),
   onView: v => { $('#why').hidden = v !== 'now'; $('#vwrap').hidden = v === 'now'; },
-  onPick: id => { selected = id; drawLines(); focusNow(true); V.set(trace()); } });
+  onPick: id => { if (pinned) return; selected = id; drawLines(); focusNow(true); V.set(trace()); } });
+/* a section being looked at stays in the views until something new is said */
+let pinned = null, pinnedAt = 0;
+const views = () => V.set(pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace()));
+
+/* ── the deck: a recording becomes a card when it stops ── */
+const D = window.SpeechformDeck.mount({ page: $('#deckPage'), server: true,
+  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; go(1); if (V.view === 'now') document.querySelector('.vchip[data-v=river]').click(); views(); } });
+async function makeCard(recording) {
+  if (!S) return;
+  let phrases = trace().phrases;
+  const since = S.recording_since || 0;
+  if (recording && since && phrases.some(p => p.at >= since)) phrases = phrases.filter(p => p.at >= since);
+  if (!phrases.length) return;
+  go(3);
+  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' ') });
+}
+D.onMake(() => makeCard(false));
+/* select words in the transcript: the engine reads them on their own, and the section is kept */
+window.SpeechformDeck.selector($('#lines'), async text => {
+  const r = await post('/classify', { text }); if (!r || !r.ok) return;
+  const trace2 = { kinds: Object.keys(S.form_to_register), focus: null, ideas: r.topics, active: null,
+    phrases: r.events.map(e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.topic, engine: true, ranked: e.why.scores.map(s => [s.form, s.similarity]),
+      own: e.why.own, weights: e.why.weights, parts: {}, signals: e.why.signals })) };
+  trace2.phrases.forEach((p, i) => p.parts = Object.fromEntries(Object.entries(r.events[i].why.parts || {}).map(([k, q]) => [k, [{ label: 'examples', add: q.match, type: 'example' }, { label: 'pull', add: q.bias, type: 'bias' }].concat(q.signals > .001 ? [{ label: 'shape', add: q.signals, type: 'shape' }] : [])])));
+  const reading = window.SpeechformReading.read(trace2.phrases, r.topics);
+  const section = { text, profile: reading.profile, top: reading.profile[0] && reading.profile[0][0], signals: reading.signals, words: reading.words,
+    windows: reading.windows.map(w => ({ text: w.text, profile: w.profile.slice(0, 5) })), trace: trace2 };
+  await D.keepSection(section);
+  pinned = { ...trace2, color: colorOf }; pinnedAt = S.transcript.length; go(1); if (V.view === 'now') document.querySelector('.vchip[data-v=river]').click(); views();
+});
 
 async function poll() {
   try {
     const r = await fetch('/state'); S = await r.json();
     drawControls();
-    drawLines(); focusNow(false); V.set(trace());
+    drawLines(); focusNow(false); views();
   } catch (e) { /* the server is starting */ }
 }
 poll(); setInterval(poll, 800);

@@ -33,8 +33,8 @@ body { display: flex; justify-content: center; overflow: hidden; }
   border: 2px solid var(--green-dim); border-radius: 14px; overflow: hidden; background: #000; }
 .screen canvas { width: 100%; height: 100%; display: block; }
 .lower { position: relative; flex: 1 1 auto; min-height: 0; border: 2px solid var(--green-dim); border-radius: 14px; overflow: hidden; background: var(--panel); }
-.track { display: flex; width: 300%; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.24,1); }
-.page { width: 33.3334%; height: 100%; display: flex; flex-direction: column; min-height: 0; }
+.track { display: flex; width: 400%; height: 100%; transition: transform .45s cubic-bezier(.22,.8,.24,1); }
+.page { width: 25%; height: 100%; display: flex; flex-direction: column; min-height: 0; }
 .scroll { flex: 1; overflow-y: auto; padding: 12px 12px 6px; scrollbar-width: thin; scrollbar-color: var(--faint) transparent; }
 .line { padding: 7px 6px; border-radius: 8px; cursor: pointer; }
 .line:hover { background: rgba(255,255,255,.03); }
@@ -90,6 +90,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
     <button class="tool on" data-page="0" aria-label="transcript" title="transcript"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10.5h14M5 15h14M5 19.5h8"/></svg></button>
     <button class="tool" data-page="1" aria-label="classifier" title="classifier"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><circle cx="19" cy="12" r="2"/><path d="M6.6 10.6l3.8-3.6M6.6 13.4l3.8 3.6M13.6 7l3.8 3.6M13.6 17l3.8-3.6"/></svg></button>
     <button class="tool" data-page="2" aria-label="memory" title="memory"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></button>
+    <button class="tool" data-page="3" aria-label="cards" title="cards"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="11" height="15" rx="2"/><path d="M8.5 21h9a2 2 0 0 0 2-2V7"/></svg></button>
     <span class="gap"></span>
     <button class="tool" id="start" aria-label="start" title="start"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg></button>
     <button class="tool idle" id="stop" aria-label="stop" title="stop"><svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
@@ -118,12 +119,15 @@ body { display: flex; justify-content: center; overflow: hidden; }
         <div class="mem-head"><input class="find" id="find" autocomplete="off" placeholder="search"><span id="memCount"></span></div>
         <div class="scroll" id="mem"></div>
       </section>
+      <section class="page" id="deckPage"></section>
     </div>
   </div>
 </div>
 <script src="classify.js"></script>
 <script src="growers.js"></script>
 <script src="views.js"></script>
+<script src="reading.js"></script>
+<script src="deck.js"></script>
 <script>
 'use strict';
 const C = window.SpeechformClassify, G = window.SpeechformGrowers;
@@ -201,7 +205,7 @@ function ingest(text, source) {
   const p = { id: 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), text, at: now(), source, kind, image, idea: idea.idea.id,
               scores: own.scores, because: own.because, parts: own.parts, weights: heard.weights, structure: heard.own.structure, ranked: heard.ranked, window: heard.recent.map(r => r.text),
               reason: choice.reason, ideaWhy: { result: idea.result, score: idea.score, line: idea.line } };
-  S.phrases.push(p);
+  S.phrases.push(p); pinned = null;
   direct();
   remember(p);
   drawLines(); if (page === 1) drawWhy(); if (page === 2) drawMemory();
@@ -233,8 +237,10 @@ async function onDeviceRecognition(lang) {
 async function macTranscription() {
   try { const r = await fetch('/status', { cache: 'no-store' }); return r.ok; } catch (e) { return false; }
 }
+let recStart = 0;
 async function start() {
   if (listening) return;
+  recStart = now();
   listening = true; paintControls();
   const lang = navigator.language || 'en-US';
   if (await onDeviceRecognition(lang)) { hearing = 'this device (the browser, on-device)'; startBrowser(lang); }
@@ -301,6 +307,7 @@ function startLevel() {
   }).catch(() => {});
 }
 function stop() {
+  if (listening) setTimeout(() => makeCard(true), 400);   // a recording becomes a card when it stops
   listening = false; interim = '';
   if (rec) { const r = rec; rec = null; try { r.stop(); } catch (e) {} }
   if (mac) { mac.stream.getTracks().forEach(t => t.stop()); mac.ac.close(); mac = null; }
@@ -326,8 +333,11 @@ function frame(t) {
   if (document.hidden || t - lastDraw < 1000 / 30) return;            // thirty frames a second, none when hidden
   lastDraw = t;
   if (audio) level = level * .8 + audio.read() * .2; else level *= .95;
+  paintFrame(t);
+}
+function paintFrame(t, dt) {
   const last = S.phrases[S.phrases.length - 1];
-  R.draw({ order: S.order.length ? S.order : ['kelp'], lead: S.lead, growth: S.growth, gateAt: S.gateAt,
+  R.draw({ now: t, dt, order: S.order.length ? S.order : ['kelp'], lead: S.lead, growth: S.growth, gateAt: S.gateAt,
     c: { t: t / 1000, e: Math.min(1, level * 12), warm: S.dir.warmth, seed: S.dir.seed, density: S.dir.density, speed: S.dir.speed,
          memory: S.dir.memory, radius: S.radius, point: now() - S.conclusionAt < 7, ideas: S.ideas, activeIdea: last && last.idea, speakers: S.speakers } });
 }
@@ -335,17 +345,60 @@ requestAnimationFrame(frame);
 
 /* ── the classifier's other views: one trace, drawn five more ways ── */
 const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.documentElement).getPropertyValue('--r-' + C.IMAGE[k]).trim() || '#39ff14');
-const trace = () => ({ kinds: C.KINDS, color: colorOf, focus: S.selected, ideas: S.ideas, active: (S.phrases[S.phrases.length - 1] || {}).idea,
-  phrases: S.phrases.map(p => ({ id: p.id, text: p.text, kind: p.kind, ranked: p.ranked, own: p.scores, weights: p.weights, parts: p.parts, signals: p.structure, idea: p.idea })) });
+let pinned = null;                    // a section being looked at stays in the views until something new is said
+const trace = () => pinned || ({ kinds: C.KINDS, color: colorOf, focus: S.selected, ideas: S.ideas, active: (S.phrases[S.phrases.length - 1] || {}).idea,
+  phrases: S.phrases.map(p => ({ id: p.id, text: p.text, at: p.at, kind: p.kind, ranked: p.ranked, own: p.scores, weights: p.weights, parts: p.parts, signals: p.structure, idea: p.idea })) });
 const V = window.SpeechformViews.mount({ bar: $('#vbar'), canvas: $('#vcan'), note: $('#vnote'),
   onView: v => { $('#why').hidden = v !== 'now'; $('#vwrap').hidden = v === 'now'; },
   onPick: id => { S.selected = id; drawLines(); drawWhy(); V.set(trace()); } });
 
+/* ── the deck: cards and sections; the Speechform server, when it answers, keeps them and draws their clear side ── */
+let D = null;
+fetch('/status', { cache: 'no-store' }).then(r => r.ok).catch(() => false).then(server => {
+  D = window.SpeechformDeck.mount({ page: $('#deckPage'), server,
+    onSection: sec => { pinned = { ...sec.trace, color: colorOf }; go(1); if (V.view === 'now') document.querySelector('.vchip[data-v=river]').click(); V.set(trace()); } });
+  D.onMake(() => makeCard(false));
+});
+function grownImage() {
+  /* the image the talk grew, on black, as the card's abstract side */
+  /* painted now, a second and a half of frames at once, so the capture holds the image even when the page is out of sight */
+  const t0 = performance.now() + 4000; for (let i = 0; i < 45; i++) paintFrame(t0 + i * 33, .033);
+  const src = $('#image'), c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
+  const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height); x.drawImage(src, 0, 0);
+  return c.toDataURL('image/jpeg', .9);
+}
+async function makeCard(recording) {
+  if (!D) return;
+  const was = pinned; pinned = null;
+  let phrases = trace().phrases; pinned = was;
+  if (recording && recStart) phrases = phrases.filter(p => p.at >= recStart - 1);
+  if (!phrases.length) return;
+  go(3);
+  await D.make({ phrases, ideas: S.ideas.map(i => ({ id: i.id, title: i.title, words: i.words, returns: i.returns, n: i.n })), text: phrases.map(p => p.text).join(' '), abstract: grownImage() });
+}
+/* select words in the transcript: Light's algorithm reads them on their own, phrase by phrase, and the section is kept */
+window.SpeechformDeck.selector($('#lines'), text => {
+  const parts = text.split(/(?<=[.!?;])\s+/).map(t => t.trim()).filter(Boolean), hist = [], ideas = [];
+  let kind = null, cand = null, streak = 0; const t0 = now();
+  parts.forEach((t, i) => {
+    const own = C.scorePhrase(t), heard = C.hear(hist, t, t0 + i);
+    streak = heard.ranked[0][0] === cand ? streak + 1 : 1; cand = heard.ranked[0][0];
+    kind = C.decide(kind, heard.ranked, streak).kind;
+    hist.push({ id: 's' + i, text: t, at: t0 + i, kind, ranked: heard.ranked, own: own.scores, scores: own.scores, weights: heard.weights, parts: own.parts, signals: own.structure, idea: 'section' });
+  });
+  const tr = { kinds: C.KINDS, focus: null, active: 'section', ideas: [{ id: 'section', title: 'this section', words: text.split(/\s+/).length, returns: 0, n: hist.length }], phrases: hist };
+  const reading = window.SpeechformReading.read(hist, tr.ideas);
+  if (!reading || !D) return;
+  D.keepSection({ text, profile: reading.profile, top: reading.profile[0] && reading.profile[0][0], signals: reading.signals, words: reading.words,
+    windows: reading.windows.map(w => ({ text: w.text, profile: w.profile.slice(0, 5) })), trace: tr });
+  pinned = { ...tr, color: colorOf }; go(1); if (V.view === 'now') document.querySelector('.vchip[data-v=river]').click(); V.set(trace());
+});
+
 /* ── the lower screens ── */
 let page = 0;
 function go(i) {
-  page = Math.max(0, Math.min(2, i));
-  $('#track').style.transform = `translateX(${-100 / 3 * page}%)`;
+  page = Math.max(0, Math.min(3, i));
+  $('#track').style.transform = `translateX(${-25 * page}%)`;
   document.querySelectorAll('.tool[data-page]').forEach(t => t.classList.toggle('on', +t.dataset.page === page));
   if (page === 1) drawWhy(); if (page === 2) drawMemory();
 }
@@ -361,7 +414,7 @@ function drawLines() {
     return `<div class="line ${S.selected === p.id ? 'sel' : ''}" data-id="${p.id}"><div class="said">${esc(p.text)}</div>
       <div class="meta"><span class="chip" style="color:${col(p.image)}">${esc(p.kind)} → ${p.image}</span><span class="chip ${back ? 'back' : 'idea'}">${back ? '↺ ' : ''}${esc(idea.title)}</span></div></div>`;
   }).join('') + (interim ? `<div class="line interim">${esc(interim)}</div>` : '');
-  box.querySelectorAll('.line[data-id]').forEach(l => l.onclick = () => { S.selected = l.dataset.id; drawLines(); go(1); V.set(trace()); });
+  box.querySelectorAll('.line[data-id]').forEach(l => l.onclick = () => { if (getSelection().toString()) return; S.selected = l.dataset.id; drawLines(); go(1); V.set(trace()); });
   box.scrollTop = box.scrollHeight;
 }
 

@@ -71,6 +71,11 @@ For Speechform Heavy, the same endpoint also receives `{"task": "image", ...}` a
 | `GET /state` | everything the app shows, including each phrase's full reasoning under `why`: `scores` (with the minute of talk), `own` (the phrase alone), `weights` (each phrase's share of the verdict), `parts` (examples, general pull and signals for the leading kinds), `signals`, `cues`, `margin`, `reason`, `idea`, `xy` and `saliency` |
 | `GET /memory` | everything said in the app, newest first |
 | `POST /say` `{"text": "...", "speaker": "A"}` | a typed phrase, classified like speech (add `"test": true` so it stays out of memory) |
+| `POST /card` `{"card": {...}, "text": "...", "abstract": "data:image/jpeg;base64,..."}` | keeps a card (written by `light/reading.js`) and starts its art: Jev's decisions, the bank, then the easel. Without `abstract`, TouchDesigner's frame is used |
+| `GET /cards`, `GET /cards/<id>/<file>` | every card, newest first, with its reading, Jev's answers, the prompt and how its art was made (`art`); and its images |
+| `POST /classify` `{"text": "..."}` | any passage read on its own by the engine, phrase by phrase, without touching the live session |
+| `POST /sections`, `GET /sections` | keep and list sections classified by hand |
+| `GET /easel` | whether the image model on this Mac is installed, loaded and ready |
 | `POST /start` | opens TouchDesigner if needed, then listens |
 | `POST /stop` | stops listening |
 | `POST /intake` `{"action": "reset"}` | starts a new session |

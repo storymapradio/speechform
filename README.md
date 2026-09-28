@@ -89,6 +89,45 @@ The key fields are optional. With no provider, a built-in stand-in steers the im
 - **Claude**, with your Anthropic API key. The default model is Claude Haiku 4.5.
 - **A local model** through any OpenAI-compatible endpoint, such as [Ollama](https://ollama.com) at `http://127.0.0.1:11434/v1` with `gemma3:1b`.
 
+## Cards
+
+When a recording stops, Speechform reads it whole and turns it into a card. The ▣ icon opens the deck, and ⊕ makes a card of the whole session at any time.
+
+**The reading** (`light/reading.js`, shared by both versions) weighs the recording at three scales:
+
+- **Each phrase**, as the classifier heard it.
+- **Each section.** Every run of one idea is a section, and a window of about fifty words also slides along the recording, half a window at a time.
+- **The whole recording**, with every phrase counted by its words.
+
+Each scale gets a share for every kind of speech and an average shape. The reading also measures how often the kind switched, how clearly each phrase was marked, how the ideas held together, and how often the talk came back to one. All of it is kept with the card.
+
+**The card** is written from the reading:
+
+| Part | Where it comes from |
+| --- | --- |
+| Name | the idea with the most words |
+| Type | the image of the leading kind, then the first and second kinds |
+| Level (1 to 12 hexagons) | the length of the recording and its number of ideas |
+| Focus | how clearly the talk declared its kind, and how rarely it switched |
+| Hold | how well the talk stayed with its ideas, and how often it came back to them |
+| Rarity | how far this recording's profile sits from the average of your earlier cards: common, rare, super rare or ultra rare (a rainbow foil) |
+| Colour strip | every kind's share, side by side |
+| Effect | sentences written from the reading, for example "It returns to the lantern twice." |
+| Back | the image the talk grew, the six largest shares, Jev's verdict and the clearest moment |
+
+Tap a card to flip it, and use the arrow to save the side you are looking at as a PNG.
+
+**The art.** Every card has two sides:
+
+1. **The abstract side** is the image your talk grew. The full app takes TouchDesigner's last frame, and Light captures its own canvas. It is free, instant and never leaves your Mac.
+2. **Jev decides**, when a TypeSafe key is saved, in one call: the kind of the whole recording, which of the six styles fits it, whether it is safe to draw, and whether a picture already in the bank fits it well enough to reuse. A recording Jev judges unsafe keeps its abstract side only.
+3. **The bank** is searched next. A picture of the same image and style sharing at least half its words is reused at no cost.
+4. **The easel draws the clear side** (`imagery/easel.py`). It runs SDXL Turbo on the Mac's GPU in its own process on port 9996. It redraws the abstract image toward a prompt written from the recording's most repeated words, in the chosen style, keeping the shape and colour the talk made. A picture takes three to eight seconds and never leaves the Mac. The new picture also goes into the bank, where Heavy can reuse it.
+
+Run `imagery/easel-setup.sh` once to install the easel (about 7 GB). The Speechform server starts it the first time a card needs a picture. SDXL Turbo comes from Stability AI under its own licence, which is free for personal and non-commercial use; the model is downloaded to your Mac and is not part of this repository.
+
+**Sections.** Select any words in the transcript, and a hexagon appears beside them. Tap it, and those words are read on their own, phrase by phrase: by the MiniLM engine in the full app, and by the algorithm in Light. The classifier views then show the section, and the section is kept with its shares under ▤ in the deck. Tap a kept section to see it in the views again.
+
 ## Privacy
 
 Speechform needs no account and connects to none. Your speech is transcribed on your Mac and classified on your Mac. Your memory is kept in `runtime/memory.jsonl` and your keys in `~/.config/speechform/settings.json`, and neither is ever part of this repository. The only thing that leaves your Mac is the latest few phrases, sent to the provider you choose, and only if you choose a cloud provider.

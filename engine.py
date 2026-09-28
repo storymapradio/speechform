@@ -175,6 +175,24 @@ class Engine:
   self.state['topics'].append(topic);self.vectors[ident]=vector
   self.last_match.update(result='a new idea: "%s"'%title,id=ident)
   return topic
+ def read_passage(self,text):
+  """any stretch of text, read on its own: split into phrases and heard one after another, as if spoken,
+  without touching the live session"""
+  keep=(self.state,self.vectors,self.phrase_scores,self.phrase_vecs,self.phrase_heat,self.last_match,self.candidate,self.candidate_count,self.seen)
+  self.reset();events=[]
+  try:
+   parts=[x.strip() for x in re.split(r'(?<=[.!?;])\s+|\n+',text) if x.strip()]
+   phrases=[]
+   for x in parts:
+    w=x.split()
+    while len(w)>30:phrases.append(' '.join(w[:24]));w=w[24:]
+    if w:phrases.append(' '.join(w))
+   for x in phrases[:80]:
+    e=self.ingest(x,'A','Section')
+    if e:events.append(e)
+   return {'events':events,'topics':[{'id':t['id'],'title':t['title'],'words':t['words'],'returns':t['returns'],'n':len(t['events'])} for t in self.state['topics']]}
+  finally:
+   (self.state,self.vectors,self.phrase_scores,self.phrase_vecs,self.phrase_heat,self.last_match,self.candidate,self.candidate_count,self.seen)=keep
  def reassign(self,event_id,topic_id):
   topic=next(t for t in self.state['topics'] if t['id']==topic_id)
   event=next(e for e in self.state['events'] if e['id']==event_id)

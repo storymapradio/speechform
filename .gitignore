@@ -25,3 +25,5 @@ engine.before-app.py
 CHAT_TRANSCRIPT.md
 .DS_Store
 build_local.sh
+.art/
+runtime/cards/

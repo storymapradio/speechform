@@ -46,6 +46,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import growers  # the same rules TouchDesigner uses, so the app shows what the Loom does
 import heavy    # Speechform Heavy: safe prompts, the image bank, sequences, Jev's tasks
+import cards    # a recording read whole becomes a card, with art from the easel on this Mac
 
 STATE = ROOT / 'runtime' / 'state.json'
 DIRECTION = ROOT / 'runtime' / 'direction.json'
@@ -407,7 +408,7 @@ def app_state():
         'mix': mix, 'growth': grow, 'lead': max(mix, key=mix.get), 'form_to_register': growers.FORM_TO_REGISTER,
         'direction': d, 'directed_by': 'jev (posted)' if time.time() - last_jev < 8 else 'director',
         'decisions': list(decisions)[:40], 'provider': public_settings(), 'provider_status': provider_status,
-        'status': status(), 'microphone': bool(panel.get('microphone')), 'worker_alive': time.time() - float(s.get('heartbeat', 0)) < 12,
+        'status': status(), 'microphone': bool(panel.get('microphone')), 'recording_since': panel.get('recording_since', 0), 'worker_alive': time.time() - float(s.get('heartbeat', 0)) < 12,
         'now': time.time(),
     }
 
@@ -449,6 +450,17 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, (APP / 'index.html').read_bytes(), 'text/html; charset=utf-8')
         if path == '/bank':
             return self._send(200, {'bank': heavy.bank_list()})
+        if path == '/cards':
+            return self._send(200, {'cards': cards.cards()})
+        if path.startswith('/cards/'):
+            f = cards.card_file(path[7:])
+            if f:
+                return self._send(200, f.read_bytes(), {'.jpg': 'image/jpeg', '.png': 'image/png', '.json': 'application/json'}.get(f.suffix, 'application/octet-stream'))
+            return self._send(404, {'error': 'not here'})
+        if path == '/sections':
+            return self._send(200, {'sections': cards.sections()})
+        if path == '/easel':
+            return self._send(200, cards.easel_status())
         if path.startswith('/bank/'):
             f = (heavy.BANK / path[6:]).resolve()
             if f.is_file() and heavy.BANK in f.parents:
@@ -541,6 +553,27 @@ class Handler(BaseHTTPRequestHandler):
             if not jpeg:
                 return self._send(400, {'error': 'no image'})
             return self._send(200, heavy.save_frame(d.get('session'), d.get('streak', 0), d.get('meta') or {}, jpeg))
+        if path == '/card':
+            if not d.get('card'):
+                return self._send(400, {'error': 'no card'})
+            return self._send(200, cards.make(settings(), d['card'], str(d.get('text', '')), d.get('abstract')))
+        if path == '/sections':
+            return self._send(200, cards.keep_section(d))
+        if path == '/classify':
+            # a section chosen by hand: the worker reads it on its own and answers through runtime/replies
+            text = str(d.get('text', '')).strip()
+            if not text:
+                return self._send(400, {'error': 'nothing to classify'})
+            reply = uuid.uuid4().hex
+            command('classify', text=text, reply=reply)
+            f = ROOT / 'runtime' / 'replies' / (reply + '.json')
+            t0 = time.time()
+            while time.time() - t0 < 40:
+                if f.exists():
+                    got = json.loads(f.read_text()); f.unlink()
+                    return self._send(200, {'ok': True, **got})
+                time.sleep(.1)
+            return self._send(200, {'ok': False, 'error': 'the speech worker did not answer'})
         if path == '/mask':
             return self._send(200, {'text': heavy.mask(str(d.get('text', '')))})
         if path == '/jev/test':
@@ -575,6 +608,8 @@ class Handler(BaseHTTPRequestHandler):
                 if not opened.get('ok'):
                     return self._send(200, opened)
             p = read_json(PANEL, {})
+            if on and not p.get('microphone'):
+                p['recording_since'] = time.time()      # a recording runs from start to stop, and becomes a card
             p['microphone'] = on
             if d.get('speaker') in ('A', 'B'):
                 p['speaker'] = d['speaker']

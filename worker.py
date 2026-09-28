@@ -63,6 +63,11 @@ def main():
    elif action=='reset':
     save();engine.reset();rehearsal=None
    elif action=='reassign':engine.reassign(c['event'],c['topic'])
+   elif action=='classify':
+    # a section chosen by hand, read on its own; the answer goes back through runtime/replies
+    (RUNTIME/'replies').mkdir(exist_ok=True)
+    atomic(RUNTIME/'replies'/(str(c.get('reply','x'))+'.json'),engine.read_passage(c.get('text','')))
+    continue
    elif action=='audio':
     engine.state.update(processing=True,status='Transcribing audio locally.',error='');save()
     path=Path(c['path']).expanduser().resolve()
