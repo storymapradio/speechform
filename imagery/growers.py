@@ -60,9 +60,27 @@ class Ctx:
         self.density = float(self.d.get('density', 1.0))
         self.speed = float(self.d.get('tempo', 1.0))
         # the ideas of the talk, in the order they arrived: each one adds structure to every image
-        self.ideas = [{'id': t.get('id'), 'words': float(t.get('words', 0)), 'returns': int(t.get('returns', 0)), 'n': len(t.get('events', []))}
+        self.ideas = [{'id': t.get('id'), 'words': float(t.get('words', 0)) * PACE, 'returns': int(t.get('returns', 0)), 'n': len(t.get('events', []))}
                       for t in self.state.get('topics', [])]
         self.active_idea = self.state.get('active_topic')
+
+# Speechform is made for long talks: an image takes about half an hour of speech to fill,
+# and the image in front holds the square for at least half a minute before another takes it.
+PACE = 0.2           # growth per word spoken
+DWELL = 30.0         # seconds the image in front holds before a new kind of speech may take the square
+
+def leads(state):
+    """the images that have stood in front, in order, and the one in front now: a change of kind moves
+    the square only when the image in front has held it for DWELL seconds"""
+    lead, since, seen = None, 0.0, []
+    for ev in (state or {}).get('events', []):
+        r = FORM_TO_REGISTER.get(ev.get('form'), 'kelp'); at = float(ev.get('at', 0))
+        if lead is None or (r != lead and at - since >= DWELL):
+            lead, since = r, at
+            if r in seen:
+                seen.remove(r)
+            seen.append(r)
+    return lead, seen
 
 def growth(state, direction):
     """words spoken in each register, plus Jev's own additions"""
@@ -84,15 +102,11 @@ def active(state, direction):
         best = max(d['mix'], key=lambda r: d['mix'][r])
         if best in REGISTERS and d['mix'][best] > 0:
             return best
-    return FORM_TO_REGISTER.get((state or {}).get('form'), 'kelp')
+    return leads(state)[0] or FORM_TO_REGISTER.get((state or {}).get('form'), 'kelp')
 
 def order(state, direction):
-    """every image the talk has grown so far, in the order it first appeared"""
-    seen = []
-    for ev in (state or {}).get('events', []):
-        r = FORM_TO_REGISTER.get(ev.get('form'), 'kelp')
-        if r not in seen:
-            seen.append(r)
+    """every image that has stood in front, in the order it last did"""
+    seen = list(leads(state)[1])
     for r in ((direction or {}).get('mix') or {}):
         if r in REGISTERS and r not in seen and (direction['mix'][r] or 0) > 0:
             seen.append(r)
@@ -126,13 +140,13 @@ def mix(state, direction):
 
 _at = {}
 def _glide(register, target):
-    """an image moves to its new place over about a second rather than jumping"""
+    """an image moves to its new place over a few seconds rather than jumping"""
     cur = _at.get(register)
     if cur is None:
         _at[register] = list(target)
         return target
     for j in range(3):
-        cur[j] += (target[j] - cur[j]) * 0.07
+        cur[j] += (target[j] - cur[j]) * 0.025      # a few seconds, so a change reads as a slow turn
     return tuple(cur)
 
 def _emit(rows, x, y, z, s, rz, col, a):
@@ -388,7 +402,7 @@ def fill(scriptOp, register, weight=1.0):
     state = td_runtime.STATE
     direction = getattr(td_runtime, 'DIRECTION', {})
     c = Ctx(state, direction, td_runtime.time.time() % 100000, getattr(td_runtime, 'level', 0.0) * 12)
-    g = growth(state, direction).get(register, 0.0)
+    g = growth(state, direction).get(register, 0.0) * PACE
     rows = GROWERS[register](c, g) or [(0, 0, 0, 0, 0, 0, 0, 0, 0)]
     scriptOp.clear()
     scriptOp.numSamples = len(rows)

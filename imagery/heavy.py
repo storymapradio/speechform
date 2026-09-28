@@ -183,8 +183,8 @@ KIND_CRITERIA = {
     'cosmology': 'the universe, stars, space and time', 'mystery': 'a puzzle, clues, who did it', 'argument': 'making a claim and supporting it',
 }
 
-def typesafe(cfg, state, questions, timeout=15):
-    got = _call(TYPESAFE + '/v1/systemone', {'state': state[:4000], 'model': cfg.get('model') or 'jev-latest', 'questions': questions},
+def typesafe(cfg, state, questions, timeout=15, limit=4000):
+    got = _call(TYPESAFE + '/v1/systemone', {'state': state[:limit], 'model': cfg.get('model') or 'jev-latest', 'questions': questions},
                 {'Authorization': 'Bearer ' + cfg.get('key', '')}, timeout)
     return got.get('answers', {})
 

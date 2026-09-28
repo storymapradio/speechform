@@ -13,10 +13,15 @@
     make: '<rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M12 9v6M9 12h6"/>',
     save: '<path d="M12 4v11M7.5 10.5L12 15l4.5-4.5M5 19.5h14"/>',
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    play: '<path d="M8 5.5v13l10.5-6.5z"/>',
+    pause: '<path d="M8 5.5v13M16 5.5v13"/>',
     folder: '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
     reading: '<path d="M4 19V11M9 19V6M14 19v-9M19 19v-5"/>',
   };
   const svg = k => `<svg viewBox="0 0 24 24">${ICON[k]}</svg>`;
+  const VI = (root.SpeechformViews || {}).ICON || {};
+  /* the tabs beside an opened card: its transcript, its reading, and every graph */
+  const DTABS = [['transcript', VI.transcript || ICON.sections], ['reading', ICON.reading], ...['bars', 'river', 'window', 'build', 'shape', 'ideas'].map(k => [k, VI[k] || ''])];
   const LOCAL = 'speechform-light:cards', LOCAL_SECTIONS = 'speechform-light:sections';
   const local = { get(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } },
                   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* full or blocked */ } } };
@@ -37,7 +42,10 @@
     const sheet = document.createElement('div'); sheet.className = 'cardsheet'; sheet.hidden = true;
     sheet.innerHTML = `<div class="cardhold"><div class="cardcol"><canvas class="bigcard"></canvas><p class="cardart"></p>
       <div class="cardtools"><button class="vchip" data-save title="save" aria-label="save">${svg('save')}</button><button class="vchip" data-folder title="open its folder" aria-label="open its folder">${svg('folder')}</button><button class="vchip" data-close title="close" aria-label="close">${svg('close')}</button></div></div>
-      <div class="carddetail"><audio controls preload="none"></audio><div class="dtabs"><button class="vchip on" data-d="transcript.txt" title="transcript" aria-label="transcript">${svg('sections')}</button><button class="vchip" data-d="reading.txt" title="reading" aria-label="reading">${svg('reading')}</button></div><pre class="dtext"></pre></div></div>`;
+      <div class="carddetail"><audio preload="auto"></audio>
+        <div class="dplay"><button class="vchip" data-play title="play" aria-label="play">${svg('play')}</button><input type="range" class="dscrub" min="0" max="1000" value="1000"><span class="dtime"></span></div>
+        <div class="dtabs">${DTABS.map(([k, icon]) => `<button class="vchip" data-d="${k}" title="${k}" aria-label="${k}"><svg viewBox="0 0 24 24">${icon}</svg></button>`).join('')}</div>
+        <div class="dtrans"></div><pre class="dtext"></pre><div class="dview"><canvas></canvas><p class="dnote"></p></div></div></div>`;
     document.body.appendChild(sheet);
     let big = sheet.querySelector('canvas');
     /* a card is drawn once; if the browser takes its canvas back (the easel shares the GPU), it is drawn again */
@@ -47,17 +55,80 @@
     page.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { tab = b.dataset.t; page.querySelectorAll('[data-t]').forEach(q => q.classList.toggle('on', q === b)); draw(); });
     sheet.querySelector('[data-close]').onclick = () => { sheet.hidden = true; open = null; sheet.querySelector('audio').pause(); };
     sheet.querySelector('[data-folder]').onclick = () => open && server && fetch(`/cards/${encodeURIComponent(open.id)}/reveal`, { method: 'POST', body: '{}' });
-    /* everything kept with the recording: its audio, its transcript and its reading */
-    let doc = 'transcript.txt';
-    const detail = async () => {
-      const box = sheet.querySelector('.carddetail'); box.hidden = !server || !open; if (box.hidden) return;
-      const au = box.querySelector('audio'), src = open.audio ? url(open, open.audio) : '';
-      au.hidden = !src; if (au.dataset.for !== src) { au.dataset.for = src; if (src) au.src = src; else au.removeAttribute('src'); }
-      box.querySelectorAll('[data-d]').forEach(b => b.classList.toggle('on', b.dataset.d === doc));
-      try { const r = await fetch(url(open, doc)); box.querySelector('.dtext').textContent = r.ok ? await r.text() : ''; } catch (e) {}
+    /* everything kept with the recording, and its replay: press play and the audio, the transcript and every
+       graph move through the recording as it happened; drag the line to go anywhere in it */
+    let doc = 'transcript', P = [], ideaTitles = {}, since = 0, clock = null, playing = false;
+    const box = sheet.querySelector('.carddetail'), au = box.querySelector('audio'), scrub = box.querySelector('.dscrub');
+    const VW = root.SpeechformViews, view = VW && VW.renderer(box.querySelector('.dview canvas'), { note: box.querySelector('.dnote'), start: 'river',
+      onPick: id => { const p = P.find(q => q.id === id); if (p) seek(p.at - since + .01); } });
+    const length = () => Math.max((au.src && isFinite(au.duration) && au.duration) || 0, P.length ? P[P.length - 1].at - since + 4 : 1);
+    /* the replay's own clock leads; the audio plays beside it and, while it plays, keeps the clock in step */
+    const now = () => {
+      if (!clock) return Infinity;
+      if (clock.still) return clock.t0;
+      if (au.src && !au.paused && au.readyState >= 3 && au.currentTime > 0) { clock = { t0: au.currentTime, at: performance.now() }; return au.currentTime; }
+      return clock.t0 + (performance.now() - clock.at) / 1000;
     };
-    sheet.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { doc = b.dataset.d; detail(); });
-    sheet.onclick = e => { if (e.target === sheet) { sheet.hidden = true; open = null; } };
+    const traceAt = t => {
+      const cut = P.filter(p => (p.at || 0) - since <= t), ideas = {};
+      cut.forEach((p, i) => { const it = ideas[p.idea] || (ideas[p.idea] = { id: p.idea, title: ideaTitles[p.idea] || 'an idea', words: 0, returns: 0, n: 0 });
+        it.words += (p.text || '').split(/\s+/).length; it.n++; if (i && cut[i - 1].idea !== p.idea && cut.slice(0, i).some(q => q.idea === p.idea)) it.returns++; });
+      return { kinds: Object.keys(R.IMAGE), color: k => R.COLORS[R.IMAGE[k]] || '#39ff14', focus: null, windowWords: 120, recency: 30,
+        ideas: Object.values(ideas), active: cut.length ? cut[cut.length - 1].idea : null, phrases: cut };
+    };
+    const clockText = t => { const s2 = Math.max(0, Math.floor(t)); return `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, '0')}`; };
+    function frame() {
+      const t = now(), L = length(), full = t === Infinity, tt = full ? L : Math.min(t, L);
+      if (!full && document.activeElement !== scrub) scrub.value = Math.round(tt / L * 1000);
+      box.querySelector('.dtime').textContent = full ? clockText(L) : `${clockText(tt)} / ${clockText(L)}`;
+      const T = traceAt(full ? 1e9 : tt); if (view) view.set(T);
+      /* the transcript follows: said lines lit, the line being said marked, the rest waiting */
+      const lines = box.querySelectorAll('.dline'), said = T.phrases.length;
+      lines.forEach((l, i) => { l.classList.toggle('future', i >= said); l.classList.toggle('current', !full && i === said - 1); });
+      if (!full && playing && lines[said - 1]) { const c = box.querySelector('.dtrans'), l = lines[said - 1]; if (l.offsetTop < c.scrollTop || l.offsetTop > c.scrollTop + c.clientHeight - 40) c.scrollTop = l.offsetTop - 40; }
+      if (playing && tt >= L - .02) pause();
+      if (playing) requestAnimationFrame(frame);
+    }
+    function seek(t) {
+      t = Math.max(0, Math.min(length(), t));
+      if (au.src) { try { au.currentTime = t; } catch (e) {} }
+      clock = playing ? { t0: t, at: performance.now() } : { t0: t, still: true }; frame();
+    }
+    function play() {
+      let t = clock && clock.still ? clock.t0 : 0; if (t >= length() - .05) t = 0;
+      clock = { t0: t, at: performance.now() };
+      if (au.src) { try { au.currentTime = t; } catch (e) {} au.play().catch(() => {}); }
+      playing = true; box.querySelector('[data-play]').innerHTML = svg('pause'); requestAnimationFrame(frame);
+    }
+    function pause() { const t = now(); playing = false; au.pause(); clock = { t0: t === Infinity ? length() : t, still: true }; box.querySelector('[data-play]').innerHTML = svg('play'); }
+    box.querySelector('[data-play]').onclick = () => playing ? pause() : play();
+    scrub.oninput = () => seek(scrub.value / 1000 * length());
+    au.onended = () => { if (playing) pause(); };
+    function showDoc() {
+      box.querySelectorAll('[data-d]').forEach(b => b.classList.toggle('on', b.dataset.d === doc));
+      box.querySelector('.dtrans').hidden = doc !== 'transcript'; box.querySelector('.dtext').hidden = doc !== 'reading';
+      box.querySelector('.dview').hidden = doc === 'transcript' || doc === 'reading';
+      if (view && !box.querySelector('.dview').hidden) view.setView(doc);
+      frame();
+    }
+    box.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { doc = b.dataset.d; showDoc(); });
+    let loadedFor = null;
+    const detail = async () => {
+      box.hidden = !server || !open; if (box.hidden) return;
+      const src = open.audio ? url(open, open.audio) : '';
+      if (au.dataset.for !== src) { au.dataset.for = src; if (src) au.src = src; else au.removeAttribute('src'); }
+      if (loadedFor !== open.id) {
+        loadedFor = open.id; pause(); clock = null; P = []; since = open.since || 0;
+        ideaTitles = Object.fromEntries(((open.reading || {}).ideas || []).map(i => [i.id, i.title]));
+        try { const r = await fetch(url(open, 'phrases.json')); P = r.ok ? (await r.json()).filter(p => p.ranked) : []; } catch (e) {}
+        if (!since && P.length) since = P[0].at - 2;
+        box.querySelector('.dtrans').innerHTML = P.map(p => `<div class="dline"><span class="dt">${clockText((p.at || 0) - since)}</span> <span class="dk" style="color:${R.COLORS[R.IMAGE[p.kind]] || '#7d9a78'}">${esc(p.kind)}</span><div>${esc(p.text)}</div></div>`).join('');
+        box.querySelectorAll('.dline').forEach((l, i) => l.onclick = () => seek((P[i].at || 0) - since + .01));
+      }
+      try { const r = await fetch(url(open, 'reading.txt')); box.querySelector('.dtext').textContent = r.ok ? await r.text() : ''; } catch (e) {}
+      showDoc();
+    };
+    sheet.onclick = e => { if (e.target === sheet) { sheet.hidden = true; open = null; au.pause(); playing = false; } };
     /* tap the card to flip it: the clear art on the front, the grown image and the whole reading on the back */
     big.onclick = flip;
     sheet.querySelector('[data-save]').onclick = () => { const a = document.createElement('a'); a.download = (open.name || 'card').replace(/\W+/g, '-').toLowerCase() + '-' + side + '.png'; a.href = big.toDataURL('image/png'); a.click(); };
@@ -130,8 +201,22 @@
 .cardcol{display:flex;flex-direction:column;align-items:center;gap:8px}
 .carddetail{width:min(440px,92vw);max-height:78vh;display:flex;flex-direction:column;gap:8px;background:var(--panel,#070907);border:2px solid var(--green-dim,rgba(57,255,20,.35));border-radius:14px;padding:12px}
 .carddetail[hidden]{display:none}
-.carddetail audio{width:100%;height:34px}
-.carddetail audio[hidden]{display:none}
+.carddetail{height:min(78vh,720px)}
+.carddetail audio{display:none}
+.dplay{display:flex;align-items:center;gap:8px}
+.dscrub{flex:1;accent-color:#ffc94a}
+.dtime{font:11px ui-monospace,Menlo,monospace;color:var(--muted,#7d9a78);min-width:78px;text-align:right}
+.dtabs{flex-wrap:wrap}
+.dtrans{flex:1;min-height:0;overflow:auto;font:12.5px/1.5 ui-monospace,Menlo,monospace;position:relative}
+.dtrans[hidden],.dtext[hidden],.dview[hidden]{display:none}
+.dline{padding:6px 8px;border-radius:8px;cursor:pointer;transition:opacity .3s,background .3s}
+.dline:hover{background:rgba(255,255,255,.03)}
+.dline.future{opacity:.3}
+.dline.current{background:rgba(255,201,74,.12);outline:1px solid rgba(255,201,74,.5)}
+.dt{color:var(--muted,#7d9a78);font-size:10.5px}.dk{font-size:10.5px}
+.dview{flex:1;min-height:0;display:flex;flex-direction:column}
+.dview canvas{flex:1;min-height:0;width:100%;display:block;cursor:pointer}
+.dnote{margin:6px 0 0;color:var(--muted,#7d9a78);font-size:10.5px;line-height:1.45}
 .dtabs{display:flex;gap:2px}
 .dtext{flex:1;min-height:0;overflow:auto;margin:0;white-space:pre-wrap;font:12px/1.55 ui-monospace,Menlo,monospace;color:var(--ink,#e8f5e4)}
 .bigcard{height:min(78vh,720px);max-width:92vw;object-fit:contain;cursor:pointer;transition:transform .18s ease-in;animation:cardin .5s cubic-bezier(.2,.8,.2,1)}

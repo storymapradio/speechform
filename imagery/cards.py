@@ -29,6 +29,7 @@ STYLE_FOR = {'poetry': 'water', 'story': 'woodcut', 'reading aloud': 'woodcut', 
              'instruction': 'woodcut', 'lecture': 'ink', 'lesson': 'water', 'reflective monologue': 'ink', 'thinking aloud': 'ink',
              'stream of consciousness': 'water', 'dialogue': 'glass', 'song': 'neon', 'lyrics': 'neon'}
 _easel_started = {'at': 0.0}
+ON_LEARN = {}              # the server sets this: tell the speech worker to learn what Jev taught
 
 def _get(url, timeout=5):
     with urllib.request.urlopen(url, timeout=timeout) as r:
@@ -76,24 +77,80 @@ def main_words(text, n=6):
         first.setdefault(w, i)
     return [w for w, _ in sorted(Counter(ws).items(), key=lambda kv: (-kv[1], first[kv[0]]))][:n]
 
-# ── Jev's part: four decisions, one call ──────────────────────────────────────────
-def jev_card(cfg, text, bank_hit=None):
+# ── Jev's part: one call when the recording stops ─────────────────────────────────
+LEARNED = ROOT / 'runtime' / 'learned.json'
+
+def segments(phrases, most=12):
+    """the recording cut into at most twelve passages of whole phrases, each at least forty words"""
+    words = lambda t: len((t or '').split())
+    total = sum(words(p.get('text')) for p in phrases)
+    size = max(40, total / most)
+    out, cur, n = [], [], 0
+    for p in phrases:
+        cur.append(p); n += words(p.get('text'))
+        if n >= size:
+            out.append(cur); cur, n = [], 0
+    if cur:
+        if out and n < size / 2:
+            out[-1] += cur
+        else:
+            out.append(cur)
+    result = []
+    for seg in out:
+        count = Counter()
+        for p in seg:
+            count[p.get('kind')] += words(p.get('text'))
+        result.append({'text': ' '.join(p.get('text', '') for p in seg), 'classifier': count.most_common(1)[0][0] if count else None,
+                       'from': seg[0].get('at'), 'to': seg[-1].get('at')})
+    return result
+
+def jev_card(cfg, text, bank_hit=None, segs=None):
+    """four decisions about the whole recording, and the kind of every passage, all in one call"""
+    segs = segs or []
+    room = max(200, 7000 // max(1, len(segs))) if segs else 0
+    state = ('\n\n'.join(f'Passage {i + 1}: ' + heavy.mask(s['text'])[:room] for i, s in enumerate(segs))) if segs else heavy.mask(text)
     qs = {
-        'kind': {'type': 'choice', 'instructions': 'What kind of speech is this recording, taken as a whole?', 'criteria': heavy.KIND_CRITERIA},
+        'kind': {'type': 'choice', 'instructions': 'What kind of speech is this recording, taken as a whole' + (' (all the passages together)?' if segs else '?'), 'criteria': heavy.KIND_CRITERIA},
         'style': {'type': 'choice', 'instructions': 'Which art style would picture this recording best?',
                   'criteria': {k: v[0] + ': ' + v[1] for k, v in heavy.STYLES.items()}},
         'unsafe': {'type': 'noul', 'instructions': 'Does this recording describe violence, gore or cruelty, or use profanity?'},
     }
+    for i in range(len(segs)):
+        qs[f'p{i + 1}'] = {'type': 'choice', 'instructions': f'What kind of speech is Passage {i + 1}?', 'criteria': heavy.KIND_CRITERIA}
     if bank_hit:
         qs['reuse'] = {'type': 'noul', 'instructions': 'A saved picture shows: ' + ', '.join(bank_hit['keywords']) +
                        '. Would that picture fit this recording well?'}
-    a = heavy.typesafe(cfg, heavy.mask(text), qs, timeout=25)
+    a = heavy.typesafe(cfg, state, qs, timeout=60, limit=8000)
     k, st = a.get('kind', {}), a.get('style', {})
     out = {'kind': k.get('choice'), 'confidence': k.get('confidence'), 'style': st.get('choice'),
            'style_confidence': st.get('confidence'), 'unsafe': a.get('unsafe', {}).get('noul', 0)}
     if bank_hit:
         out['reuse'] = a.get('reuse', {}).get('noul', 0)
+    out['segments'] = [{**sg, 'jev': a.get(f'p{i + 1}', {}).get('choice'), 'confidence': a.get(f'p{i + 1}', {}).get('confidence')}
+                       for i, sg in enumerate(segs)]
     return out
+
+def learned():
+    try:
+        return json.loads(LEARNED.read_text())
+    except (OSError, ValueError):
+        return []
+
+def learn(segs, card_id):
+    """every passage Jev is sure of becomes an example of its kind for the classifier (the newest forty per kind)"""
+    items = learned()
+    have = {it['text'] for it in items}                       # a passage already learned is not learned twice
+    new = [{'text': sg['text'][:600], 'kind': sg['jev'], 'confidence': round(sg['confidence'], 3), 'classifier': sg.get('classifier'),
+            'card': card_id, 'at': time.time()} for sg in segs if sg.get('jev') and (sg.get('confidence') or 0) >= .6 and sg['text'][:600] not in have]
+    if not new:
+        return 0
+    items += new
+    keep, count = [], Counter()
+    for it in reversed(items):
+        if count[it['kind']] < 40:
+            keep.append(it); count[it['kind']] += 1
+    LEARNED.write_text(json.dumps(list(reversed(keep)), indent=1))
+    return len(new)
 
 # ── a recording's folder ──────────────────────────────────────────────────────────
 # Each recording keeps everything in one folder, named by its date, time and card:
@@ -149,6 +206,8 @@ def _summary(folder):
         return
     pct = lambda v: f'{round(v * 100)}%'
     L = [card.get('name', ''), '', f"{card.get('kind')} | {card.get('register', '').upper()} | level {card.get('level')} | Focus {card.get('focus')} | Hold {card.get('hold')} | {card.get('rarity')}", '']
+    if card.get('named') == 'stated':
+        L += ['The name is the title the speaker gave.', '']
     L += [' '.join(card.get('effect', [])), '', 'THE WHOLE RECORDING', f"{r.get('words')} words in {r.get('phrases')} phrases. The kind switched {r.get('switches')} times.", '']
     L += [f'  {k:<26} {pct(v)}' for k, v in r.get('profile', [])[:10]]
     L += ['', 'EACH IDEA']
@@ -163,6 +222,11 @@ def _summary(folder):
         L.append('  Jev did not answer: ' + j['error'])
     elif j:
         L.append(f"  Jev hears it as {j.get('kind')} ({pct(j.get('confidence') or 0)} sure), chose the {j.get('style')} style ({pct(j.get('style_confidence') or 0)} sure), and judged it {pct(1 - (j.get('unsafe') or 0))} safe to draw.")
+        for i, sg in enumerate(j.get('segments') or []):
+            same = 'agrees' if sg.get('jev') == sg.get('classifier') else 'differs'
+            L.append(f"  Passage {i + 1}: the classifier said {sg.get('classifier')}; Jev hears {sg.get('jev')} ({pct(sg.get('confidence') or 0)} sure), and {same}.")
+        if card.get('taught'):
+            L.append(f"  {card['taught']} passages Jev was sure of now teach the classifier.")
         if 'reuse' in j:
             L.append(f"  A saved picture was offered; Jev gave it {pct(j['reuse'])} to fit.")
     else:
@@ -254,7 +318,7 @@ def _art(cfg, folder, stitch=True):
     def say(**kw):
         card.update(kw); _write(folder, card); _summary(folder)
     try:
-        _paint(cfg, folder, card, say)
+        _paint(cfg, folder, card, say, ON_LEARN.get('f'))
     finally:
         if stitch:
             time.sleep(4)                        # the last piece is written when the microphone stops
@@ -263,7 +327,7 @@ def _art(cfg, folder, stitch=True):
         elif (folder / 'audio.wav').exists():
             say(audio='audio.wav')
 
-def _paint(cfg, folder, card, say):
+def _paint(cfg, folder, card, say, on_learn=None):
     words = main_words(card.get('text', ''))
     register = card.get('register', 'kelp')
     style = STYLE_FOR.get(card.get('kind'), 'ink')
@@ -272,8 +336,15 @@ def _paint(cfg, folder, card, say):
     if heavy.service(cfg) == 'typesafe':
         say(art='asking Jev')
         try:
-            j = jev_card(cfg, card.get('text', ''), hit)
-            say(jev=j)
+            try:
+                segs = segments(json.loads((folder / 'phrases.json').read_text()))
+            except (OSError, ValueError):
+                segs = []
+            j = jev_card(cfg, card.get('text', ''), hit, segs)
+            taught = learn(j.get('segments', []), card['id'])
+            if taught and on_learn:
+                on_learn()
+            say(jev=j, taught=taught)
             if j.get('style') in heavy.STYLES:
                 style = j['style']
                 hit, likeness = heavy.from_bank(register, style, words)

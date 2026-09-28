@@ -8,15 +8,20 @@ from signals import signals
 STOP=set('a an the this that these those is are was were be been being to of and or in on at for with as i you he she it we they my your our their me us them but if then so from by have has had do does did will would can could should just very all some about into how what when where which who its let not'.split())
 def words(text): return re.findall(r"[\w]+(?:['’][\w]+)?",text.lower())
 def keywords(text): return [w for w in words(text) if w not in STOP and len(w)>2]
+def shares(scores):
+ """scores as shares: the kinds above the sixth-best, summing to one"""
+ s=np.asarray(scores,dtype=float);floor=np.sort(s)[-6];out=np.maximum(0,s-floor);t=out.sum()
+ return out/t if t>0 else np.ones_like(s)/len(s)
 def cos(a,b): return float(np.dot(a,b)/(np.linalg.norm(a)*np.linalg.norm(b)+1e-9))
 class Engine:
- WINDOW_SECONDS=60;WINDOW_WORDS=60;RECENCY=16.0   # a phrase's weight halves roughly every 11 words back
+ WINDOW_SECONDS=120;WINDOW_WORDS=120;RECENCY=30.0;SETTLE=.8   # the longer arc: two minutes of talk; SETTLE is how much of the running share each new phrase keeps
  def __init__(self,model):
   self.model=model;self.labels=list(KINDS)
   # every example of every kind, and which kind it belongs to
   ex=[(k,t) for k in self.labels for t in KINDS[k][1]]
   self.examples=model.encode([t for _,t in ex],normalize_embeddings=True)
   self.owner=np.array([self.labels.index(k) for k,_ in ex])
+  self.base_examples,self.base_owner=self.examples,self.owner;self.learned=[]
   # some kinds sit close to almost anything; their pull on the other kinds' examples is measured once and taken off
   pull=np.zeros(len(self.labels))
   for i in range(len(self.labels)):
@@ -33,16 +38,29 @@ class Engine:
   self.scale=float(np.abs(flat).max()) or 1.0
   self.form_xy=[{'form':k,'x':round(float(x/self.scale),3),'y':round(float(y/self.scale),3)} for k,(x,y) in zip(self.labels,flat)]
   self.reset()
- def kind_scores(self,v,topk=2):
-  s=self.examples@v;out=np.zeros(len(self.labels))
-  for i in range(len(self.labels)):out[i]=np.sort(s[self.owner==i])[-topk:].mean()
+ def kind_scores(self,v,topk=2,base=False):
+  ex,ow=(self.base_examples,self.base_owner) if base else (self.examples,self.owner)
+  s=ex@v;out=np.zeros(len(self.labels))
+  for i in range(len(self.labels)):out[i]=np.sort(s[ow==i])[-topk:].mean()
   return out
+ def learn(self,items):
+  """passages Jev has read at the end of a recording become examples of their kind, beside the written ones,
+  so the next recording is heard with what this speaker's talk has taught it"""
+  items=[x for x in items if x.get('kind') in self.labels and x.get('text')]
+  self.learned=items
+  if not items:
+   self.examples,self.owner=self.base_examples,self.base_owner;return 0
+  vecs=self.model.encode([x['text'] for x in items],normalize_embeddings=True)
+  self.examples=np.vstack([self.base_examples,vecs])
+  self.owner=np.concatenate([self.base_owner,np.array([self.labels.index(x['kind']) for x in items])])
+  return len(items)
  def classify(self,text):
   """the kind of a passage: nearest examples, less each kind's general pull, plus how the passage is built"""
   v=self.model.encode([text],normalize_embeddings=True)[0]
   match=self.kind_scores(v);base=match-self.bias
   sg=signals(text);scores=base.copy();fired=[]
-  self.last_parts={'match':match,'signals':np.zeros(len(self.labels)),'sg':sg}
+  written=self.kind_scores(v,base=True) if self.learned else match
+  self.last_parts={'match':written,'learned':match-written,'signals':np.zeros(len(self.labels)),'sg':sg}
   for k,w in SIGNALS.items():
    add=sum(sg[f]*wt for f,wt in w.items())
    if add>0.005:
@@ -77,6 +95,7 @@ class Engine:
   return v,s,acc/wsum,vec,fired
  def reset(self):
   self.state={'session':str(uuid.uuid4()),'started':time.time(),'revision':0,'status':'Ready for speech.','form':'thinking aloud','world':'scrolls','scores':[], 'topics':[],'events':[],'words':{},'active_topic':None,'speaker_words':{'A':0,'B':0},'speaker':'A','conclusion_at':0,'radius':.85,'gate_at':0,'gate_from':'','error':'','model':'MiniLM, nearest examples over the last minute','source':'Ready','processing':False,'map':{'forms':self.form_xy,'ideas':[]}}
+  self.settled=None
   self.vectors={};self.phrase_scores={};self.phrase_vecs={};self.phrase_heat={};self.last_match={};self.candidate=None;self.candidate_count=0;self.seen=set()
  def ingest(self,text,speaker='A',source='Typed',event_id=None,start=None,end=None,form_override=None):
   text=text.strip()
@@ -89,17 +108,30 @@ class Engine:
   passage=' '.join([e['text'] for e in recent]+[text])
   vector,own,scores,wvec,fired=self.heard_with(text,recent)
   self.phrase_scores[event_id]=own;self.phrase_vecs[event_id]=vector
-  ranked=sorted(zip(self.labels,map(float,scores)),key=lambda x:-x[1]);candidate=ranked[0][0]
-  old=self.state['form'];margin=ranked[0][1]-ranked[1][1]
+  ranked=sorted(zip(self.labels,map(float,scores)),key=lambda x:-x[1])
+  # over time: each phrase's shares join a running share for every kind, so one phrase moves it only so far
+  share=shares(scores)
+  self.settled=share if self.settled is None or not self.state['events'] else self.SETTLE*self.settled+(1-self.SETTLE)*share
+  settled=sorted(zip(self.labels,map(float,self.settled)),key=lambda x:-x[1])
+  candidate=settled[0][0];old=self.state['form'];margin=settled[0][1]-settled[1][1]
   if candidate==self.candidate:self.candidate_count+=1
   else:self.candidate=candidate;self.candidate_count=1
+  # the benefit of the doubt: the longer a kind has held, the more a new one must lead by, or the longer
+  run=0
+  for e in reversed(self.state['events']):
+   if e['form']!=old:break
+   run+=1
+  need_margin=.08+.012*min(run,10);need_streak=2+min(2,run//5)
+  held_share=dict(settled).get(old,0.0)
   nwords=len(passage.split())
   if form_override in KINDS:new=form_override;why='the speaker named the kind'
   elif not self.state['events']:new=candidate;why='the first phrase sets the kind'
-  elif candidate==old:new=old;why='the last minute of talk still reads as %s'%old
-  elif margin>.03:new=candidate;why='over the last %d words it leads by %.2f'%(nwords,margin)
-  elif self.candidate_count>=2:new=candidate;why='it has led for two phrases in a row'
-  else:new=old;why='held at %s until %s leads again (margin only %.2f)'%(old,candidate,margin)
+  elif candidate==old:new=old;why='the talk so far still reads as %s'%old
+  elif margin>need_margin:new=candidate;why='over time it leads by %d points, past the %d a change needs after %d phrases of %s'%(margin*100,need_margin*100,run,old)
+  elif self.candidate_count>=need_streak:new=candidate;why='it has led for %d phrases in a row'%self.candidate_count
+  else:new=old;why='%s has held for %d phrases, so %s must lead by %d points or for %d phrases (it leads by %d, for %d)'%(old,run,candidate,need_margin*100,need_streak,margin*100,self.candidate_count)
+  # how near the classifier is to changing its mind: 0 settled, 1 about to change
+  doubt=0.0 if new!=old or not self.state['events'] else min(1.0,max(margin/need_margin,self.candidate_count/need_streak)) if candidate!=old else (settled[1][1]/max(settled[0][1],1e-6))*.5
   if new!=old:
    self.state.update(gate_from=old,gate_at=now)
   # a very short phrase is matched to an idea together with the phrase before it
@@ -111,6 +143,8 @@ class Engine:
   event={'id':event_id,'text':text,'speaker':speaker,'source':source,'topic':topic['id'],'form':new,'at':now,'start':start,'end':end,
    'why':{'scores':[{'form':k,'similarity':round(v,3)} for k,v in ranked],'cues':fired,'candidate':candidate,'margin':round(margin,3),
           'held':self.candidate_count,'from':old,'form':new,'reason':why,'idea':idea,'window':passage,'window_words':nwords,
+          'settled':[{'form':k,'share':round(v,3)} for k,v in settled],'run':run,'need_margin':round(need_margin,3),'need_streak':need_streak,
+          'doubt':round(float(doubt),3),'held_share':round(held_share,3),
           'own':{k:round(float(v),3) for k,v in zip(self.labels,own)},'weights':self.last_weights,
           'parts':self.parts(ranked),'signals':{k:round(float(v),3) for k,v in self.last_parts['sg'].items()}}}
   topic['events'].append(event_id);topic['words']+=len(words(text));topic['updated']=now
@@ -136,7 +170,7 @@ class Engine:
   P=self.last_parts;out={}
   for k,_ in ranked[:5]:
    i=self.labels.index(k)
-   out[k]={'match':round(float(P['match'][i]),3),'bias':round(float(-self.bias[i]),3),'signals':round(float(P['signals'][i]),3)}
+   out[k]={'match':round(float(P['match'][i]),3),'learned':round(float(P['learned'][i]),3),'bias':round(float(-self.bias[i]),3),'signals':round(float(P['signals'][i]),3)}
   return out
  def xy(self,v):
   f=(v-self.mean)@self.axes.T/self.scale

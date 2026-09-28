@@ -80,6 +80,27 @@
     'song': { refrain: 1.4 }, 'lyrics': { refrain: 1.0, you: .3 }, 'poetry': { short: .3 },
   };
 
+  /* what Jev has taught: for each kind, the words that set its passages apart from the others' */
+  let LEARNED = {};
+  const STOPS = new Set('the and that this with from have were they them their there then when what which would could should about into your just like been some very over also more than only will said says know think really yeah okay right going want thing things people because where while these those here each every other after before again still even much many most such being'.split(' '));
+  function learn(items) {
+    const byKind = {}, all = {};
+    for (const it of items || []) {
+      const ws = (String(it.text).toLowerCase().match(/[a-z']+/g) || []).filter(w => w.length > 3 && !STOPS.has(w));
+      const c = byKind[it.kind] || (byKind[it.kind] = {});
+      for (const w of new Set(ws)) { c[w] = (c[w] || 0) + 1; all[w] = (all[w] || 0) + 1; }
+    }
+    const kinds = Object.keys(byKind), out = {};
+    for (const k of kinds) {
+      const n = (items || []).filter(i => i.kind === k).length;
+      out[k] = Object.entries(byKind[k]).filter(([w, c]) => c >= 2 || n < 3)
+        .map(([w, c]) => [w, Math.log((c + .5) / (n + 1)) - Math.log((all[w] - c + .5) / ((items.length - n) + 1))])
+        .filter(([, v]) => v > .7).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    }
+    LEARNED = out;
+    return Object.values(out).reduce((a, l) => a + l.length, 0);
+  }
+
   /* one phrase, on its own: every kind's points, and the words and shapes that earned them */
   function scorePhrase(text) {
     const low = ' ' + text.toLowerCase().replace(/[“”]/g, '"').replace(/’/g, "'") + ' ';
@@ -92,6 +113,10 @@
         const hits = low.match(re) || [];
         if (hits.length) { s += w * hits.length; hits.forEach(h => { why.push(h.trim()); built.push({ label: h.trim(), add: w * soft, type: 'word' }); }); }
       }
+      for (const [w] of LEARNED[k] || []) {
+        const hits = low.match(new RegExp('\\b' + w + '\\b', 'g')) || [];
+        if (hits.length) { s += .6 * hits.length; why.push(w); built.push({ label: w, add: .6 * hits.length * soft, type: 'learned' }); }
+      }
       s = s * soft;                                     // markers per length, softened for long passages
       for (const [f, w] of Object.entries(SHAPE[k] || {})) {
         if (sg[f] > .05) { s += w * sg[f]; why.push(f); built.push({ label: f, add: w * sg[f], type: 'shape' }); }
@@ -102,7 +127,8 @@
   }
 
   /* a phrase with the minute before it: each phrase's points averaged, the newest words counting most */
-  const WINDOW_SECONDS = 60, WINDOW_WORDS = 60, RECENCY = 16;
+  /* the longer arc: two minutes or 120 words of talk, a phrase's weight halving about every twenty words back */
+  const WINDOW_SECONDS = 120, WINDOW_WORDS = 120, RECENCY = 30, SETTLE = .8;
   function hear(history, text, now) {
     now = now || Date.now() / 1000;
     const own = scorePhrase(text);
@@ -126,18 +152,33 @@
     return { ranked, own, words, recent, weights };
   }
 
-  /* the decision: take a new kind when it clearly leads, or after it has led twice */
-  function decide(prev, ranked, streak) {
-    const [top, second] = ranked;
-    const margin = top[1] - second[1];
-    if (!prev) return { kind: top[0], reason: 'the first phrase sets the kind' };
-    if (top[1] < .15) return { kind: prev, reason: 'nothing in the last minute marks a new kind' };
-    if (top[0] === prev) return { kind: prev, reason: 'the last minute still reads as ' + prev };
-    if (margin > .12) return { kind: top[0], reason: 'it leads by ' + margin.toFixed(2) };
-    if (streak >= 2) return { kind: top[0], reason: 'it has led for two phrases' };
-    return { kind: prev, reason: 'held at ' + prev + ' until ' + top[0] + ' leads again' };
+  /* over time: each phrase's shares join a running share for every kind, so one phrase moves it only so far */
+  function shares(ranked) {
+    const floor = ranked[Math.min(5, ranked.length - 1)][1], out = {}; let sum = 0;
+    for (const [k, v] of ranked) { const s = Math.max(0, v - floor); out[k] = s; sum += s; }
+    for (const k of KINDS) out[k] = sum ? (out[k] || 0) / sum : 1 / KINDS.length;
+    return out;
+  }
+  function settle(prev, ranked) {
+    const now = shares(ranked), out = {};
+    for (const k of KINDS) out[k] = prev ? SETTLE * (prev[k] || 0) + (1 - SETTLE) * now[k] : now[k];
+    return out;
+  }
+  /* the decision, with the benefit of the doubt: the longer a kind has held (run, in phrases),
+     the more a new kind must lead the running shares by, or the longer it must lead */
+  function decide(prev, settled, streak, run) {
+    const ranked = KINDS.map(k => [k, settled[k]]).sort((a, b) => b[1] - a[1]);
+    const [top, second] = ranked, margin = top[1] - second[1];
+    const needMargin = .08 + .012 * Math.min(run || 0, 10), needStreak = 2 + Math.min(2, Math.floor((run || 0) / 5));
+    const out = (kind, reason, doubt) => ({ kind, reason, doubt, ranked, margin, needMargin, needStreak, run: run || 0 });
+    if (!prev) return out(top[0], 'the first phrase sets the kind', 0);
+    if (top[0] === prev) return out(prev, 'the talk so far still reads as ' + prev, second[1] / Math.max(top[1], 1e-6) * .5);
+    if (margin > needMargin) return out(top[0], `over time it leads by ${Math.round(margin * 100)} points, past the ${Math.round(needMargin * 100)} a change needs after ${run} phrases of ${prev}`, 0);
+    if (streak >= needStreak) return out(top[0], `it has led for ${streak} phrases in a row`, 0);
+    return out(prev, `${prev} has held for ${run} phrases, so ${top[0]} must lead by ${Math.round(needMargin * 100)} points or for ${needStreak} phrases (it leads by ${Math.round(margin * 100)}, for ${streak})`,
+      Math.min(1, Math.max(margin / needMargin, streak / needStreak)));
   }
 
-  const api = { KINDS, IMAGE, scorePhrase, hear, decide, structure };
+  const api = { KINDS, IMAGE, scorePhrase, hear, decide, settle, shares, structure, learn, learned: () => LEARNED };
   if (typeof module !== 'undefined') module.exports = api; else root.SpeechformClassify = api;
 })(this);

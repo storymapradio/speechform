@@ -14,6 +14,19 @@
  */
 (function (root) {
   'use strict';
+  const ICON = {
+    transcript: '<path d="M5 6h14M5 10.5h14M5 15h14M5 19.5h8"/>',
+    now: '<circle cx="5" cy="12" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><circle cx="19" cy="12" r="2"/><path d="M6.6 10.6l3.8-3.6M6.6 13.4l3.8 3.6M13.6 7l3.8 3.6M13.6 17l3.8-3.6"/>',
+    bars: '<path d="M4 6h13M4 10.5h9M4 15h15M4 19.5h6"/>',
+    river: '<path d="M3 8c4-3 6 3 9 0s5-3 9 0M3 13c4-3 6 3 9 0s5-3 9 0M3 18c4-3 6 3 9 0s5-3 9 0"/>',
+    window: '<path d="M5 19V9M9.5 19v-7M14 19v-4M18.5 19v-2"/><path d="M3 20h18"/>',
+    build: '<rect x="4" y="5" width="7" height="4" rx="1"/><rect x="11" y="10" width="5" height="4" rx="1"/><rect x="16" y="15" width="4" height="4" rx="1"/>',
+    shape: '<path d="M12 3.5l7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8z"/><path d="M12 8l3.5 2.5-1 4.5h-5l-1.5-4z"/>',
+    ideas: '<path d="M7 5.5l2.6 1.5v3L7 11.5 4.4 10V7zM17 5.5l2.6 1.5v3L17 11.5 14.4 10V7zM12 13l2.6 1.5v3L12 19l-2.6-1.5v-3z"/><path d="M9 10l1.5 3.3M15 10l-1.5 3.3"/>',
+    all: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
+    memory: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/>',
+    cards: '<rect x="5" y="3.5" width="11" height="15" rx="2"/><path d="M8.5 21h9a2 2 0 0 0 2-2V7"/>',
+  };
   const VIEWS = [
     ['now', '<path d="M5 6h14M5 10.5h14M5 15h9"/>'],
     ['river', '<path d="M3 8c4-3 6 3 9 0s5-3 9 0M3 13c4-3 6 3 9 0s5-3 9 0M3 18c4-3 6 3 9 0s5-3 9 0"/>'],
@@ -22,17 +35,15 @@
     ['shape', '<path d="M12 3.5l7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8z"/><path d="M12 8l3.5 2.5-1 4.5h-5l-1.5-4z"/>'],
     ['ideas', '<path d="M7 5.5l2.6 1.5v3L7 11.5 4.4 10V7zM17 5.5l2.6 1.5v3L17 11.5 14.4 10V7zM12 13l2.6 1.5v3L12 19l-2.6-1.5v-3z"/><path d="M9 10l1.5 3.3M15 10l-1.5 3.3"/>'],
   ];
-  const TYPE = { example: 'nearest examples', bias: 'general pull', shape: 'shape', word: 'word' };
+  const TYPE = { example: 'nearest examples', bias: 'general pull', shape: 'shape', word: 'word', learned: 'learned from Jev' };
+  const LEARNED_COLOR = '#a9b8ff';
   const lerp = (a, b, k) => a + (b - a) * k;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  function mount({ bar, canvas, note, onView, onPick, start = 'now' }) {
+  /* one canvas drawing one view at a time; several can run side by side (the dashboard, a card's replay) */
+  function renderer(canvas, { note, onPick, start = 'now' } = {}) {
     let view = start, T = null, dpr = 1, W = 0, H = 0, hits = [], born = {}, eased = {};
-    const x = canvas.getContext('2d');
-    bar.innerHTML = VIEWS.map(([k, svg]) => `<button class="vchip" data-v="${k}" title="${k}" aria-label="${k}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join('');
-    const paintBar = () => bar.querySelectorAll('.vchip').forEach(b => b.classList.toggle('on', b.dataset.v === view));
-    bar.querySelectorAll('.vchip').forEach(b => b.onclick = () => { view = b.dataset.v; paintBar(); onView && onView(view); });
-    paintBar(); onView && onView(view);
+    let x = canvas.getContext('2d');
     canvas.addEventListener('click', ev => {
       const r = canvas.getBoundingClientRect(), px = (ev.clientX - r.left) * dpr, py = (ev.clientY - r.top) * dpr;
       const h = hits.find(h => (px - h.x) ** 2 + (py - h.y) ** 2 < h.r * h.r);
@@ -49,8 +60,10 @@
 
     /* ── river: every kind's standing, phrase by phrase ── */
     function river() {
-      const P = T.phrases.slice(-40); if (!P.length) return empty();
-      const top = 16 * dpr, bottom = H - 30 * dpr, left = 8 * dpr, right = W - 96 * dpr, mid = (top + bottom) / 2;
+      let P = T.phrases.slice(-40); if (!P.length) return empty();
+      if (P.length === 1) P = [P[0], P[0]];                     // a single phrase still shows as a short stripe
+      const hasDoubt = P.some(p => p.doubt != null), band = hasDoubt ? 22 * dpr : 0;
+      const top = 16 * dpr + band, bottom = H - 30 * dpr, left = 8 * dpr, right = W - 96 * dpr, mid = (top + bottom) / 2;
       const kinds = T.kinds, n = P.length, step = n > 1 ? (right - left) / (n - 1) : 0;
       /* each column: the kinds above that phrase's fifth-best score, as shares; thickness is how clearly it is marked */
       const peak = Math.max(...P.map(p => Math.max(0, p.ranked[0][1])), 1e-6);
@@ -102,9 +115,17 @@
         if (p.id === (focus() || {}).id) { x.strokeStyle = amber; x.lineWidth = 1.5 * dpr; x.strokeRect(X(i) - 3 * dpr, bottom + 6 * dpr, 6 * dpr, 9 * dpr); }
         hits.push({ x: X(i), y: bottom + 10 * dpr, r: Math.max(8 * dpr, step / 2), id: p.id });
       });
+      /* the doubt: how near the classifier came, phrase by phrase, to changing its mind */
+      if (hasDoubt) {
+        const y0 = 4 * dpr, hgt = band - 8 * dpr;
+        x.beginPath(); P.forEach((p, i) => x.lineTo(X(i), y0 + hgt * (1 - (p.doubt || 0)))); x.lineTo(X(n - 1), y0 + hgt); x.lineTo(X(0), y0 + hgt); x.closePath();
+        x.fillStyle = 'rgba(255,201,74,.18)'; x.fill();
+        x.beginPath(); P.forEach((p, i) => x.lineTo(X(i), y0 + hgt * (1 - (p.doubt || 0)))); x.strokeStyle = amber; x.lineWidth = 1.2 * dpr; x.stroke();
+        font(8); x.fillStyle = amber; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText('doubt', right + 8 * dpr, y0 + hgt / 2);
+      }
       font(8.5); x.fillStyle = muted; x.textAlign = 'left'; x.fillText('heard', left, H - 8 * dpr);
       x.textAlign = 'right'; x.fillText('chosen ▬', right, H - 8 * dpr);
-      say('Each band is a kind; its thickness is its share of the points after every phrase. The strip beneath is the kind chosen, which holds until a new kind clearly leads. Tap the strip to look at a phrase.');
+      say('Each band is a kind; its thickness is its share of the points after every phrase. The strip beneath is the kind chosen, which holds until a new kind clearly leads over time. The amber line above is the doubt: how near the classifier came to changing its mind.');
     }
 
     /* ── window: the minute of talk and each phrase's share of the verdict ── */
@@ -114,16 +135,17 @@
       /* the decay: a phrase ten words back counts about half, forty words back hardly at all */
       const gx = pad, gy = pad, gw = W - pad * 2, gh = graphH - 14 * dpr;
       x.strokeStyle = faint; x.lineWidth = dpr; x.strokeRect(gx, gy, gw, gh);
-      x.beginPath(); for (let k = 0; k <= 60; k++) x.lineTo(gx + gw - k / 60 * gw, gy + gh - Math.exp(-k / 16) * gh * .92); x.strokeStyle = amber; x.stroke();
+      const SPAN = T.windowWords || 120, REC = T.recency || 30;
+      x.beginPath(); for (let k = 0; k <= SPAN; k++) x.lineTo(gx + gw - k / SPAN * gw, gy + gh - Math.exp(-k / REC) * gh * .92); x.strokeStyle = amber; x.stroke();
       let back = 0; const lens = rows.map(r => r.text.split(/\s+/).length);
       for (let i = rows.length - 1; i >= 0; i--) {
-        const px = gx + gw - Math.min(60, back) / 60 * gw, pw = Math.min(lens[i], 60 - Math.min(60, back)) / 60 * gw;
+        const px = gx + gw - Math.min(SPAN, back) / SPAN * gw, pw = Math.min(lens[i], SPAN - Math.min(SPAN, back)) / SPAN * gw;
         const own = T.phrases.find(q => q.id === rows[i].id) || p;
         x.fillStyle = T.color(topOwn(own)); x.globalAlpha = .25; x.fillRect(px - pw, gy + gh - 4 * dpr, pw, 4 * dpr); x.globalAlpha = 1;
         back += lens[i];
       }
       font(8.5); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
-      x.fillText('60 words back', gx, gy + gh + 11 * dpr); x.textAlign = 'right'; x.fillText('now', gx + gw, gy + gh + 11 * dpr);
+      x.fillText(SPAN + ' words back', gx, gy + gh + 11 * dpr); x.textAlign = 'right'; x.fillText('now', gx + gw, gy + gh + 11 * dpr);
       /* the phrases, oldest first, each bar its share */
       const maxW = Math.max(...rows.map(r => r.w), 1e-6), barX = W * .52, barW = W - barX - 44 * dpr;
       rows.forEach((r, i) => {
@@ -162,7 +184,7 @@
           const a = q.add >= 0 ? pos : neg + q.add, b = q.add >= 0 ? pos + q.add : neg;
           if (q.add >= 0) pos += q.add; else neg += q.add;
           const L = S(a), R = lerp(S(a), S(b), ease('b' + p.id + r.k + j, 1, .1));
-          x.fillStyle = q.type === 'bias' ? '#3a4a38' : q.type === 'shape' ? amber : c;
+          x.fillStyle = q.type === 'bias' ? '#3a4a38' : q.type === 'shape' ? amber : q.type === 'learned' ? LEARNED_COLOR : c;
           x.globalAlpha = q.type === 'word' ? (j % 2 ? .75 : .95) : .9; x.fillRect(L, by, Math.max(1, R - L - dpr), bh); x.globalAlpha = 1;
           font(8.5); x.fillStyle = '#000'; x.textAlign = 'center';
           const t = q.label; if (R - L > x.measureText(t).width + 6 * dpr) x.fillText(t, (L + R) / 2, by + bh / 2);
@@ -177,8 +199,8 @@
         x.fillText(fit(line, W - x0 - 10 * dpr), x0, by + bh + 11 * dpr);
       });
       say(p.engine
-        ? 'Each bar is one kind: how near the phrase came to that kind\'s examples, less the kind\'s general pull, plus its shape (amber). The white tick is the score once the minute before is counted in.'
-        : 'Each bar is one kind, built from the marker words it heard (one block each) and the phrase\'s shape (amber). The white tick is the score once the minute before is counted in.');
+        ? 'Each bar is one kind: how near the phrase came to that kind\'s examples, what Jev has taught it (blue), less the kind\'s general pull, plus its shape (amber). The white tick is the score with the talk before it counted in.'
+        : 'Each bar is one kind, built from the marker words it heard (one block each), the words Jev has taught it (blue) and the phrase\'s shape (amber). The white tick is the score with the talk before it counted in.');
     }
 
     /* ── shape: how the phrase is built, as a radar ── */
@@ -245,22 +267,109 @@
       say('Each hexagon is an idea, sized by its words, with an amber bead for every return. Each dot below is a phrase, tied to its idea; amber ties are returns. Tap a dot to look at that phrase.');
     }
 
+    /* ── bars: every kind's share over time, and how firmly the kind in front holds ── */
+    function bars() {
+      const p = focus(); if (!p) return empty();
+      const settled = p.settled || (() => { const r = p.ranked, f = r[Math.min(5, r.length - 1)][1], o = {}; let s = 0; r.forEach(([k, v]) => { o[k] = Math.max(0, v - f); s += o[k]; }); for (const k in o) o[k] /= s || 1; return o; })();
+      const rows = Object.entries(settled).sort((a, b) => b[1] - a[1]).slice(0, 8), pad = 10 * dpr, labelW = 150 * dpr;
+      const top = rows[0] ? rows[0][1] : 1, rowH = Math.min(24 * dpr, (H - 110 * dpr) / rows.length);
+      rows.forEach(([k, v], i) => {
+        const y = pad + i * rowH, w = ease('s' + k, v / Math.max(top, 1e-6)) * (W - labelW - 60 * dpr);
+        font(10.5, k === p.kind ? '600' : ''); x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillStyle = k === p.kind ? ink : muted;
+        x.fillText(fit(k, labelW - 8 * dpr), pad, y + rowH / 2);
+        x.fillStyle = '#0d130c'; x.fillRect(labelW, y + rowH * .28, W - labelW - 60 * dpr, rowH * .44);
+        x.fillStyle = T.color(k); x.globalAlpha = k === p.kind ? 1 : .7; x.fillRect(labelW, y + rowH * .28, w, rowH * .44); x.globalAlpha = 1;
+        x.fillStyle = ink; x.textAlign = 'right'; x.fillText(Math.round(v * 100) + '%', W - pad, y + rowH / 2);
+      });
+      /* the doubt meter */
+      const y = pad + rows.length * rowH + 14 * dpr, d = ease('doubt', p.doubt || 0, .08), mw = W - pad * 2;
+      font(10); x.textAlign = 'left'; x.fillStyle = amber; x.fillText('doubt', pad, y);
+      x.fillStyle = '#0d130c'; x.fillRect(pad + 50 * dpr, y - 4 * dpr, mw - 50 * dpr, 8 * dpr);
+      const g = x.createLinearGradient(pad + 50 * dpr, 0, pad + mw, 0); g.addColorStop(0, '#39ff14'); g.addColorStop(.6, amber); g.addColorStop(1, '#ff5a4a');
+      x.fillStyle = g; x.fillRect(pad + 50 * dpr, y - 4 * dpr, (mw - 50 * dpr) * d, 8 * dpr);
+      font(10); x.fillStyle = ink; let ty = y + 20 * dpr;
+      const said = p.run != null ? `${p.kind} has held for ${p.run} phrases.` : `The kind is ${p.kind}.`;
+      x.fillText(fit(said, mw), pad, ty); ty += 15 * dpr;
+      if (p.reason) { font(9.5); x.fillStyle = muted; let line = ''; for (const w2 of String(p.reason).split(' ')) { const t = line ? line + ' ' + w2 : w2; if (x.measureText(t).width > mw) { x.fillText(line, pad, ty); ty += 13 * dpr; line = w2; } else line = t; } if (line) x.fillText(line, pad, ty); }
+      say('Each bar is a kind\'s share over time: every phrase adds to it, so one phrase moves it only so far. The longer a kind has held, the more a new one must lead by. The doubt shows how near it is to changing.');
+    }
+
     function empty() { font(11); x.fillStyle = muted; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('The views fill as you speak.', W / 2, H / 2); say(''); }
     let said = '';
     function say(t) { if (t !== said) { said = t; if (note) note.textContent = t; } }
 
     function loop() {
       requestAnimationFrame(loop);
-      if (view === 'now' || !T || !canvas.offsetParent) return;
+      if (view === 'now' || !T || !canvas.getClientRects().length) return;
+      if (x.isContextLost && x.isContextLost()) return;
       dpr = devicePixelRatio || 1;
       const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       W = w; H = h; x.clearRect(0, 0, W, H); hits = [];
-      ({ river, window: windowView, build, shape, ideas })[view]();
+      ({ river, window: windowView, build, shape, ideas, bars })[view]();
     }
     requestAnimationFrame(loop);
-    return { set(t) { T = t; }, get view() { return view; } };
+    return { set(t) { T = t; }, setView(v) { view = v; }, get view() { return view; }, canvas };
   }
 
-  root.SpeechformViews = { mount, VIEWS: VIEWS.map(v => v[0]) };
+  /* the classifier screen: one renderer, and (if a bar is given) a row of view icons */
+  function mount({ bar, canvas, note, onView, onPick, start = 'now' }) {
+    const r = renderer(canvas, { note, onPick, start });
+    const set = v => { r.setView(v); if (bar) bar.querySelectorAll('.vchip').forEach(b => b.classList.toggle('on', b.dataset.v === v)); onView && onView(v); };
+    if (bar) {
+      bar.innerHTML = VIEWS.map(([k, svg]) => `<button class="vchip" data-v="${k}" title="${k}" aria-label="${k}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join('');
+      bar.querySelectorAll('.vchip').forEach(b => b.onclick = () => set(b.dataset.v));
+    }
+    set(start);
+    return { set: t => r.set(t), setView: set, get view() { return r.view; } };
+  }
+
+  /* every graph at once, over the whole window */
+  const GRID = ['bars', 'river', 'window', 'build', 'shape', 'ideas'];
+  function grid(host, { onPick } = {}) {
+    host.classList.add('vgrid');
+    host.innerHTML = GRID.map(v => `<div class="vcell"><div class="vcap"><svg viewBox="0 0 24 24">${ICON[v]}</svg><span>${v}</span></div><canvas></canvas></div>`).join('');
+    const rs = [...host.querySelectorAll('canvas')].map((c, i) => renderer(c, { start: GRID[i], onPick }));
+    return { set: t => rs.forEach(r => r.set(t)) };
+  }
+  let board = null;
+  function dashboard({ onPick } = {}) {
+    if (board) return board;
+    const el = document.createElement('div'); el.className = 'vboard'; el.hidden = true;
+    el.innerHTML = `<button class="vclose" title="close" aria-label="close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button><div class="vboardgrid"></div>`;
+    document.body.appendChild(el);
+    const g = grid(el.querySelector('.vboardgrid'), { onPick });
+    el.querySelector('.vclose').onclick = () => { el.hidden = true; };
+    board = { open() { el.hidden = false; }, close() { el.hidden = true; }, set: g.set, get isOpen() { return !el.hidden; } };
+    return board;
+  }
+  const css = `.vgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:12px}
+.vcell{display:flex;flex-direction:column;min-height:300px;border:2px solid var(--green-dim,rgba(57,255,20,.35));border-radius:14px;background:var(--panel,#070907);padding:8px 10px}
+.vcell canvas{flex:1;min-height:0;width:100%;display:block}
+.vcap{display:flex;align-items:center;gap:6px;color:var(--green,#39ff14);font:10.5px ui-monospace,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.vcap svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.vboard{position:fixed;inset:0;z-index:18;background:rgba(0,0,0,.92);padding:16px;overflow:auto}
+.vboard[hidden]{display:none}
+.vboardgrid{grid-template-columns:repeat(auto-fit,minmax(max(340px,31%),1fr));grid-auto-rows:minmax(300px,calc((100vh - 60px)/2))}
+.vclose{position:fixed;top:12px;right:14px;z-index:19;width:36px;height:36px;border:none;background:none;color:var(--ink,#e8f5e4);cursor:pointer}
+.vclose svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8}`;
+  if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
+
+  /* every screen is an icon in the top row: the transcript, the classifier's seven views, memory and the deck,
+     and a last icon that opens every graph at once */
+  const SCREENS = [['transcript', 0], ['now', 1], ['bars', 1], ['river', 1], ['window', 1], ['build', 1], ['shape', 1], ['ideas', 1], ['memory', 2], ['cards', 3]];
+  function screens(host, { go, setView, openAll }) {
+    let cur = 'transcript';
+    host.innerHTML = SCREENS.map(([k]) => `<button class="tool" data-s="${k}" title="${k}" aria-label="${k}"><svg viewBox="0 0 24 24">${ICON[k]}</svg></button>`).join('') +
+      `<button class="tool" data-all title="every graph at once" aria-label="every graph at once"><svg viewBox="0 0 24 24">${ICON.all}</svg></button>`;
+    const paint = () => host.querySelectorAll('[data-s]').forEach(b => b.classList.toggle('on', b.dataset.s === cur));
+    const show = name => { const sc = SCREENS.find(x => x[0] === name) || SCREENS[0]; cur = sc[0]; if (sc[1] === 1) setView(sc[0]); go(sc[1], true); paint(); };
+    host.querySelectorAll('[data-s]').forEach(b => b.onclick = () => show(b.dataset.s));
+    host.querySelector('[data-all]').onclick = openAll;
+    paint();
+    return { show, step(d) { const i = SCREENS.findIndex(x => x[0] === cur); show(SCREENS[Math.max(0, Math.min(SCREENS.length - 1, i + d))][0]); },
+      sync(page, view) { cur = page === 1 ? view : (SCREENS.find(x => x[1] === page) || SCREENS[0])[0]; paint(); }, get current() { return cur; } };
+  }
+
+  root.SpeechformViews = { mount, renderer, grid, dashboard, screens, ICON, SCREENS, VIEWS: VIEWS.map(v => v[0]) };
 })(this);

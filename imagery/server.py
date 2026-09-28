@@ -294,7 +294,10 @@ def director():
             log('stand-in', changes, reasons)
         cfg = settings()
         every = float(cfg.get('every', 3) or 3)
-        if cfg.get('provider') not in (None, 'stand-in') and s.get('events') and time.time() - last_ask > every:
+        # Jev (TypeSafe) is never asked while you speak: it reads the whole recording once, when it stops (cards.py).
+        # Another model set to steer the image is asked only while the microphone is on.
+        listening = bool(read_json(PANEL, {}).get('microphone'))
+        if cfg.get('provider') not in (None, 'stand-in', 'typesafe') and listening and s.get('events') and time.time() - last_ask > every:
             last_ask = time.time()
             provider_status.update(state='asking')
             t0 = time.time()
@@ -408,6 +411,7 @@ def app_state():
         'mix': mix, 'growth': grow, 'lead': max(mix, key=mix.get), 'form_to_register': growers.FORM_TO_REGISTER,
         'direction': d, 'directed_by': 'jev (posted)' if time.time() - last_jev < 8 else 'director',
         'decisions': list(decisions)[:40], 'provider': public_settings(), 'provider_status': provider_status,
+        'learned': len(cards.learned()),
         'status': status(), 'microphone': bool(panel.get('microphone')), 'recording_since': panel.get('recording_since', 0), 'worker_alive': time.time() - float(s.get('heartbeat', 0)) < 12,
         'now': time.time(),
     }
@@ -455,11 +459,26 @@ class Handler(BaseHTTPRequestHandler):
         if path.startswith('/cards/'):
             from urllib.parse import unquote
             f = cards.card_file(unquote(path[7:]))
+            rng = self.headers.get('Range', '')
+            if f and f.suffix == '.wav' and rng.startswith('bytes='):
+                # the audio of a recording, a piece at a time, so the replay can jump anywhere in it
+                size = f.stat().st_size
+                a0, _, a1 = rng[6:].partition('-')
+                start = int(a0 or 0); end = min(size - 1, int(a1) if a1 else size - 1)
+                with open(f, 'rb') as fh:
+                    fh.seek(start); body = fh.read(end - start + 1)
+                self.send_response(206)
+                self.send_header('Content-Type', 'audio/wav'); self.send_header('Accept-Ranges', 'bytes')
+                self.send_header('Content-Range', f'bytes {start}-{end}/{size}'); self.send_header('Content-Length', str(len(body)))
+                self.end_headers(); self.wfile.write(body)
+                return
             if f:
                 return self._send(200, f.read_bytes(), {'.jpg': 'image/jpeg', '.png': 'image/png', '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.wav': 'audio/wav'}.get(f.suffix, 'application/octet-stream'))
             return self._send(404, {'error': 'not here'})
         if path == '/sections':
             return self._send(200, {'sections': cards.sections()})
+        if path == '/learned':
+            return self._send(200, {'learned': cards.learned()})
         if path == '/easel':
             return self._send(200, cards.easel_status())
         if path.startswith('/bank/'):
@@ -646,6 +665,7 @@ def ensure_worker():
                      stdout=log, stderr=log, start_new_session=True)
 
 if __name__ == '__main__':
+    cards.ON_LEARN['f'] = lambda: command('learn')    # the worker reloads what Jev has taught
     DIRECTION.parent.mkdir(parents=True, exist_ok=True)
     INBOX.mkdir(parents=True, exist_ok=True)
     ensure_worker()

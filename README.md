@@ -89,6 +89,28 @@ The key fields are optional. With no provider, a built-in stand-in steers the im
 - **Claude**, with your Anthropic API key. The default model is Claude Haiku 4.5.
 - **A local model** through any OpenAI-compatible endpoint, such as [Ollama](https://ollama.com) at `http://127.0.0.1:11434/v1` with `gemma3:1b`.
 
+## Reading a long talk
+
+Speechform is made for long talks and discussions, so it looks at the longer arc.
+
+- **The kind of speech is judged over time.** Each phrase is heard with the two minutes (up to 120 words) before it, and its shares join a running share for every kind, so one phrase moves it only so far.
+- **The speaker gets the benefit of the doubt.** The longer a kind has held, the more a new kind must lead by, or the more phrases in a row it must lead. A two-phrase aside in a long instruction stays instruction; a story told for about a minute takes over.
+- **The doubt is shown.** The bars view and the river's amber line show how near the classifier is to changing its mind.
+- **Images change slowly.** An image takes about half an hour of speech to fill, the image in front holds the square for at least half a minute, and changes glide over a few seconds.
+
+## Jev reads at the end, and teaches the classifier
+
+Jev (TypeSafe) is never asked while you speak. When a recording stops, Jev reads it once, in one call: the kind of the whole recording, its style, whether it is safe to draw, and the kind of each of up to twelve passages. Every passage Jev is at least 60% sure of is kept in `runtime/learned.json` (the newest forty per kind) and teaches the classifier:
+
+- the full engine takes each passage as a new example of its kind, beside the written examples, and the build view shows what it adds in blue;
+- Light takes the words that set each kind's passages apart and gives them points for that kind.
+
+So each recording makes the next one read closer to how Jev hears it. `reading.txt` in each recording's folder lists every passage with what the classifier said and what Jev heard.
+
+## Screens
+
+Every screen is an icon in the top row: the transcript; the classifier as now, bars, river, window, build, shape and ideas; memory; and the deck. The last icon opens every graph at once, over the whole window, and they keep moving while you speak. The arrow keys and a swipe move from screen to screen.
+
 ## Cards
 
 When a recording stops, Speechform reads it whole and turns it into a card. The ▣ icon opens the deck, and ⊕ makes a card of the whole session at any time.
@@ -115,7 +137,9 @@ Each scale gets a share for every kind of speech and an average shape. The readi
 | Effect | sentences written from the reading, for example "It returns to the lantern twice." |
 | Back | the image the talk grew, the six largest shares, Jev's verdict and the clearest moment |
 
-Tap a card to flip it, and use the arrow to save the side you are looking at as a PNG. Beside the card are its audio, its transcript and its reading, and the folder icon opens its folder in Finder.
+Tap a card to flip it, and use the arrow to save the side you are looking at as a PNG. Beside the card is its replay: press play and the audio plays while the transcript follows along and any of the six graphs moves through the recording as it happened. Drag the line to go anywhere, or tap a line of the transcript to go to it. The folder icon opens the recording's folder in Finder.
+
+**The name.** A title the speaker states becomes the card's name: "this story is called…", "the title is…", "Chapter Three: The Lighthouse", "Lesson four", "The Raven, by Edgar Allan Poe", "Welcome to…". Without one, the card is named after its busiest idea.
 
 **Where everything is kept.** Every recording has one folder in `runtime/cards/`, named by its date, time and card. To keep it on the Desktop, run `ln -s "$PWD/runtime/cards" ~/Desktop/"Speechform Cards"`. Each folder holds:
 
@@ -133,7 +157,7 @@ Sections classified by hand are kept in the same folder under `Sections`, one te
 **The art.** Every card has two sides:
 
 1. **The abstract side** is the image your talk grew. The full app takes TouchDesigner's last frame, and Light captures its own canvas. It is free, instant and never leaves your Mac.
-2. **Jev decides**, when a TypeSafe key is saved, in one call: the kind of the whole recording, which of the six styles fits it, whether it is safe to draw, and whether a picture already in the bank fits it well enough to reuse. A recording Jev judges unsafe keeps its abstract side only.
+2. **Jev decides**, when a TypeSafe key is saved, in the one call it makes when the recording stops: the kind of the whole recording and of each passage, which of the six styles fits it, whether it is safe to draw, and whether a picture already in the bank fits it well enough to reuse. A recording Jev judges unsafe keeps its abstract side only.
 3. **The bank** is searched next. A picture of the same image and style sharing at least half its words is reused at no cost.
 4. **The easel draws the clear side** (`imagery/easel.py`). It runs SDXL Turbo on the Mac's GPU in its own process on port 9996. It redraws the abstract image toward a prompt written from the recording's most repeated words, in the chosen style, keeping the shape and colour the talk made. A picture takes three to eight seconds and never leaves the Mac. The new picture also goes into the bank, where Heavy can reuse it.
 

@@ -81,8 +81,36 @@
       kinds: P.map(p => p.kind), switches, clarity: clamp(margins / tops * 2, 0, 1), continuity: P.length > 1 ? stays / (P.length - 1) : 1,
       ideas: used.map(id => ({ id, title: (byId[id] || {}).title || '', words: ideaWords[id], returns: returns[id] || 0 })).sort((a, b) => b.words - a.words),
       sections, windows, strongest: { id: strongest.id, text: strongest.text, kind: strongest.kind },
-      first: P[0].kind, last: P[P.length - 1].kind,
+      first: P[0].kind, last: P[P.length - 1].kind, title: statedTitle(P),
     };
+  }
+
+  /* a title the speaker states wins over any name the reading could give: "this story is called…",
+     "Chapter Three: The Lighthouse", "Lesson four, listening", "The Raven, by Edgar Allan Poe" */
+  const NUM = '(?:\\d+|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|[ivxlc]+)';
+  const TITLE = [
+    [new RegExp(`\\b((?:chapter|part|book|lesson|episode|act|scene|session|unit|track|verse|canto|movement)\\s+${NUM})\\b[\\s:.,-]*([^.!?;]{0,60})`, 'i'), m => m[2] && m[2].trim().split(/\s+/).length <= 6 ? `${m[1]}: ${m[2]}` : m[1]],
+    [/\b(?:this|the|my|our|today's|tonight's)\s+(?:story|poem|song|talk|lesson|lecture|piece|chapter|tale|book|reading|episode|session|essay|speech)\s+(?:is\s+)?(?:called|titled|named|entitled)\s+["“']?([^.!?;"”]{2,60})/i, m => m[1]],
+    [/\b(?:it's|it is|this is|that's)\s+(?:called|titled|named|entitled)\s+["“']?([^.!?;"”]{2,60})/i, m => m[1]],
+    [/\b(?:the\s+)?(?:title|name)\s+(?:of\s+(?:this|the|my)\s+\w+\s+)?is\s+["“']?([^.!?;"”]{2,60})/i, m => m[1]],
+    [/\b(?:titled|entitled)\s+["“']?([^.!?;"”]{2,60})/i, m => m[1]],
+    [/\b(?:today's|tonight's|this)\s+(?:lesson|talk|lecture|topic|session|class)\s+is\s+(?:on|about)\s+([^.!?;]{2,60})/i, m => m[1]],
+    [/^\s*["“']?([A-Z][^.!?;,]{1,50}),?\s+by\s+([A-Z][\w.'-]+(?:\s+[A-Z][\w.'-]+){0,3})/, m => m[1]],
+    [/\b[Ww]elcome\s+to\s+(?:episode\s+\w+\s+of\s+)?["“']?((?:[A-Z][\w'-]*\s*){1,6})/, m => m[1]],
+  ];
+  function statedTitle(phrases) {
+    /* a title is usually said near the start; a chapter or lesson heading anywhere counts too */
+    const sentence = t => /[.!?;:]\s*$/.test(t) ? t : t + '.';        // speech often has no full stop between phrases
+    const head = phrases.slice(0, 6).map(p => sentence(p.text)).join(' ');
+    const all = phrases.map(p => sentence(p.text)).join(' ');
+    for (const [re, pick] of TITLE) {
+      for (const text of [head, all]) {
+        const m = text.match(re); if (!m) continue;
+        const t = pick(m).replace(/\s+(?:and|so|which|that|where|who)\b.*$/i, '').replace(/[\s,:-]+$/, '').trim();
+        if (t && t.split(/\s+/).length <= 10) return t;
+      }
+    }
+    return null;
   }
 
   /* the card: a name, a type, a level, two numbers, a rarity, and what it does, all from the reading */
@@ -112,7 +140,7 @@
     if (back && back.returns) effect.push(`It returns to "${back.title}" ${TIMES(back.returns)}.`);
     effect.push(`It holds ${r.ideas.length === 1 ? 'one idea' : r.ideas.length + ' ideas'} across ${r.words} words.`);
     return {
-      name: titleCase(main.title), register: IMAGE[k1] || 'kelp', kind: k1, second: k2, level, focus, hold, rarity, distance,
+      name: r.title ? titleCase(r.title) : titleCase(main.title), named: r.title ? 'stated' : 'idea', register: IMAGE[k1] || 'kelp', kind: k1, second: k2, level, focus, hold, rarity, distance,
       effect, profile: r.profile, strongest: r.strongest, at: r.at,
     };
   }
@@ -191,6 +219,6 @@
     }
   }
 
-  const api = { read, card, drawCard, shares, weigh, IMAGE, COLORS };
+  const api = { read, card, drawCard, shares, weigh, statedTitle, IMAGE, COLORS };
   if (typeof module !== 'undefined') module.exports = api; else root.SpeechformReading = api;
 })(this);

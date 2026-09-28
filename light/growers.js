@@ -250,6 +250,9 @@
 
   /* the canvas: shapes in additive light over a fading trail, with a soft glow laid over them */
   /* opts.transparent: draw over whatever lies beneath (a camera feed) instead of over black */
+  /* made for long talks: an image takes about half an hour of speech to fill, and the image in front
+     holds the square for at least half a minute before another kind may take it */
+  const PACE = .2, DWELL = 30;
   function Renderer(canvas, size, opts) {
     const S = size || 480, clear = !!(opts && opts.transparent);
     canvas.width = canvas.height = S;
@@ -280,15 +283,16 @@
       ctx.fillStyle = `rgba(0,0,0,${(.34 - .16 * ctxState.c.memory).toFixed(3)})`; ctx.fillRect(0, 0, S, S);
       ctx.globalCompositeOperation = 'lighter';
       const place = layout(ctxState.order, ctxState.lead);
+      const slow = { ...ctxState.c, ideas: (ctxState.c.ideas || []).map(i => ({ ...i, words: (i.words || 0) * PACE })) };
       for (const r of REGISTERS) {
         const target = place[r] ? (r === ctxState.lead ? 1 : .8) : 0;
-        weight[r] = (weight[r] || 0) + (target - (weight[r] || 0)) * Math.min(1, dt * 1.6);
+        weight[r] = (weight[r] || 0) + (target - (weight[r] || 0)) * Math.min(1, dt * .5);
         if (weight[r] < .004) { delete at[r]; continue; }
         const goal = place[r] || at[r] || [0, 0, 1];
         const cur = at[r] || (at[r] = goal.slice());
-        for (let j = 0; j < 3; j++) cur[j] += (goal[j] - cur[j]) * Math.min(1, dt * 2.5);
+        for (let j = 0; j < 3; j++) cur[j] += (goal[j] - cur[j]) * Math.min(1, dt * .8);
         const w = weight[r], ease = w * w * (3 - 2 * w), k = cur[2] * (.6 + .4 * ease);
-        for (const [x, y, s, rot, col, a, form] of G[r](ctxState.c, ctxState.growth[r] || 0))
+        for (const [x, y, s, rot, col, a, form] of G[r](slow, (ctxState.growth[r] || 0) * PACE))
           shape(form || SHAPE[r], cur[0] + x * k, cur[1] + y * k, s * cur[2] * ease, rot, col, a * ease);
       }
       /* the omega gate: a passage of light opens when the image in front changes */
@@ -307,6 +311,6 @@
     return { draw };
   }
 
-  const api = { REGISTERS, G, layout, Renderer };
+  const api = { REGISTERS, G, layout, Renderer, PACE, DWELL };
   if (typeof module !== 'undefined') module.exports = api; else root.SpeechformGrowers = api;
 })(this);

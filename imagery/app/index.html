@@ -28,11 +28,13 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .live.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
 
 /* the icons across the top, as in Oral Histories */
-.tools { display: flex; justify-content: center; align-items: center; gap: 4px; flex: 0 0 auto; }
+.tools { display: flex; justify-content: center; align-items: center; gap: 1px; flex: 0 0 auto; }
+.screens { display: flex; gap: 1px; }
+.tool.on::after { content: ""; position: absolute; bottom: 1px; left: 50%; width: 14px; height: 2px; margin-left: -7px; border-radius: 1px; background: currentColor; }
 .tools .gap { width: 14px; }
-.tool { position: relative; display: grid; place-items: center; width: 38px; height: 36px; padding: 0; background: none; border: none; color: var(--ink);
+.tool { position: relative; display: grid; place-items: center; width: 31px; height: 36px; padding: 0; background: none; border: none; color: var(--ink);
   cursor: pointer; opacity: .55; transition: opacity .18s, color .18s, transform .14s, filter .18s; }
-.tool svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tool svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .tool:hover { opacity: 1; color: var(--amber); transform: translateY(-1px); }
 .tool:active { transform: scale(.9); }
 .tool.on { opacity: 1; color: var(--amber); filter: drop-shadow(0 0 6px rgba(255,201,74,.45)); }
@@ -187,10 +189,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 <body>
 <div class="app">
   <nav class="tools" id="tools">
-    <button class="tool on" data-page="0" aria-label="transcript" title="transcript"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 10.5h14M5 15h14M5 19.5h8"/></svg></button>
-    <button class="tool" data-page="1" aria-label="classifier" title="classifier"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="5.5" r="2"/><circle cx="12" cy="18.5" r="2"/><circle cx="19" cy="12" r="2"/><path d="M6.6 10.6l3.8-3.6M6.6 13.4l3.8 3.6M13.6 7l3.8 3.6M13.6 17l3.8-3.6"/></svg></button>
-    <button class="tool" data-page="2" aria-label="memory" title="memory"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/></svg></button>
-    <button class="tool" data-page="3" aria-label="cards" title="cards"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="11" height="15" rx="2"/><path d="M8.5 21h9a2 2 0 0 0 2-2V7"/></svg></button>
+    <span id="screens" class="screens"></span>
     <span class="gap"></span>
     <button class="tool act" id="start" aria-label="start" title="start"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><i class="badge"></i></button>
     <button class="tool act" id="stop" aria-label="stop" title="stop"><svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
@@ -213,13 +212,12 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
       </section>
       <section class="page">
         <div class="pipe" id="pipe"></div>
-        <div class="vbar" id="vbar"></div>
         <div class="vwrap" id="vwrap" hidden><canvas id="vcan"></canvas><p id="vnote"></p></div>
         <div class="scroll" id="why">
           <div class="step reveal" data-at="0"><h4>heard</h4><p class="heat" id="heat"></p><p class="quiet" id="heardMeta"></p></div>
           <div class="step reveal" data-at="2"><h4>where it lands among twenty kinds of speech</h4><canvas class="map" id="map"></canvas>
             <p class="quiet" id="mapNote" style="margin-top:6px"></p></div>
-          <div class="step reveal" data-at="3"><h4>compared with each kind</h4><div class="rank" id="rank"></div></div>
+          <div class="step reveal" data-at="3"><h4>each kind, over time</h4><div class="rank" id="rank"></div></div>
           <div class="step reveal" data-at="4"><h4>the choice</h4><p id="choice"></p>
             <p class="quiet">Each phrase is heard with the minute of talk before it, up to fifty words. A new kind is taken when it leads by more than 0.04, or after it has led for two phrases.</p></div>
           <div class="step reveal" data-at="5"><h4>the idea</h4><p id="ideaText"></p>
@@ -274,19 +272,19 @@ let S = null, page = 0, selected = null, speaker = 'A', lastCount = 0;
 })();
 
 /* ── the bottom screen swings between its two pages ── */
-function go(i) {
+let SC = null;
+function go(i, fromScreens) {
   page = Math.max(0, Math.min(3, i));
   $('#track').style.transform = `translateX(${-25 * page}%)`;
-  document.querySelectorAll('.tool[data-page]').forEach(t => t.classList.toggle('on', +t.dataset.page === page));
+  if (SC && !fromScreens) SC.sync(page, V.view);
   if (page === 1) drawWhy();
   if (page === 2) drawMemory();
 }
-document.querySelectorAll('.tool[data-page]').forEach(t => t.onclick = () => go(+t.dataset.page));
-document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') go(page + 1); if (e.key === 'ArrowLeft') go(page - 1); });
+document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') SC.step(1); if (e.key === 'ArrowLeft') SC.step(-1); });
 let sx = null;
 $('#lower').addEventListener('pointerdown', e => { sx = e.clientX; });
-$('#lower').addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; if (Math.abs(dx) > 60) go(page + (dx < 0 ? 1 : -1)); sx = null; });
-$('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) go(page + (e.deltaX > 0 ? 1 : -1)); }, { passive: true });
+$('#lower').addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; if (Math.abs(dx) > 60) SC.step(dx < 0 ? 1 : -1); sx = null; });
+$('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) SC.step(e.deltaX > 0 ? 1 : -1); }, { passive: true });
 
 /* ── controls ── */
 const post = (p, b) => fetch(p, { method: 'POST', body: JSON.stringify(b) }).then(r => r.json()).catch(() => null);
@@ -400,34 +398,40 @@ function drawHeard(e, fresh) {
 function drawRank(e) {
   const w = e && e.why; const box = $('#rank');
   if (!w) { box.innerHTML = ''; box.style.height = '0'; return; }
+  /* each kind's share over time: every phrase adds to it, so one phrase moves it only so far */
+  const list = w.settled ? w.settled.map(x => ({ form: x.form, similarity: x.share })) : w.scores;
   const cues = Object.fromEntries((w.cues || []).map(c => [c.form, c.cue]));
-  const top = Math.max(w.scores[0].similarity, .01), RH = 17;
-  Object.keys(ranks).forEach(k => { if (!w.scores.some(s => s.form === k)) { ranks[k].remove(); delete ranks[k]; } });
-  box.style.height = (w.scores.length * RH + 6) + 'px';
-  w.scores.forEach((sc, i) => {
+  const top = Math.max(list[0].similarity, .01), RH = 17;
+  Object.keys(ranks).forEach(k => { if (!list.some(s => s.form === k)) { ranks[k].remove(); delete ranks[k]; } });
+  box.style.height = (list.length * RH + 6) + 'px';
+  list.forEach((sc, i) => {
     let row = ranks[sc.form];
     if (!row) { row = document.createElement('div'); row.className = 'b'; row.innerHTML = '<span class="nm"></span><span class="track2"><span class="fill"></span></span><span class="v"></span>'; box.appendChild(row); ranks[sc.form] = row; }
     row.style.transform = `translateY(${i * RH}px)`;
-    row.classList.toggle('top', i === 0);
+    row.classList.toggle('top', sc.form === w.form);
     row.querySelector('.nm').innerHTML = esc(sc.form) + (cues[sc.form] ? ` <span class="cue">+${esc(cues[sc.form])}</span>` : '');
     const f = row.querySelector('.fill'); f.style.width = pct(sc.similarity / top);
     f.style.background = i < 4 ? col(S.form_to_register[sc.form] || 'kelp') : '';
-    row.querySelector('.v').textContent = sc.similarity.toFixed(2);
+    row.querySelector('.v').textContent = w.settled ? Math.round(sc.similarity * 100) + '%' : sc.similarity.toFixed(2);
   });
   let m = box.querySelector('.margin');
   if (!m) { m = document.createElement('div'); m.className = 'margin'; m.innerHTML = '<b></b><b></b><em></em>'; box.appendChild(m); }
-  const s1 = w.scores[1] ? w.scores[1].similarity : 0;
+  const s1 = list[1] ? list[1].similarity : 0;
   const [b1, b2] = m.querySelectorAll('b');
-  b1.style.left = pct(s1 / top); b2.style.left = pct(w.scores[0].similarity / top);
+  b1.style.left = pct(s1 / top); b2.style.left = pct(list[0].similarity / top);
   m.style.transform = `translateY(${RH + 1}px)`;
   m.querySelector('em').style.left = pct(s1 / top);
-  m.querySelector('em').textContent = `margin ${w.margin.toFixed(2)} ${w.margin > .07 ? '> 0.07' : '< 0.07'}`;
+  const gap = list[0].similarity - s1;
+  m.querySelector('em').textContent = w.need_margin != null
+    ? `lead ${Math.round(gap * 100)} points; a change needs ${Math.round(w.need_margin * 100)} after ${w.run} phrases · doubt ${Math.round((w.doubt || 0) * 100)}%`
+    : `margin ${w.margin.toFixed(2)}`;
 }
 function drawChoice(e) {
   const w = e && e.why; if (!w) { $('#choice').textContent = ''; return; }
   $('#choice').innerHTML = `Strongest: <b style="color:${col(S.form_to_register[w.candidate] || 'kelp')}">${esc(w.candidate)}</b>, ahead by ${w.margin.toFixed(2)}. ` +
     `${w.form === w.from ? 'The kind stays' : 'The kind moves from ' + esc(w.from) + ' to'} <b>${esc(w.form)}</b>, because ${esc(w.reason)}. ` +
-    `That grows <b style="color:${col(S.form_to_register[w.form] || 'kelp')}">${esc(S.form_to_register[w.form] || 'kelp')}</b>.`;
+    `That grows <b style="color:${col(S.form_to_register[w.form] || 'kelp')}">${esc(S.form_to_register[w.form] || 'kelp')}</b>.` +
+    (w.doubt != null ? ` <span style="color:var(--amber)">Doubt ${Math.round(w.doubt * 100)}%.</span>` : '') + (S.learned ? ` <span class="quiet">It has learned from ${S.learned} passages Jev read.</span>` : '');
 }
 function drawIdea(e) {
   const i = (e && e.why && e.why.idea) || {};
@@ -439,10 +443,12 @@ function drawIdea(e) {
 }
 function drawDirect() {
   const d = S.direction || {}, ps = S.provider_status || {}, pv = S.provider || {};
-  $('#directs').textContent = S.directed_by === 'director' ? (pv.provider && pv.provider !== 'stand-in' ? pv.provider + ' with the stand-in' : 'the stand-in director') : S.directed_by;
-  $('#provLine').innerHTML = pv.provider && pv.provider !== 'stand-in'
-    ? `${esc(pv.provider)} is asked every ${pv.every} seconds${ps.state === 'error' ? `. <span style="color:var(--red)">${esc(ps.error)}</span>` : ps.latency ? `, and answered in ${ps.latency} seconds.` : '.'}`
-    : 'The stand-in is deciding alone. Jev takes over once its key is set under ⚙.';
+  $('#directs').textContent = S.directed_by === 'director' ? (pv.provider && !['stand-in', 'typesafe'].includes(pv.provider) ? pv.provider + ' with the stand-in' : 'the stand-in director') : S.directed_by;
+  $('#provLine').innerHTML = pv.provider === 'typesafe'
+    ? 'While you speak, the stand-in steers the image. Jev reads the whole recording once, when you stop, for its card and to teach the classifier.'
+    : pv.provider && pv.provider !== 'stand-in'
+    ? `${esc(pv.provider)} is asked every ${pv.every} seconds while the microphone is on${ps.state === 'error' ? `. <span style="color:var(--red)">${esc(ps.error)}</span>` : ps.latency ? `, and answered in ${ps.latency} seconds.` : '.'}`
+    : 'The stand-in is deciding alone.';
   const G = [['warmth', 0, 1], ['tempo', .3, 2], ['memory', 0, 1], ['saturation', 0, 1], ['density', .5, 2], ['drift', 0, 3]];
   const box = $('#gauges');
   if (!box.children.length) box.innerHTML = G.map(([k]) => `<div class="g" data-k="${k}">${k}<span class="v"></span><div class="line2"><i></i></div></div>`).join('');
@@ -545,33 +551,38 @@ const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.doc
 function trace() {
   const parts = w => Object.fromEntries(Object.entries(w.parts || {}).map(([k, q]) => {
     const cue = (w.cues || []).find(c => c.form === k);
-    return [k, [{ label: 'examples', add: q.match, type: 'example' }, { label: 'pull', add: q.bias, type: 'bias' }].concat(q.signals > .001 ? [{ label: cue ? cue.cue : 'shape', add: q.signals, type: 'shape' }] : [])];
+    return [k, [{ label: 'examples', add: q.match, type: 'example' }].concat(Math.abs(q.learned || 0) > .001 ? [{ label: 'Jev', add: q.learned, type: 'learned' }] : [],
+      [{ label: 'pull', add: q.bias, type: 'bias' }], q.signals > .001 ? [{ label: cue ? cue.cue : 'shape', add: q.signals, type: 'shape' }] : [])];
   }));
-  return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea,
+  return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea, windowWords: 120, recency: 30,
     phrases: S.transcript.filter(e => e.why && e.why.scores).map(e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea, engine: true,
-      ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: parts(e.why), signals: e.why.signals })) };
+      ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: parts(e.why), signals: e.why.signals,
+      settled: e.why.settled ? Object.fromEntries(e.why.settled.map(x => [x.form, x.share])) : null, doubt: e.why.doubt, run: e.why.run, reason: e.why.reason })) };
 }
-const V = window.SpeechformViews.mount({ bar: $('#vbar'), canvas: $('#vcan'), note: $('#vnote'),
+const V = window.SpeechformViews.mount({ bar: null, canvas: $('#vcan'), note: $('#vnote'),
   onView: v => { $('#why').hidden = v !== 'now'; $('#vwrap').hidden = v === 'now'; },
   onPick: id => { if (pinned) return; selected = id; drawLines(); focusNow(true); V.set(trace()); } });
 /* a section being looked at stays in the views until something new is said */
 let pinned = null, pinnedAt = 0;
-const views = () => V.set(pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace()));
+const B = window.SpeechformViews.dashboard({ onPick: id => { selected = id; drawLines(); focusNow(true); views(); } });
+const views = () => { const t = pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace()); V.set(t); if (B.isOpen) B.set(t); };
+SC = window.SpeechformViews.screens($('#screens'), { go, setView: v => V.setView(v), openAll: () => { B.open(); views(); } });
 
 /* ── the deck: a recording becomes a card when it stops ── */
 const D = window.SpeechformDeck.mount({ page: $('#deckPage'), server: true,
-  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; go(1); if (V.view === 'now') document.querySelector('.vchip[data-v=river]').click(); views(); } });
+  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; SC.show(['now', 'transcript', 'memory', 'cards'].includes(SC.current) ? 'river' : SC.current); views(); } });
 async function makeCard(recording) {
   if (!S) return;
   let phrases = trace().phrases;
   const since = S.recording_since || 0;
-  if (recording && since && phrases.some(p => p.at >= since)) phrases = phrases.filter(p => p.at >= since);
+  /* a recording is what was said between start and stop; if nothing new was said, there is no new card */
+  if (recording) phrases = since ? phrases.filter(p => p.at >= since - 2) : [];
   if (!phrases.length) return;
   go(3);
   const tr = Object.fromEntries(S.transcript.map(e => [e.id, e.speaker]));
   phrases = phrases.map(p => ({ ...p, speaker: tr[p.id] || 'A' }));
   await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '),
-    since: recording && since ? since : Math.max(0, phrases[0].at - 8) });
+    since: Math.min(recording && since ? since : 1e12, phrases[0].at - 8) });
 }
 D.onMake(() => makeCard(false));
 /* select words in the transcript: the engine reads them on their own, and the section is kept */
@@ -579,13 +590,14 @@ window.SpeechformDeck.selector($('#lines'), async text => {
   const r = await post('/classify', { text }); if (!r || !r.ok) return;
   const trace2 = { kinds: Object.keys(S.form_to_register), focus: null, ideas: r.topics, active: null,
     phrases: r.events.map(e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.topic, engine: true, ranked: e.why.scores.map(s => [s.form, s.similarity]),
-      own: e.why.own, weights: e.why.weights, parts: {}, signals: e.why.signals })) };
-  trace2.phrases.forEach((p, i) => p.parts = Object.fromEntries(Object.entries(r.events[i].why.parts || {}).map(([k, q]) => [k, [{ label: 'examples', add: q.match, type: 'example' }, { label: 'pull', add: q.bias, type: 'bias' }].concat(q.signals > .001 ? [{ label: 'shape', add: q.signals, type: 'shape' }] : [])])));
+      own: e.why.own, weights: e.why.weights, parts: {}, signals: e.why.signals,
+      settled: e.why.settled ? Object.fromEntries(e.why.settled.map(x => [x.form, x.share])) : null, doubt: e.why.doubt, run: e.why.run, reason: e.why.reason })) };
+  trace2.phrases.forEach((p, i) => p.parts = Object.fromEntries(Object.entries(r.events[i].why.parts || {}).map(([k, q]) => [k, [{ label: 'examples', add: q.match, type: 'example' }].concat(Math.abs(q.learned || 0) > .001 ? [{ label: 'Jev', add: q.learned, type: 'learned' }] : [], [{ label: 'pull', add: q.bias, type: 'bias' }], q.signals > .001 ? [{ label: 'shape', add: q.signals, type: 'shape' }] : [])])));
   const reading = window.SpeechformReading.read(trace2.phrases, r.topics);
   const section = { text, profile: reading.profile, top: reading.profile[0] && reading.profile[0][0], signals: reading.signals, words: reading.words,
     windows: reading.windows.map(w => ({ text: w.text, profile: w.profile.slice(0, 5) })), trace: trace2 };
   await D.keepSection(section);
-  pinned = { ...trace2, color: colorOf }; pinnedAt = S.transcript.length; go(1); if (V.view === 'now') document.querySelector('.vchip[data-v=river]').click(); views();
+  pinned = { ...trace2, color: colorOf }; pinnedAt = S.transcript.length; SC.show(['now', 'transcript', 'memory', 'cards'].includes(SC.current) ? 'river' : SC.current); views();
 });
 
 async function poll() {

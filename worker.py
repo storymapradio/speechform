@@ -19,6 +19,11 @@ def main():
  if not (RUNTIME/'state.json').exists():atomic(RUNTIME/'state.json',{'status':'Loading the local language model.','processing':True,'error':''})
  model=SentenceTransformer('sentence-transformers/all-MiniLM-L6-v2',cache_folder=str(ROOT/'models'),local_files_only=True)
  engine=Engine(model)
+ def relearn():
+  # passages Jev has read at the end of each recording teach the classifier (runtime/learned.json)
+  try:return engine.learn(json.loads((RUNTIME/'learned.json').read_text()))
+  except (OSError,ValueError):return 0
+ relearn()
  # Resume the last saved session, including exact stable idea IDs and assignments.
  try:
   previous=json.loads((RUNTIME/'state.json').read_text())
@@ -63,6 +68,7 @@ def main():
    elif action=='reset':
     save();engine.reset();rehearsal=None
    elif action=='reassign':engine.reassign(c['event'],c['topic'])
+   elif action=='learn':relearn();continue
    elif action=='classify':
     # a section chosen by hand, read on its own; the answer goes back through runtime/replies
     (RUNTIME/'replies').mkdir(exist_ok=True)
