@@ -80,6 +80,17 @@
     'song': { refrain: 1.4 }, 'lyrics': { refrain: 1.0, you: .3 }, 'poetry': { short: .3 },
   };
 
+  /* rules Claude has written from the passages where the classifier and Jev disagreed (runtime/rules.json),
+     each kept only because it made the classifier agree with Jev more often without losing the tests */
+  let RULES = {};
+  function rules(obj) {
+    RULES = {};
+    for (const [k, list] of Object.entries(obj || {})) {
+      if (!KINDS.includes(k)) continue;
+      RULES[k] = (list || []).map(r => { try { return { re: new RegExp(r.pattern, 'gi'), weight: +r.weight || .8, label: r.label || r.pattern }; } catch (e) { return null; } }).filter(Boolean);
+    }
+    return Object.values(RULES).reduce((a, l) => a + l.length, 0);
+  }
   /* what Jev has taught: for each kind, the words that set its passages apart from the others' */
   let LEARNED = {};
   const STOPS = new Set('the and that this with from have were they them their there then when what which would could should about into your just like been some very over also more than only will said says know think really yeah okay right going want thing things people because where while these those here each every other after before again still even much many most such being'.split(' '));
@@ -112,6 +123,10 @@
       for (const [re, w] of MARKERS[k] || []) {
         const hits = low.match(re) || [];
         if (hits.length) { s += w * hits.length; hits.forEach(h => { why.push(h.trim()); built.push({ label: h.trim(), add: w * soft, type: 'word' }); }); }
+      }
+      for (const r of RULES[k] || []) {
+        const hits = low.match(r.re) || [];
+        if (hits.length) { s += r.weight * hits.length; why.push(r.label); built.push({ label: r.label, add: r.weight * hits.length * soft, type: 'learned' }); }
       }
       for (const [w] of LEARNED[k] || []) {
         const hits = low.match(new RegExp('\\b' + w + '\\b', 'g')) || [];
@@ -179,6 +194,6 @@
       Math.min(1, Math.max(margin / needMargin, streak / needStreak)));
   }
 
-  const api = { KINDS, IMAGE, scorePhrase, hear, decide, settle, shares, structure, learn, learned: () => LEARNED };
+  const api = { KINDS, IMAGE, scorePhrase, hear, decide, settle, shares, structure, learn, learned: () => LEARNED, rules, ruleCount: () => Object.values(RULES).reduce((a, l) => a + l.length, 0) };
   if (typeof module !== 'undefined') module.exports = api; else root.SpeechformClassify = api;
 })(this);

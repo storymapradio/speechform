@@ -21,7 +21,7 @@ class Engine:
   ex=[(k,t) for k in self.labels for t in KINDS[k][1]]
   self.examples=model.encode([t for _,t in ex],normalize_embeddings=True)
   self.owner=np.array([self.labels.index(k) for k,_ in ex])
-  self.base_examples,self.base_owner=self.examples,self.owner;self.learned=[]
+  self.base_examples,self.base_owner=self.examples,self.owner;self.learned=[];self.rules={}
   # some kinds sit close to almost anything; their pull on the other kinds' examples is measured once and taken off
   pull=np.zeros(len(self.labels))
   for i in range(len(self.labels)):
@@ -43,6 +43,17 @@ class Engine:
   s=ex@v;out=np.zeros(len(self.labels))
   for i in range(len(self.labels)):out[i]=np.sort(s[ow==i])[-topk:].mean()
   return out
+ def set_rules(self,rules):
+  """marker rules Claude has written from where the classifier and Jev disagreed (runtime/rules.json)"""
+  self.rules={}
+  for k,lst in (rules or {}).items():
+   if k not in self.labels:continue
+   out=[]
+   for r in lst or []:
+    try:out.append((re.compile(r['pattern'],re.I),float(r.get('weight',.8)),r.get('label') or r['pattern']))
+    except (re.error,KeyError,TypeError,ValueError):pass
+   if out:self.rules[k]=out
+  return sum(len(v) for v in self.rules.values())
  def learn(self,items):
   """passages Jev has read at the end of a recording become examples of their kind, beside the written ones,
   so the next recording is heard with what this speaker's talk has taught it"""
@@ -59,6 +70,12 @@ class Engine:
   v=self.model.encode([text],normalize_embeddings=True)[0]
   match=self.kind_scores(v);base=match-self.bias
   sg=signals(text);scores=base.copy();fired=[]
+  # the rules: each hit a small push toward its kind, at most .15
+  for k,lst in self.rules.items():
+   add=min(.15,sum(.04*w*len(rx.findall(text)) for rx,w,_ in lst))
+   if add>0:
+    scores[self.labels.index(k)]+=add
+    fired.append({'form':k,'cue':'rule','add':round(add,3)})
   written=self.kind_scores(v,base=True) if self.learned else match
   self.last_parts={'match':written,'learned':match-written,'signals':np.zeros(len(self.labels)),'sg':sg}
   for k,w in SIGNALS.items():

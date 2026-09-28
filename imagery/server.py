@@ -478,7 +478,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/sections':
             return self._send(200, {'sections': cards.sections()})
         if path == '/learned':
-            return self._send(200, {'learned': cards.learned()})
+            import refine
+            return self._send(200, {'learned': cards.learned(), 'jev': cards.jev_status(), 'rules': read_json(refine.RULES, {}), 'refinements': refine.history(10)})
         if path == '/easel':
             return self._send(200, cards.easel_status())
         if path.startswith('/bank/'):
@@ -499,6 +500,12 @@ class Handler(BaseHTTPRequestHandler):
             if f.is_file() and HEAVY in f.parents:
                 kind = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript'}.get(f.suffix, 'application/octet-stream')
                 return self._send(200, f.read_bytes(), kind)
+            return self._send(404, {'error': 'not here'})
+        if path == '/studio' or path.startswith('/studio/'):
+            STUDIO = ROOT / 'studio'
+            f = (STUDIO / (path[len('/studio/'):] or 'index.html')).resolve()
+            if f.is_file() and STUDIO in f.parents:
+                return self._send(200, f.read_bytes(), {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript'}.get(f.suffix, 'application/octet-stream'))
             return self._send(404, {'error': 'not here'})
         if path == '/light' or path.startswith('/light/'):
             LIGHT = ROOT / 'light'
@@ -538,7 +545,9 @@ class Handler(BaseHTTPRequestHandler):
             text = str(d.get('text', '')).strip()
             if not text:
                 return self._send(400, {'error': 'nothing to say'})
-            command('text', text=text, speaker=d.get('speaker', 'A'), source='Test' if d.get('test') else 'Typed', form=d.get('form'))
+            # a phrase heard by a page on this device (Studio) is speech from the microphone, like TouchDesigner's
+            source = 'Test' if d.get('test') else 'Microphone' if d.get('heard') else 'Typed'
+            command('text', text=text, speaker=d.get('speaker', 'A'), source=source, form=d.get('form'))
             return self._send(200, {'ok': True})
         if path == '/intake':
             if 'microphone' in d:

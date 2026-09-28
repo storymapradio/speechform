@@ -28,7 +28,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .live.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
 
 /* the icons across the top, as in Oral Histories */
-.tools { display: flex; justify-content: center; align-items: center; gap: 1px; flex: 0 0 auto; }
+.tools { display: flex; justify-content: center; align-items: center; gap: 8px; flex: 0 0 auto; }
 .screens { display: flex; gap: 1px; }
 .tool.on::after { content: ""; position: absolute; bottom: 1px; left: 50%; width: 14px; height: 2px; margin-left: -7px; border-radius: 1px; background: currentColor; }
 .tools .gap { width: 14px; }
@@ -189,15 +189,14 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 <body>
 <div class="app">
   <nav class="tools" id="tools">
-    <span id="screens" class="screens"></span>
-    <span class="gap"></span>
-    <button class="tool act" id="start" aria-label="start" title="start"><svg viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></svg><i class="badge"></i></button>
-    <button class="tool act" id="stop" aria-label="stop" title="stop"><svg viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/></svg></button>
+    <span id="pages"></span>
+    <span style="flex:1"></span>
+    <button id="rec"></button>
     <button class="tool act" id="fresh" aria-label="new session" title="new session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="tool act" id="keyBtn" aria-label="key" title="key"><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="3.6"/><path d="M10.6 12.4L19 4M15.5 7.5l2.6 2.6M13.3 9.7l2 2"/></svg></button>
   </nav>
   <div class="screen" id="screen">
-    <img id="loom" alt="The image your speech is growing">
+    <img id="loom" alt="" aria-label="The image your speech is growing">
   </div>
 
   <div class="lower" id="lower">
@@ -207,7 +206,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
         <form class="say" id="say">
           <button type="button" class="spk" id="spk" title="Who is speaking">A</button>
           <input id="words" placeholder="" autocomplete="off">
-          <button type="submit" class="mic" id="micBtn" title="speak, or send what is typed" aria-label="record"><svg viewBox="0 0 24 24"><rect x="9" y="3.5" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg></button>
+          <button type="submit" class="mic" id="micBtn" title="send" aria-label="send"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
         </form>
       </section>
       <section class="page">
@@ -256,6 +255,7 @@ canvas.map { width: 100%; aspect-ratio: 1 / .78; display: block; border: 1px sol
 <script src="/light/views.js"></script>
 <script src="/light/reading.js"></script>
 <script src="/light/deck.js"></script>
+<script src="/light/looks.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const FRAME = 'http://127.0.0.1:9983/frame.jpg';
@@ -272,40 +272,44 @@ let S = null, page = 0, selected = null, speaker = 'A', lastCount = 0;
 })();
 
 /* ── the bottom screen swings between its two pages ── */
-let SC = null;
-function go(i, fromScreens) {
+let PG = null;
+function go(i) {
   page = Math.max(0, Math.min(3, i));
   $('#track').style.transform = `translateX(${-25 * page}%)`;
-  if (SC && !fromScreens) SC.sync(page, V.view);
+  if (PG) PG.mark(['transcript', 'now', 'memory', 'cards'][page]);
   if (page === 1) drawWhy();
   if (page === 2) drawMemory();
 }
-document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') SC.step(1); if (e.key === 'ArrowLeft') SC.step(-1); });
+document.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT') return; if (e.key === 'ArrowRight') go(page + 1); if (e.key === 'ArrowLeft') go(page - 1); });
 let sx = null;
 $('#lower').addEventListener('pointerdown', e => { sx = e.clientX; });
-$('#lower').addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; if (Math.abs(dx) > 60) SC.step(dx < 0 ? 1 : -1); sx = null; });
-$('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) SC.step(e.deltaX > 0 ? 1 : -1); }, { passive: true });
+$('#lower').addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; if (Math.abs(dx) > 60) go(page + (dx < 0 ? 1 : -1)); sx = null; });
+$('#lower').addEventListener('wheel', e => { if (Math.abs(e.deltaX) > 30 && Math.abs(e.deltaX) > Math.abs(e.deltaY)) go(page + (e.deltaX > 0 ? 1 : -1)); }, { passive: true });
 
 /* ── controls ── */
 const post = (p, b) => fetch(p, { method: 'POST', body: JSON.stringify(b) }).then(r => r.json()).catch(() => null);
 let waking = false;
-$('#start').onclick = () => { if ($('#start').classList.contains('idle-press') || (S && S.microphone && S.status && S.status.touchdesigner)) return; waking = true; post('/start', { speaker }).then(poll); };
-$('#stop').onclick = () => { const was = S && S.microphone; waking = false; post('/stop', {}).then(() => { poll(); if (was) makeCard(true); }); };
+/* one record button: a red dot to record (TouchDesigner opens once, if it is not open, and listens),
+   a red square to stop, which makes the recording's card; amber while TouchDesigner opens */
+const REC = window.SpeechformLooks.recordButton($('#rec'));
+$('#rec').onclick = () => {
+  if (!S) return;
+  const st = S.status || {};
+  if (S.microphone) { waking = false; post('/stop', {}).then(() => { poll(); makeCard(true); }); return; }
+  if (st.opening || (waking && !st.touchdesigner)) return;
+  waking = true; post('/start', { speaker }).then(poll);
+};
 function drawControls() {
   const st = S.status || {};
   const listening = !!S.microphone && st.touchdesigner;
   const opening = !!st.opening || (waking && !st.touchdesigner);
   if (listening) waking = false;
-  /* TouchDesigner opens once: while it is opening the start icon waits and cannot be pressed again */
-  $('#start').className = 'tool act ' + (listening ? 'live' : opening ? 'waking idle-press' : '');
-  $('#start .badge').classList.toggle('on', !!st.touchdesigner);
-  $('#stop').className = 'tool act ' + (S.microphone ? '' : 'idle');
-  $('#micBtn').classList.toggle('live', !!S.microphone);
+  REC.paint({ on: !!S.microphone, waking: opening, ready: !!st.touchdesigner });
 }
 $('#fresh').onclick = () => { selected = null; post('/intake', { action: 'reset' }); };
 $('#spk').onclick = () => { speaker = speaker === 'A' ? 'B' : 'A'; $('#spk').textContent = speaker; if (S && S.microphone) post('/intake', { microphone: true, speaker }); };
 $('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim();
-  if (t) { post('/say', { text: t, speaker }); $('#words').value = ''; } else if (S && S.microphone) $('#stop').click(); else $('#start').click(); };
+  if (t) { post('/say', { text: t, speaker }); $('#words').value = ''; } };
 
 /* ── settings ── */
 /* the key: paste a token and Speechform recognises whose it is; only a custom service needs an address */
@@ -565,12 +569,16 @@ const V = window.SpeechformViews.mount({ bar: null, canvas: $('#vcan'), note: $(
 /* a section being looked at stays in the views until something new is said */
 let pinned = null, pinnedAt = 0;
 const B = window.SpeechformViews.dashboard({ onPick: id => { selected = id; drawLines(); focusNow(true); views(); } });
-const views = () => { const t = pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace()); V.set(t); if (B.isOpen) B.set(t); };
-SC = window.SpeechformViews.screens($('#screens'), { go, setView: v => V.setView(v), openAll: () => { B.open(); views(); } });
+const views = () => { if (!S) return; const t = pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace()); V.set(t); if (B.isOpen) B.set(t); if (typeof LK !== 'undefined') LK.set(t); };
+/* the top square: the image TouchDesigner grows is one visualization among the classifier's others */
+const LK = window.SpeechformLooks.install($('#screen'), { image: $('#loom'), onPick: id => { selected = id; drawLines(); focusNow(true); views(); }, openAll: () => { B.open(); views(); } });
+PG = window.SpeechformLooks.segment($('#pages'), [['transcript', window.SpeechformViews.ICON.transcript], ['now', window.SpeechformViews.ICON.now, 'classifier'],
+  ['memory', window.SpeechformViews.ICON.memory], ['cards', window.SpeechformViews.ICON.cards]], k => go(['transcript', 'now', 'memory', 'cards'].indexOf(k)));
+PG.mark('transcript'); V.setView('now');
 
 /* ── the deck: a recording becomes a card when it stops ── */
 const D = window.SpeechformDeck.mount({ page: $('#deckPage'), server: true,
-  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; SC.show(['now', 'transcript', 'memory', 'cards'].includes(SC.current) ? 'river' : SC.current); views(); } });
+  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; if (LK.current === 'image') LK.show('river'); views(); } });
 async function makeCard(recording) {
   if (!S) return;
   let phrases = trace().phrases;
@@ -597,7 +605,7 @@ window.SpeechformDeck.selector($('#lines'), async text => {
   const section = { text, profile: reading.profile, top: reading.profile[0] && reading.profile[0][0], signals: reading.signals, words: reading.words,
     windows: reading.windows.map(w => ({ text: w.text, profile: w.profile.slice(0, 5) })), trace: trace2 };
   await D.keepSection(section);
-  pinned = { ...trace2, color: colorOf }; pinnedAt = S.transcript.length; SC.show(['now', 'transcript', 'memory', 'cards'].includes(SC.current) ? 'river' : SC.current); views();
+  pinned = { ...trace2, color: colorOf }; pinnedAt = S.transcript.length; if (LK.current === 'image') LK.show('river'); views();
 });
 
 async function poll() {
@@ -607,7 +615,9 @@ async function poll() {
     drawLines(); focusNow(false); views();
   } catch (e) { /* the server is starting */ }
 }
-poll(); setInterval(poll, 800);
+/* a new session each time Speechform opens, unless it is recording: what was said before is kept in memory and the cards */
+fetch('/state').then(r => r.json()).then(s0 => s0.microphone ? null : post('/intake', { action: 'reset' })).catch(() => {}).then(() => setTimeout(poll, 400));
+setInterval(poll, 800);
 </script>
 </body>
 </html>

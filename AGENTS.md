@@ -76,7 +76,9 @@ For Speechform Heavy, the same endpoint also receives `{"task": "image", ...}` a
 | `POST /classify` `{"text": "..."}` | any passage read on its own by the engine, phrase by phrase, without touching the live session |
 | `POST /sections`, `GET /sections` | keep and list sections classified by hand |
 | `GET /easel` | whether the image model on this Mac is installed, loaded and ready |
-| `GET /learned` | the passages Jev has labelled at the end of recordings, which teach both classifiers |
+| `GET /learned` | the passages Jev has labelled, the rules Claude wrote (`rules`), the last refinements, and how near the classifier is to not needing Jev (`jev`: recent agreement, `graduated`) |
+| `GET /studio/` | Speechform Studio, the version without TouchDesigner |
+| `POST /say` `{"text", "heard": true}` | a phrase a page heard on this device, kept as speech from the microphone |
 | `POST /cards/<id>/faces`, `POST /cards/<id>/reveal` | keep a card's two sides as PNGs; open its folder in Finder |
 
 Each phrase's `why` also carries `settled` (every kind's share over time), `run` (phrases the kind has held), `need_margin` and `need_streak` (what a change needs now), `doubt` (0 to 1) and, in `parts`, `learned` (what Jev's passages add). Jev is not asked while the microphone is on.

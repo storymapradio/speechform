@@ -130,6 +130,50 @@ def jev_card(cfg, text, bank_hit=None, segs=None):
                        for i, sg in enumerate(segs)]
     return out
 
+# ── the aim: a classifier good enough that Jev is no longer needed ───────────────
+AGREEMENT = ROOT / 'runtime' / 'agreement.json'
+GRADUATE = 0.9          # the classifier agrees with Jev on at least nine passages in ten
+IN_A_ROW = 5            # for five recordings in a row
+CHECK_EVERY = 5         # after that, Jev reads only every fifth recording, to catch any drift
+
+def agreement():
+    try:
+        return json.loads(AGREEMENT.read_text())
+    except (OSError, ValueError):
+        return []
+
+def record_agreement(segs, card_id):
+    judged = [sg for sg in segs if sg.get('jev')]
+    if not judged:
+        return None
+    share = sum(1 for sg in judged if sg.get('classifier') == sg['jev']) / len(judged)
+    items = agreement() + [{'card': card_id, 'at': time.time(), 'passages': len(judged), 'agree': round(share, 3)}]
+    AGREEMENT.write_text(json.dumps(items[-200:], indent=1))
+    return share
+
+def graduated():
+    """whether the classifier has earned its independence: nine in ten for five recordings in a row"""
+    last = agreement()[-IN_A_ROW:]
+    return len(last) == IN_A_ROW and all(x['agree'] >= GRADUATE for x in last)
+
+def jev_status():
+    items = agreement(); last = items[-IN_A_ROW:]
+    since = 0
+    for x in reversed(items):
+        if x.get('skipped'):
+            since += 1
+        else:
+            break
+    return {'recordings': len(items), 'recent': [x['agree'] for x in last if 'agree' in x],
+            'mean': round(sum(x['agree'] for x in last if 'agree' in x) / max(1, len([x for x in last if 'agree' in x])), 3) if last else None,
+            'graduated': graduated(), 'need': GRADUATE, 'in_a_row': IN_A_ROW, 'check_every': CHECK_EVERY, 'skipped_since_check': since}
+
+def ask_jev_now():
+    """before the classifier graduates, Jev reads every recording; after, only every fifth"""
+    if not graduated():
+        return True
+    return jev_status()['skipped_since_check'] >= CHECK_EVERY - 1
+
 def learned():
     try:
         return json.loads(LEARNED.read_text())
@@ -218,13 +262,19 @@ def _summary(folder):
         L.append(f'  {i + 1}. ' + ', '.join(f'{k} {pct(v)}' for k, v in w.get('profile', [])[:3]))
     j = card.get('jev') or {}
     L += ['', 'JEV']
-    if j.get('error'):
+    if j.get('skipped'):
+        L.append('  Jev was not asked: ' + j['skipped'] + '.')
+    elif j.get('error'):
         L.append('  Jev did not answer: ' + j['error'])
     elif j:
         L.append(f"  Jev hears it as {j.get('kind')} ({pct(j.get('confidence') or 0)} sure), chose the {j.get('style')} style ({pct(j.get('style_confidence') or 0)} sure), and judged it {pct(1 - (j.get('unsafe') or 0))} safe to draw.")
         for i, sg in enumerate(j.get('segments') or []):
             same = 'agrees' if sg.get('jev') == sg.get('classifier') else 'differs'
             L.append(f"  Passage {i + 1}: the classifier said {sg.get('classifier')}; Jev hears {sg.get('jev')} ({pct(sg.get('confidence') or 0)} sure), and {same}.")
+        if j.get('agree') is not None:
+            L.append(f"  The classifier agreed with Jev on {pct(j['agree'])} of the passages. Jev stops being needed once that is at least {pct(GRADUATE)} for {IN_A_ROW} recordings in a row.")
+        if card.get('refining'):
+            L.append('  Claude and the rules: ' + card['refining'] + '.')
         if card.get('taught'):
             L.append(f"  {card['taught']} passages Jev was sure of now teach the classifier.")
         if 'reuse' in j:
@@ -319,6 +369,18 @@ def _art(cfg, folder, stitch=True):
         card.update(kw); _write(folder, card); _summary(folder)
     try:
         _paint(cfg, folder, card, say, ON_LEARN.get('f'))
+        # Claude refines the rules from where the classifier and Jev disagreed, and keeps only what helps
+        if (card.get('jev') or {}).get('segments'):
+            say(refining='Claude is refining the rules')
+            try:
+                import refine
+                rep = refine.refine(card['id'])
+                if rep:
+                    say(refining=rep.get('result'), refined={'before': rep.get('before'), 'after': rep.get('after')})
+                    if rep.get('result', '').startswith('kept') and ON_LEARN.get('f'):
+                        ON_LEARN['f']()
+            except Exception as e:
+                say(refining='Claude could not refine the rules: ' + str(e)[:160])
     finally:
         if stitch:
             time.sleep(4)                        # the last piece is written when the microphone stops
@@ -333,7 +395,11 @@ def _paint(cfg, folder, card, say, on_learn=None):
     style = STYLE_FOR.get(card.get('kind'), 'ink')
     hit, likeness = heavy.from_bank(register, style, words)
     # Jev, when its key is saved, decides before anything is drawn
-    if heavy.service(cfg) == 'typesafe':
+    if heavy.service(cfg) == 'typesafe' and not ask_jev_now():
+        items = agreement() + [{'card': card['id'], 'at': time.time(), 'skipped': True}]
+        AGREEMENT.write_text(json.dumps(items[-200:], indent=1))
+        say(jev={'skipped': 'the classifier agrees with Jev on nine passages in ten, so Jev was not needed for this recording'})
+    elif heavy.service(cfg) == 'typesafe':
         say(art='asking Jev')
         try:
             try:
@@ -342,6 +408,7 @@ def _paint(cfg, folder, card, say, on_learn=None):
                 segs = []
             j = jev_card(cfg, card.get('text', ''), hit, segs)
             taught = learn(j.get('segments', []), card['id'])
+            j['agree'] = record_agreement(j.get('segments', []), card['id'])
             if taught and on_learn:
                 on_learn()
             say(jev=j, taught=taught)

@@ -21,6 +21,8 @@ def main():
  engine=Engine(model)
  def relearn():
   # passages Jev has read at the end of each recording teach the classifier (runtime/learned.json)
+  try:engine.set_rules(json.loads((RUNTIME/'rules.json').read_text()))
+  except (OSError,ValueError):pass
   try:return engine.learn(json.loads((RUNTIME/'learned.json').read_text()))
   except (OSError,ValueError):return 0
  relearn()

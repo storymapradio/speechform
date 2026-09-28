@@ -105,7 +105,11 @@ Jev (TypeSafe) is never asked while you speak. When a recording stops, Jev reads
 - the full engine takes each passage as a new example of its kind, beside the written examples, and the build view shows what it adds in blue;
 - Light takes the words that set each kind's passages apart and gives them points for that kind.
 
-So each recording makes the next one read closer to how Jev hears it. `reading.txt` in each recording's folder lists every passage with what the classifier said and what Jev heard.
+So each recording makes the next one read closer to how Jev hears it.
+
+**Claude refines the rules, so that one day Jev is not needed.** After Jev reads a recording, the passages where the classifier and Jev disagreed go to Claude (the Claude Code command line, headless, on this Mac, `imagery/refine.py`). Claude answers with marker rules only: a pattern that captures how something is said, the kind it points to, and a weight. Each rule is tried on its own and kept only if it raises either classifier's agreement with Jev and neither classifier loses a single fixed test passage. Kept rules are in `runtime/rules.json` and are read by both classifiers; every attempt, kept or not, is in `runtime/refinements/`.
+
+**When Jev is no longer needed.** Each recording Jev reads records how often the classifier agreed with it (`runtime/agreement.json`). Once the classifier agrees on at least nine passages in ten for five recordings in a row, Jev stops being asked, and reads only every fifth recording to catch any drift. The deck shows the agreement so far. `reading.txt` in each recording's folder lists every passage with what the classifier said and what Jev heard.
 
 ## Screens
 
@@ -195,6 +199,16 @@ microphone ─ TouchDesigner (Audio Device In CHOP) ─ 6-second batches
 - A new kind is taken when it leads by more than 0.03, or after it has led for two phrases.
 
 On the test passages in `tests/passages.py`, the old way (each fragment alone, against one example per kind) was right 41% of the time on fragments. The rolling window is right about 90% of the time, and it turns to a new kind within a phrase or two. Ideas are compared with everything said in the session, and each image grows with every word ever spoken in its kind.
+
+## Speechform Studio
+
+Studio is Speechform without TouchDesigner. The top of the window shows the classifier's visualizations, and the bottom holds the transcript, memory and the deck. It hears on the device (the browser's on-device recognition, or the Mac's own transcription), classifies with the full engine in the Speechform server, and draws the growing image in the browser, the same ten images TouchDesigner and Light grow. Recordings become cards with their audio, transcript and reading, as in the other versions. Open it at `http://127.0.0.1:9990/studio/`, or from **Speechform Studio** on the Desktop (`studio/mac/launch.sh`).
+
+## The controls, in every version
+
+- **The top row** holds the four pages as one group (transcript, classifier, memory, cards), then the **record button**: a red dot to record, which turns into a red square to stop. Stopping makes the recording's card. In the full app the button glows amber while TouchDesigner opens, and a green dot on it shows that TouchDesigner is drawing.
+- **The top square** has its own group of icons: the growing image is one visualization among the classifier's others (bars, river, window, build, shape, ideas). The last icon shows every visualization at once. They keep moving while you speak.
+- **A new session** starts each time the full app or Studio opens, unless it is recording. What was said before stays in memory and in the cards.
 
 ## Speechform Light
 

@@ -38,6 +38,7 @@
     page.innerHTML = `<div class="deckbar"><button class="vchip on" data-t="cards" title="cards" aria-label="cards">${svg('cards')}</button>
       <button class="vchip" data-t="sections" title="sections" aria-label="sections">${svg('sections')}</button><span style="flex:1"></span>
       <button class="vchip" data-make title="make a card of this session" aria-label="make a card">${svg('make')}</button></div>
+      <p class="jevline" id="jevline"></p>
       <div class="scroll deck" id="deckList"></div>`;
     const sheet = document.createElement('div'); sheet.className = 'cardsheet'; sheet.hidden = true;
     sheet.innerHTML = `<div class="cardhold"><div class="cardcol"><canvas class="bigcard"></canvas><p class="cardart"></p>
@@ -138,8 +139,19 @@
         try { list = (await (await fetch('/cards')).json()).cards; secs = (await (await fetch('/sections')).json()).sections; } catch (e) { list = []; }
       } else { list = local.get(LOCAL); secs = local.get(LOCAL_SECTIONS); }
     }
+    /* how near the classifier is to not needing Jev */
+    async function jevLine() {
+      if (!server) return;
+      try {
+        const j = await (await fetch('/learned')).json(), st = j.jev || {}, rules = Object.values(j.rules || {}).reduce((a, l) => a + l.length, 0);
+        const recent = (st.recent || []).map(v => Math.round(v * 100) + '%').join(' · ');
+        page.querySelector('#jevline').innerHTML = !st.recordings ? '' : st.graduated
+          ? `The classifier agrees with Jev on nine passages in ten, so Jev now reads only every ${st.check_every}th recording. It has learned from ${(j.learned || []).length} passages and keeps ${rules} rules Claude wrote.`
+          : `Agreement with Jev, last recordings: <b>${recent || 'none yet'}</b>. Jev is no longer needed at ${Math.round(st.need * 100)}% for ${st.in_a_row} in a row. It has learned from ${(j.learned || []).length} passages and keeps ${rules} rules Claude wrote.`;
+      } catch (e) {}
+    }
     async function draw() {
-      await load();
+      await load(); jevLine();
       const box = page.querySelector('#deckList');
       if (tab === 'cards') {
         box.innerHTML = list.length ? '<div class="deckgrid">' + list.map(c => `<button class="minicard" data-id="${esc(c.id)}"><canvas></canvas></button>`).join('') + '</div>'
@@ -191,6 +203,7 @@
 
   /* the style every page shares for the deck */
   const css = `.deckbar{display:flex;align-items:center;gap:2px;padding:6px 8px 2px;border-bottom:1px solid var(--faint)}
+.jevline{margin:0;padding:6px 12px 0;color:var(--muted,#7d9a78);font-size:10.5px;line-height:1.45}.jevline:empty{display:none}.jevline b{color:var(--amber,#ffc94a);font-weight:500}
 .deckgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
 .minicard{padding:0;border:none;background:none;cursor:pointer;transition:transform .18s}
 .minicard:hover{transform:translateY(-3px) scale(1.03)}
