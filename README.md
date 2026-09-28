@@ -117,7 +117,7 @@ Each scale gets a share for every kind of speech and an average shape. The readi
 
 Tap a card to flip it, and use the arrow to save the side you are looking at as a PNG. Beside the card are its audio, its transcript and its reading, and the folder icon opens its folder in Finder.
 
-**Where everything is kept.** Every recording has one folder in `runtime/cards/`, named by its date, time and card. `setup` links it to the Desktop as **Speechform Cards**. Each folder holds:
+**Where everything is kept.** Every recording has one folder in `runtime/cards/`, named by its date, time and card. To keep it on the Desktop, run `ln -s "$PWD/runtime/cards" ~/Desktop/"Speechform Cards"`. Each folder holds:
 
 | File | What it is |
 | --- | --- |
