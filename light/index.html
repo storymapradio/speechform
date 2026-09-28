@@ -237,7 +237,7 @@ async function onDeviceRecognition(lang) {
 async function macTranscription() {
   try { const r = await fetch('/status', { cache: 'no-store' }); return r.ok; } catch (e) { return false; }
 }
-let recStart = 0;
+let recStart = 0, take = null;
 async function start() {
   if (listening) return;
   recStart = now();
@@ -303,6 +303,10 @@ function startLevel() {
   navigator.mediaDevices && navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const ac = new (window.AudioContext || window.webkitAudioContext)(), an = ac.createAnalyser(); an.fftSize = 512;
     ac.createMediaStreamSource(stream).connect(an); const buf = new Float32Array(an.fftSize);
+    /* the recording itself, kept in this page while listening, and given to the card when it stops */
+    const keep = ac.createScriptProcessor(4096, 1, 1); ac.createMediaStreamSource(stream).connect(keep); keep.connect(ac.destination);
+    take = { rate: ac.sampleRate, chunks: [] };
+    keep.onaudioprocess = e => { if (listening && take) take.chunks.push(new Float32Array(e.inputBuffer.getChannelData(0))); };
     audio = { stream, ac, read() { an.getFloatTimeDomainData(buf); let s = 0; for (const v of buf) s += v * v; return Math.sqrt(s / buf.length); } };
   }).catch(() => {});
 }
@@ -374,7 +378,10 @@ async function makeCard(recording) {
   if (recording && recStart) phrases = phrases.filter(p => p.at >= recStart - 1);
   if (!phrases.length) return;
   go(3);
-  await D.make({ phrases, ideas: S.ideas.map(i => ({ id: i.id, title: i.title, words: i.words, returns: i.returns, n: i.n })), text: phrases.map(p => p.text).join(' '), abstract: grownImage() });
+  let audio = null;
+  if (take && take.chunks.length) { const blob = toWav(take.chunks, take.rate, 16000); audio = await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); }); }
+  await D.make({ phrases: phrases.map(p => ({ ...p, speaker: 'A' })), ideas: S.ideas.map(i => ({ id: i.id, title: i.title, words: i.words, returns: i.returns, n: i.n })),
+    text: phrases.map(p => p.text).join(' '), abstract: grownImage(), audio, since: recording && recStart ? recStart : phrases[0].at });
 }
 /* select words in the transcript: Light's algorithm reads them on their own, phrase by phrase, and the section is kept */
 window.SpeechformDeck.selector($('#lines'), text => {

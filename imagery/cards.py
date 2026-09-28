@@ -12,7 +12,7 @@ Here the card is kept, and its art is made in the background:
 Cards live in runtime/cards/<id>/ (card.json, abstract.jpg, clear.png). Sections classified by hand
 are kept in runtime/sections.jsonl.
 """
-import base64, json, re, subprocess, sys, threading, time, urllib.request, uuid
+import base64, hashlib, json, re, subprocess, sys, threading, time, urllib.request, uuid
 from collections import Counter
 from pathlib import Path
 import heavy
@@ -95,17 +95,127 @@ def jev_card(cfg, text, bank_hit=None):
         out['reuse'] = a.get('reuse', {}).get('noul', 0)
     return out
 
-# ── cards ─────────────────────────────────────────────────────────────────────────
+# ── a recording's folder ──────────────────────────────────────────────────────────
+# Each recording keeps everything in one folder, named by its date, time and card:
+#   audio.wav          the whole recording (full app: TouchDesigner's microphone; Light: the page's own capture)
+#   transcript.txt     every phrase with its time, speaker, kind of speech and idea
+#   reading.txt        the reading in words: the shares, the sections, Jev's answers, how the art was made
+#   card-front.png     the card, front and back, as images
+#   card-back.png
+#   grown.jpg          the image the talk grew (the card's abstract side)
+#   painted.png        the easel's picture (the card's clear side)
+#   phrases.json       every phrase with the classifier's full reasoning
+#   reading.json       the whole reading: shares for the recording, each idea's section and each fifty-word window
+#   card.json          the card itself
+ABOUT = """Speechform keeps one folder here for every recording. Each folder holds:
+
+audio.wav         the recording itself
+transcript.txt    every phrase, with its time, speaker, kind of speech and idea
+reading.txt       what the classifier and Jev made of the whole recording, and how the art was made
+card-front.png    the card, front and back
+card-back.png
+grown.jpg         the image your talk grew
+painted.png       the picture the easel painted from it, on this Mac
+phrases.json      every phrase with the classifier's full reasoning
+reading.json      the reading as data: the whole recording, each idea's section, each fifty-word window
+card.json         the card as data
+
+Sections holds the passages you selected in a transcript and classified on their own.
+"""
+
 def _write(folder, card):
     tmp = folder / 'card.tmp'
     tmp.write_text(json.dumps(card, indent=1))
     tmp.replace(folder / 'card.json')
 
-def make(cfg, card, text, abstract=None):
-    """keep a new card and start its art; returns the card at once, with its abstract side"""
-    ident = time.strftime('%Y%m%d-%H%M%S-') + uuid.uuid4().hex[:4]
+def _clock(t, t0):
+    s = max(0, int(t - t0)); return f'{s // 60:02d}:{s % 60:02d}'
+
+def _transcript(folder, card, phrases, t0):
+    titles = {i.get('id'): i.get('title') for i in (card.get('reading') or {}).get('ideas', [])}
+    lines = [card.get('name', ''), time.strftime('%A %-d %B %Y, %H:%M', time.localtime(t0)), '']
+    for p in phrases:
+        lines.append(f"[{_clock(p.get('at', t0), t0)}] {p.get('speaker', 'A')} | {p.get('kind', '')} | {titles.get(p.get('idea')) or ''}")
+        lines.append(heavy.mask(p.get('text', '')))
+        lines.append('')
+    (folder / 'transcript.txt').write_text('\n'.join(lines))
+
+def _summary(folder):
+    """reading.txt: the whole reading, in words"""
+    try:
+        card = json.loads((folder / 'card.json').read_text())
+        r = json.loads((folder / 'reading.json').read_text())
+    except (OSError, ValueError):
+        return
+    pct = lambda v: f'{round(v * 100)}%'
+    L = [card.get('name', ''), '', f"{card.get('kind')} | {card.get('register', '').upper()} | level {card.get('level')} | Focus {card.get('focus')} | Hold {card.get('hold')} | {card.get('rarity')}", '']
+    L += [' '.join(card.get('effect', [])), '', 'THE WHOLE RECORDING', f"{r.get('words')} words in {r.get('phrases')} phrases. The kind switched {r.get('switches')} times.", '']
+    L += [f'  {k:<26} {pct(v)}' for k, v in r.get('profile', [])[:10]]
+    L += ['', 'EACH IDEA']
+    for sct in r.get('sections', []):
+        L.append(f"  {sct.get('title') or 'an idea'}: " + ', '.join(f'{k} {pct(v)}' for k, v in sct.get('profile', [])[:3]))
+    L += ['', 'EVERY FIFTY WORDS']
+    for i, w in enumerate(r.get('windows', [])):
+        L.append(f'  {i + 1}. ' + ', '.join(f'{k} {pct(v)}' for k, v in w.get('profile', [])[:3]))
+    j = card.get('jev') or {}
+    L += ['', 'JEV']
+    if j.get('error'):
+        L.append('  Jev did not answer: ' + j['error'])
+    elif j:
+        L.append(f"  Jev hears it as {j.get('kind')} ({pct(j.get('confidence') or 0)} sure), chose the {j.get('style')} style ({pct(j.get('style_confidence') or 0)} sure), and judged it {pct(1 - (j.get('unsafe') or 0))} safe to draw.")
+        if 'reuse' in j:
+            L.append(f"  A saved picture was offered; Jev gave it {pct(j['reuse'])} to fit.")
+    else:
+        L.append('  No Jev key is saved, so the style came from the kind of speech.')
+    L += ['', 'THE ART', f"  {card.get('art', '')}", f"  Style: {card.get('style', '')}", f"  Words: {', '.join(card.get('words') or [])}", f"  Prompt: {card.get('prompt', '')}"]
+    (folder / 'reading.txt').write_text('\n'.join(L) + '\n')
+
+def _stitch_microphone(folder, since, until):
+    """the full app's audio: TouchDesigner writes the microphone in six-second pieces (runtime/mic-<ns>.wav,
+    named when each piece ends, quiet pieces skipped). The pieces of this recording are laid at their own times,
+    silence between them, so the audio keeps step with the transcript."""
+    import wave
+    pieces = []
+    for f in (ROOT / 'runtime').glob('mic-*.wav'):
+        try:
+            end = int(f.stem[4:]) / 1e9
+        except ValueError:
+            continue
+        if since - 1 <= end <= until + 15:
+            pieces.append((end, f))
+    if not pieces:
+        return False
+    pieces.sort()
+    rate, out, cursor = 44100, bytearray(), None
+    for end, f in pieces:
+        with wave.open(str(f), 'rb') as w:
+            rate = w.getframerate(); frames = w.readframes(w.getnframes())
+        start = end - len(frames) / 2 / rate
+        if cursor is not None and start > cursor:
+            out += b'\0\0' * int(min(start - cursor, 30) * rate)     # the quiet between pieces, up to half a minute
+        out += frames; cursor = end
+    with wave.open(str(folder / 'audio.wav'), 'wb') as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(bytes(out))
+    return True
+
+def _name(card):
+    title = re.sub(r'[^\w\s\'-]', '', card.get('name') or 'A recording').strip()[:48] or 'A recording'
+    base = time.strftime('%Y-%m-%d %H.%M ') + title
+    ident, n = base, 2
+    while (CARDS / ident).exists():
+        ident = f'{base} ({n})'; n += 1
+    return ident
+
+def make(cfg, card, text, abstract=None, phrases=None, audio=None, since=None):
+    """keep a new recording and its card, and start its art; returns the card at once, with its abstract side"""
+    CARDS.mkdir(parents=True, exist_ok=True)
+    if not (CARDS / 'About this folder.txt').exists():
+        (CARDS / 'About this folder.txt').write_text(ABOUT)
+    ident = _name(card)
     folder = CARDS / ident
-    folder.mkdir(parents=True, exist_ok=True)
+    folder.mkdir(parents=True)
+    phrases = phrases or []
+    t0 = float(since or (phrases[0].get('at') if phrases else time.time()) or time.time())
     raw = None
     if abstract:
         raw = base64.b64decode(abstract.split(',', 1)[-1])
@@ -115,17 +225,45 @@ def make(cfg, card, text, abstract=None):
         except Exception:
             raw = None
     if raw:
-        (folder / 'abstract.jpg').write_bytes(raw)
-    card = {**card, 'id': ident, 'text': heavy.mask(text)[:6000], 'abstract': 'abstract.jpg' if raw else None,
-            'clear': None, 'art': 'waiting', 'made': time.time()}
+        (folder / 'grown.jpg').write_bytes(raw)
+    if audio:
+        (folder / 'audio.wav').write_bytes(base64.b64decode(audio.split(',', 1)[-1]))
+    reading = card.pop('reading', None) or {}
+    (folder / 'reading.json').write_text(json.dumps(reading, indent=1))
+    (folder / 'phrases.json').write_text(json.dumps([{**p, 'text': heavy.mask(p.get('text', ''))} for p in phrases], indent=1))
+    card = {**card, 'id': ident, 'text': heavy.mask(text)[:6000], 'abstract': 'grown.jpg' if raw else None,
+            'clear': None, 'art': 'waiting', 'made': time.time(), 'since': t0, 'reading': {'ideas': reading.get('ideas', [])}}
     _write(folder, card)
-    threading.Thread(target=_art, args=(cfg, folder), daemon=True).start()
+    _transcript(folder, card, phrases, t0)
+    threading.Thread(target=_art, args=(cfg, folder, not audio), daemon=True).start()
     return card
 
-def _art(cfg, folder):
+def faces(ident, d):
+    """the card's two sides as images, drawn by the page once its art is done"""
+    folder = CARDS / ident
+    if not (folder / 'card.json').exists() or CARDS not in folder.resolve().parents:
+        return {'ok': False}
+    for side in ('front', 'back'):
+        if d.get(side):
+            (folder / f'card-{side}.png').write_bytes(base64.b64decode(d[side].split(',', 1)[-1]))
+    card = json.loads((folder / 'card.json').read_text()); card['faces'] = True; _write(folder, card)
+    return {'ok': True}
+
+def _art(cfg, folder, stitch=True):
     card = json.loads((folder / 'card.json').read_text())
     def say(**kw):
-        card.update(kw); _write(folder, card)
+        card.update(kw); _write(folder, card); _summary(folder)
+    try:
+        _paint(cfg, folder, card, say)
+    finally:
+        if stitch:
+            time.sleep(4)                        # the last piece is written when the microphone stops
+            if _stitch_microphone(folder, card.get('since', card['made']), card['made']):
+                say(audio='audio.wav')
+        elif (folder / 'audio.wav').exists():
+            say(audio='audio.wav')
+
+def _paint(cfg, folder, card, say):
     words = main_words(card.get('text', ''))
     register = card.get('register', 'kelp')
     style = STYLE_FOR.get(card.get('kind'), 'ink')
@@ -149,20 +287,20 @@ def _art(cfg, folder):
     say(style=style, prompt=prompt, words=words)
     if hit:
         src = heavy.BANK / hit['file']
-        (folder / ('clear' + src.suffix)).write_bytes(src.read_bytes())
-        return say(clear='clear' + src.suffix, art=f'from the bank ({round(likeness * 100)}% alike)', bank=hit['id'])
+        (folder / ('painted' + src.suffix)).write_bytes(src.read_bytes())
+        return say(clear='painted' + src.suffix, art=f'from the bank ({round(likeness * 100)}% alike)', bank=hit['id'])
     say(art='the easel is drawing')
     if not ensure_easel():
         return say(art='kept abstract: the easel is not installed or could not load its model')
     init = None
-    if (folder / 'abstract.jpg').exists():
-        init = 'data:image/jpeg;base64,' + base64.b64encode((folder / 'abstract.jpg').read_bytes()).decode()
+    if (folder / 'grown.jpg').exists():
+        init = 'data:image/jpeg;base64,' + base64.b64encode((folder / 'grown.jpg').read_bytes()).decode()
     try:
         got = _post(EASEL + '/draw', {'prompt': prompt, 'negative': heavy.NEGATIVE, 'init': init, 'strength': STRENGTH,
-                                     'steps': 4, 'seed': int(card['id'][-4:], 16)})
-        (folder / 'clear.png').write_bytes(base64.b64decode(got['image'].split(',', 1)[1]))
+                                     'steps': 4, 'seed': int(hashlib.sha1(card['id'].encode()).hexdigest()[:6], 16)})
+        (folder / 'painted.png').write_bytes(base64.b64decode(got['image'].split(',', 1)[1]))
         item = heavy.to_bank(register, style, words, prompt, got['image'])   # Heavy can reuse it too
-        say(clear='clear.png', art=f"drawn on this Mac in {got.get('seconds')} s", bank=item['id'])
+        say(clear='painted.png', art=f"drawn on this Mac in {got.get('seconds')} s", bank=item['id'])
     except Exception as e:
         say(art='kept abstract: ' + str(e)[:160])
 
@@ -185,6 +323,12 @@ def keep_section(d):
     SECTIONS.parent.mkdir(parents=True, exist_ok=True)
     with open(SECTIONS, 'a') as f:
         f.write(json.dumps(d) + '\n')
+    # and one readable file per section, in the folder on the Desktop
+    folder = CARDS / 'Sections'; folder.mkdir(parents=True, exist_ok=True)
+    top = (d.get('top') or 'a section').strip()
+    lines = [time.strftime('%A %-d %B %Y, %H:%M'), '', d['text'], '', 'Its kinds of speech:']
+    lines += [f'  {k:<26} {round(v * 100)}%' for k, v in (d.get('profile') or [])[:8]]
+    (folder / f"{time.strftime('%Y-%m-%d %H.%M.%S')} {top}.txt").write_text('\n'.join(lines) + '\n')
     return d
 
 def sections(limit=300):

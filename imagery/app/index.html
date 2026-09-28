@@ -568,7 +568,10 @@ async function makeCard(recording) {
   if (recording && since && phrases.some(p => p.at >= since)) phrases = phrases.filter(p => p.at >= since);
   if (!phrases.length) return;
   go(3);
-  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' ') });
+  const tr = Object.fromEntries(S.transcript.map(e => [e.id, e.speaker]));
+  phrases = phrases.map(p => ({ ...p, speaker: tr[p.id] || 'A' }));
+  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '),
+    since: recording && since ? since : Math.max(0, phrases[0].at - 8) });
 }
 D.onMake(() => makeCard(false));
 /* select words in the transcript: the engine reads them on their own, and the section is kept */

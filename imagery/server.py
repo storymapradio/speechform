@@ -453,9 +453,10 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/cards':
             return self._send(200, {'cards': cards.cards()})
         if path.startswith('/cards/'):
-            f = cards.card_file(path[7:])
+            from urllib.parse import unquote
+            f = cards.card_file(unquote(path[7:]))
             if f:
-                return self._send(200, f.read_bytes(), {'.jpg': 'image/jpeg', '.png': 'image/png', '.json': 'application/json'}.get(f.suffix, 'application/octet-stream'))
+                return self._send(200, f.read_bytes(), {'.jpg': 'image/jpeg', '.png': 'image/png', '.json': 'application/json', '.txt': 'text/plain; charset=utf-8', '.wav': 'audio/wav'}.get(f.suffix, 'application/octet-stream'))
             return self._send(404, {'error': 'not here'})
         if path == '/sections':
             return self._send(200, {'sections': cards.sections()})
@@ -556,7 +557,19 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/card':
             if not d.get('card'):
                 return self._send(400, {'error': 'no card'})
-            return self._send(200, cards.make(settings(), d['card'], str(d.get('text', '')), d.get('abstract')))
+            return self._send(200, cards.make(settings(), d['card'], str(d.get('text', '')), d.get('abstract'),
+                                              d.get('phrases'), d.get('audio'), d.get('since')))
+        if path.startswith('/cards/') and path.endswith('/reveal'):
+            from urllib.parse import unquote
+            folder = (cards.CARDS / unquote(path[7:-7])).resolve()
+            if folder.is_dir() and cards.CARDS in folder.parents:
+                import subprocess
+                subprocess.Popen(['open', str(folder)])          # the recording's folder, in Finder
+                return self._send(200, {'ok': True})
+            return self._send(404, {'error': 'not here'})
+        if path.startswith('/cards/') and path.endswith('/faces'):
+            from urllib.parse import unquote
+            return self._send(200, cards.faces(unquote(path[7:-6]), d))
         if path == '/sections':
             return self._send(200, cards.keep_section(d))
         if path == '/classify':

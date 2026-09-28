@@ -115,7 +115,20 @@ Each scale gets a share for every kind of speech and an average shape. The readi
 | Effect | sentences written from the reading, for example "It returns to the lantern twice." |
 | Back | the image the talk grew, the six largest shares, Jev's verdict and the clearest moment |
 
-Tap a card to flip it, and use the arrow to save the side you are looking at as a PNG.
+Tap a card to flip it, and use the arrow to save the side you are looking at as a PNG. Beside the card are its audio, its transcript and its reading, and the folder icon opens its folder in Finder.
+
+**Where everything is kept.** Every recording has one folder in `runtime/cards/`, named by its date, time and card. `setup` links it to the Desktop as **Speechform Cards**. Each folder holds:
+
+| File | What it is |
+| --- | --- |
+| `audio.wav` | the recording. The full app takes it from TouchDesigner's microphone pieces, laid at their own times; Light keeps its own copy while it listens |
+| `transcript.txt` | every phrase, with its time, speaker, kind of speech and idea |
+| `reading.txt` | the reading in words: the shares for the whole recording, each idea and every fifty words; Jev's answers; how the art was made |
+| `card-front.png`, `card-back.png` | the card, both sides |
+| `grown.jpg`, `painted.png` | the image the talk grew, and the easel's picture |
+| `phrases.json`, `reading.json`, `card.json` | the same as data, with the classifier's full reasoning for every phrase |
+
+Sections classified by hand are kept in the same folder under `Sections`, one text file each. Nothing in it leaves the Mac or goes to GitHub.
 
 **The art.** Every card has two sides:
 
