@@ -26,7 +26,20 @@
     all: '<rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/>',
     memory: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 2"/>',
     cards: '<rect x="5" y="3.5" width="11" height="15" rx="2"/><path d="M8.5 21h9a2 2 0 0 0 2-2V7"/>',
+    depth: '<path d="M12 3.5L20 18H4z"/><path d="M12 9.5l3.2 5.7H8.8z"/>',
+    lenses: '<path d="M12 3.5l8 14.5H4z"/><circle cx="12" cy="3.5" r="1.4"/><circle cx="20" cy="18" r="1.4"/><circle cx="4" cy="18" r="1.4"/>',
+    arc: '<path d="M3.5 17c3-9 14-9 17 0"/><circle cx="5" cy="14" r="1.6"/><circle cx="12" cy="9.3" r="1.6"/><circle cx="19" cy="14" r="1.6"/>',
+    threads: '<path d="M3 7c5 0 7 3 18 3M3 12h11M3 17c6 0 8-2 13-2"/><circle cx="16.5" cy="12" r="1.8"/><circle cx="18" cy="15" r="1.4"/>',
+    pulse: '<path d="M2.5 12h4l2-5 3 10 3-12 2.5 7h4.5"/>',
+    airtime: '<path d="M12 5v14M4 9.5l16-3M8 20h8"/><circle cx="5" cy="13" r="2.6"/><circle cx="19" cy="10" r="2"/>',
+    questions: '<path d="M8.5 9a3.5 3.5 0 1 1 5 3.2c-1 .5-1.5 1.2-1.5 2.3"/><circle cx="12" cy="18.5" r=".9"/>',
+    links: '<path d="M2.5 6c7 0 8 6 13 6M2.5 18c7 0 8-6 13-6"/><circle cx="18" cy="12" r="2.6"/>',
+    steerall: '<rect x="3.5" y="3.5" width="7" height="7" rx="3.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="3.5"/>',
   };
+  /* the speakers, by letter, the same colours everywhere they appear */
+  const SPEAKER = { A: '#5af0f0', B: '#ff9ae0', C: '#ffc25a' };
+  const STATE = { opened: '#b9c9b5', developing: null, returned: '#ffc94a', ready: '#ffc94a', dormant: '#41503f', closed: '#39ff14' };
+  const STATE_WORD = { opened: 'just started', developing: 'needs more', returned: 'returned to', ready: 'ready to close', dormant: 'dormant', closed: 'closed' };
   const VIEWS = [
     ['now', '<path d="M5 6h14M5 10.5h14M5 15h9"/>'],
     ['river', '<path d="M3 8c4-3 6 3 9 0s5-3 9 0M3 13c4-3 6 3 9 0s5-3 9 0M3 18c4-3 6 3 9 0s5-3 9 0"/>'],
@@ -41,7 +54,7 @@
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
   /* one canvas drawing one view at a time; several can run side by side (the dashboard, a card's replay) */
-  function renderer(canvas, { note, onPick, start = 'now' } = {}) {
+  function renderer(canvas, { note, onPick, start = 'now', scale = 1 } = {}) {
     let view = start, T = null, dpr = 1, W = 0, H = 0, hits = [], born = {}, eased = {};
     let x = canvas.getContext('2d');
     canvas.addEventListener('click', ev => {
@@ -53,7 +66,8 @@
     const focus = () => T && (T.phrases.find(p => p.id === T.focus) || T.phrases[T.phrases.length - 1]);
     const ease = (key, target, k = .14) => (eased[key] = lerp(eased[key] ?? target, target, k));
     const age = id => { if (!(id in born)) born[id] = performance.now(); return clamp((performance.now() - born[id]) / 700, 0, 1); };
-    const font = (s, w = '') => x.font = `${w} ${s * dpr}px ui-monospace, "SF Mono", Menlo, monospace`;
+    const font = (s, w = '') => x.font = `${w} ${s * dpr * scale}px ui-monospace, "SF Mono", Menlo, monospace`;
+    const U = v => v * dpr * scale;                                         // a length in the view's own units
     const muted = '#7d9a78', ink = '#e8f5e4', faint = '#1c281a', amber = '#ffc94a';
     const fit = (t, w) => { if (x.measureText(t).width <= w) return t; while (t.length > 1 && x.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
     const hex = (cx, cy, r) => { x.beginPath(); for (let k = 0; k < 7; k++) { const a = Math.PI / 3 * k + Math.PI / 6; x.lineTo(cx + r * Math.cos(a), cy + r * Math.sin(a)); } };
@@ -294,7 +308,284 @@
       say('Each bar is a kind\'s share over time: every phrase adds to it, so one phrase moves it only so far. The longer a kind has held, the more a new one must lead by. The doubt shows how near it is to changing.');
     }
 
-    function empty() { font(11); x.fillStyle = muted; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('The views fill as you speak.', W / 2, H / 2); say(''); }
+    /* ════ depth and steering: what each phrase carries in p.depth (the three lenses) and p.steer (the threads) ════ */
+    const lastWith = key => { const P = T.phrases, f = focus(); if (!f) return null; for (let j = P.indexOf(f); j >= 0; j--) if (P[j][key]) return P[j][key]; return null; };
+    const nowOf = () => T.now || (focus() ? focus().at : Date.now() / 1000);
+    const live = (t, now) => t.state !== 'closed' && now - (t.last_at || now) >= (T.dormantSeconds || 90) ? 'dormant' : t.state;
+    const pulseT = () => performance.now() / 1000;
+    const LN = ['listener', 'speaker', 'absorption'], LNAME = { listener: 'Listener', speaker: 'Speaker', absorption: 'Absorption' };
+    const wrapText = (t, w) => { const out = []; let line = ''; for (const wd of String(t || '').split(/\s+/)) { const tt = line ? line + ' ' + wd : wd; if (x.measureText(tt).width > w && line) { out.push(line); line = wd; } else line = tt; } if (line) out.push(line); return out; };
+    const glowOn = (c, b) => { x.shadowColor = c; x.shadowBlur = b; }, glowOff = () => { x.shadowBlur = 0; };
+
+    /* ── lenses: the three questions as a triangle, the elements lighting as they are found ── */
+    function lensesView() {
+      const d = lastWith('depth'); if (!d) return empty('The lenses fill as you speak.');
+      const rowsN = LN.reduce((a, q) => a + d.lenses[q].elements.length, 0), most0 = Math.max(...LN.map(q => d.lenses[q].elements.length));
+      const wide = W > H * 1.25 && (H - U(102)) / rowsN >= U(15), kc = T.color(d.kind);
+      const small = H < 250 * dpr || W < 280 * dpr || (!wide && (H - (H * .3 + Math.min(W * .3, H * .22) * 1.05 + U(54))) / most0 < U(11));
+      const cx = wide ? W * .28 : W / 2, cy = wide ? H * .54 : small ? H * .36 : H * .3, R = wide ? Math.min(W * .18, H * .34) : small ? Math.min(W * .26, H * .24) : Math.min(W * .3, H * .22);
+      const A = i => -Math.PI / 2 + i * 2 * Math.PI / 3, pt = (i, v) => [cx + R * v * Math.cos(A(i)), cy + R * v * Math.sin(A(i))];
+      x.strokeStyle = faint; x.lineWidth = dpr;
+      [.25, .5, .75, 1].forEach(s => { x.beginPath(); for (let i = 0; i < 3; i++) x.lineTo(...pt(i, s)); x.closePath(); x.stroke(); });
+      for (let i = 0; i < 3; i++) { x.beginPath(); x.moveTo(cx, cy); x.lineTo(...pt(i, 1)); x.stroke(); }
+      const tri = (m, alpha, fill, key, col, dash) => {
+        x.beginPath(); LN.forEach((l, i) => x.lineTo(...pt(i, .04 + .96 * (key ? ease(key + l, m[l] || 0, .1) : (m[l] || 0))))); x.closePath();
+        x.strokeStyle = col; x.globalAlpha = alpha; x.lineWidth = (fill ? 2 : 1) * dpr; if (dash) x.setLineDash([U(4), U(4)]); x.stroke(); x.setLineDash([]);
+        if (fill) { x.fillStyle = col; x.globalAlpha = .2; x.fill(); } x.globalAlpha = 1;
+      };
+      const meters = dd => Object.fromEntries(LN.map(l => [l, dd.lenses[l].meter]));
+      const H6 = T.phrases.filter(q => q.depth).slice(-7, -1);
+      H6.forEach((q, i) => tri(meters(q.depth), .08 + .22 * i / Math.max(1, H6.length), false, null, T.color(q.depth.kind)));
+      Object.entries(d.near || {}).forEach(([k, m]) => tri(m, .7, false, null, T.color(k), true));
+      tri(meters(d), 1, true, 'lz', kc);
+      if (T.jev && T.jev.lenses) LN.forEach((l, i) => { if (T.jev.lenses[l] == null) return; const [px, py] = pt(i, .04 + .96 * T.jev.lenses[l]); x.fillStyle = amber; x.beginPath(); x.moveTo(px, py - U(5)); x.lineTo(px + U(5), py); x.lineTo(px, py + U(5)); x.lineTo(px - U(5), py); x.fill(); });
+      /* the corners: each lens and its meter */
+      font(small ? 9.5 : 11, '600'); x.textBaseline = 'middle'; x.textAlign = 'left';
+      LN.forEach((l, i) => {
+        const [px, py] = pt(i, 1.13), t = `${small ? LNAME[l].slice(0, 6) : LNAME[l]} ${Math.round(d.lenses[l].meter * 100)}%`, tw = x.measureText(t).width;
+        const lx = clamp(i === 0 ? px - tw / 2 : i === 1 ? px : px - tw, U(4), W - tw - U(4));
+        x.fillStyle = ink; x.fillText(t, lx, py + (i === 0 ? -U(4) : U(10)));
+      });
+      if (small) {
+        /* a small cell: each lens a row of hexagons, lit as their elements are found */
+        let y = cy + R * .6 + U(30);
+        LN.forEach(l => {
+          font(8.5); x.fillStyle = muted; x.textAlign = 'left'; x.fillText(LNAME[l].slice(0, 6), U(6), y);
+          d.lenses[l].elements.forEach((e, j) => { hex(U(62) + j * U(15), y, U(5.5)); if (e.found) { glowOn(kc, U(6)); x.fillStyle = kc; x.fill(); glowOff(); } else { x.fillStyle = kc; x.globalAlpha = .12 + .5 * e.score; x.fill(); x.globalAlpha = 1; x.strokeStyle = kc; x.lineWidth = dpr; x.stroke(); } });
+          y += U(16);
+        });
+        say(`The three lenses of ${d.kind}; hexagons light as elements are found.`);
+        return;
+      }
+      /* the elements, lens by lens: lit when found, half lit as they gather, with the first words that showed them */
+      const x0 = wide ? Math.max(W * .56, cx + R * 1.25 + U(60)) : U(10), colW = wide ? W - x0 - U(10) : (W - U(20)) / 3;
+      let y0 = wide ? U(14) : cy + R * 1.05 + U(26);
+      LN.forEach((l, i) => {
+        const bx = wide ? x0 : x0 + i * colW, els = d.lenses[l].elements;
+        let by = wide ? y0 : y0;
+        font(9.5, '600'); x.textAlign = 'left'; x.fillStyle = kc; x.fillText(LNAME[l].toUpperCase(), bx, by); by += U(15);
+        const rows = LN.reduce((a, q) => a + d.lenses[q].elements.length, 0);
+        const most = Math.max(...LN.map(q => d.lenses[q].elements.length));
+        const rowH = wide ? Math.min(U(22), (H - U(24) - 3 * U(26)) / Math.max(1, rows)) : Math.min(U(19), (H - y0 - U(28)) / most);
+        els.forEach((e, j) => {
+          const lit = ease('el' + l + e.id, e.score, .08);
+          hex(bx + U(6), by, U(5.5));
+          if (e.found) { glowOn(kc, U(8)); x.fillStyle = kc; x.fill(); glowOff(); }
+          else { x.fillStyle = kc; x.globalAlpha = .12 + .5 * lit; x.fill(); x.globalAlpha = 1; x.strokeStyle = kc; x.lineWidth = dpr; x.stroke(); }
+          font(Math.min(wide ? 10 : 9.5, rowH / U(1) * .62)); x.fillStyle = e.found ? ink : muted;
+          const ev = e.found && e.evidence && e.evidence[0] ? ' · ' + e.evidence[0] : '';
+          x.fillText(fit(e.name + ev, colW - U(20)), bx + U(16), by);
+          by += rowH;
+        });
+        if (wide) y0 = by + U(8);
+      });
+      say(`The triangle is the three lenses of ${d.kind}: what the listener must bring, what the speaker must deliver, and what draws a listener in. Earlier phrases fade behind; dashed outlines are kinds near it; amber marks are Jev's reading at a pause. A hexagon lights when its element is found.`);
+    }
+
+    /* ── arc: the lead form's stages as a path, the marker where the talk stands, the next move glowing ── */
+    function arcView() {
+      const st = lastWith('steer'), a = st && st.arc; if (!a || !a.stages || !a.stages.length) return empty('The arc fills as you speak.');
+      const n = a.stages.length, kc = T.color(a.kind), pad = U(34), small = H < U(300), y0 = small ? H * .5 : H * .56, top = small ? H * .26 : H * .2;
+      const B = u => { const q = 1 - u; return [q * q * pad + 2 * q * u * (W / 2) + u * u * (W - pad), q * q * y0 + 2 * q * u * top + u * u * y0]; };
+      const U_ = i => n > 1 ? i / (n - 1) : .5;
+      x.lineWidth = U(3); x.strokeStyle = faint; x.beginPath(); for (let k = 0; k <= 60; k++) x.lineTo(...B(k / 60)); x.stroke();
+      const cur = a.stages.findIndex(s => s.id === a.current), curE = ease('arcm', Math.max(0, cur), .06);
+      if (cur >= 0) { x.strokeStyle = kc; x.lineWidth = U(3); x.beginPath(); for (let k = 0; k <= 60 * U_(curE); k++) x.lineTo(...B(k / 60)); x.stroke(); }
+      const nextI = a.next ? a.stages.findIndex(s => s.id === a.next.id) : -1, beat = .5 + .5 * Math.sin(pulseT() * 3);
+      a.stages.forEach((s, i) => {
+        const [px, py] = B(U_(i)), r = Math.min(U(13), (W - 2 * pad) / n * .22);
+        if (i === nextI) { glowOn('#39ff14', U(10 + 14 * beat)); hex(px, py, r * (1.05 + .1 * beat)); x.strokeStyle = '#39ff14'; x.lineWidth = U(2); x.stroke(); glowOff(); }
+        hex(px, py, r);
+        if (s.reached) { x.fillStyle = kc; x.fill(); } else { x.fillStyle = '#070907'; x.fill(); x.strokeStyle = s.landing ? kc : muted; x.lineWidth = dpr * (s.landing ? 2 : 1); x.stroke(); }
+        if (s.landing) { hex(px, py, r * 1.35); x.strokeStyle = kc; x.globalAlpha = .35; x.lineWidth = dpr; x.stroke(); x.globalAlpha = 1; }
+        let fs = 10; font(fs, s.reached ? '600' : ''); while (fs > 7 && x.measureText(s.name).width > (W - 2 * pad) / n * .95) font(fs -= .5, s.reached ? '600' : '');
+        x.fillStyle = s.reached ? ink : muted; x.textAlign = 'center'; x.textBaseline = 'top';
+        x.fillText(fit(s.name, (W - 2 * pad) / n), px, py + r + U(8));
+        if (T.jev && T.jev.stage === s.id) { x.fillStyle = amber; x.beginPath(); x.moveTo(px, py - r - U(4)); x.lineTo(px - U(5), py - r - U(13)); x.lineTo(px + U(5), py - r - U(13)); x.fill(); }
+      });
+      if (cur >= 0) { const [mx, my] = B(U_(curE)); glowOn(amber, U(12)); x.strokeStyle = amber; x.lineWidth = U(2.5); x.beginPath(); x.arc(mx, my, Math.min(U(19), (W - 2 * pad) / n * .33), 0, 7); x.stroke(); glowOff(); }
+      /* the other threads of this form, as beads under the stage each has reached */
+      const others = (st.threads || []).filter(t => t.id !== a.thread && t.kind === a.kind && t.stage);
+      others.forEach((t, j) => { const i = a.stages.findIndex(s => s.id === t.stage); if (i < 0) return; const [px, py] = B(U_(i)); x.fillStyle = STATE[live(t, nowOf())] || kc; x.beginPath(); x.arc(px - U(12) + (j % 5) * U(6), py + U(44), U(2.6), 0, 7); x.fill(); });
+      font(11, '600'); x.textAlign = 'left'; x.textBaseline = 'top'; x.fillStyle = kc;
+      const th = (st.threads || []).find(t => t.id === a.thread);
+      x.fillText(fit(`${a.kind}${th ? ' · ' + th.title : ''}`, W - U(20)), U(10), U(8));
+      font(12); x.textAlign = 'center'; x.fillStyle = ink;
+      if (a.next) {
+        font(12.5); const lines = wrapText(a.next.move, W - U(40)).slice(0, small ? 2 : 3);
+        let ty = Math.min(y0 + U(52), H - U(10) - U(16) - lines.length * U(17)); x.fillStyle = '#39ff14'; font(10, '600'); x.fillText('NEXT', W / 2, ty); ty += U(16);
+        font(12.5); x.fillStyle = ink; lines.forEach(l => { x.fillText(l, W / 2, ty); ty += U(17); });
+      } else { font(12); x.fillStyle = kc; x.fillText('The arc has landed.', W / 2, Math.min(y0 + U(56), H - U(24))); }
+      say(`The path is the arc of ${a.kind}, stage by stage. Filled hexagons are reached in the thread in play; the amber ring is where it stands; the glowing hexagon is the natural next move. Beads beneath are other threads of the same form.`);
+    }
+
+    /* ── threads: a loom of lines that begin, thicken, dim, bud and flower ── */
+    function threadsView() {
+      const st = lastWith('steer'), TH = st && st.threads; if (!TH || !TH.length) return empty('Threads appear as ideas open.');
+      const now = nowOf(), many = ((st.talk || {}).speakers || []).length > 1;
+      const t0 = Math.min(...TH.map(t => t.opened_at)), t1 = Math.max(now, ...TH.map(t => t.last_at)) + 2;
+      const labelW = Math.min(U(150), W * .28), left = U(10) + labelW, right = W - U(84), top = U(14), bottom = H - U(22);
+      const rowH = Math.min(U(34), (bottom - top) / TH.length), X = t => left + (t - t0) / Math.max(1, t1 - t0) * (right - left);
+      hits = [];
+      TH.forEach((t, i) => {
+        const y = top + rowH * (i + .5), state = live(t, now), kc = T.color(t.kind), sc = STATE[state] || kc;
+        /* arriving from the edge: a thread an earlier recording opened */
+        if (t.link) { x.strokeStyle = amber; x.globalAlpha = .7; x.setLineDash([U(3), U(3)]); x.lineWidth = dpr; x.beginPath(); x.moveTo(0, y - rowH * .4); x.bezierCurveTo(left * .5, y - rowH * .4, left * .7, y, X(t.opened_at), y); x.stroke(); x.setLineDash([]); x.globalAlpha = 1; }
+        let cum = 0; const M = t.marks || [];
+        M.forEach((m, k) => {
+          cum += m[1]; const w = U(1.2) + Math.min(U(9), cum * U(.06)), xa = X(m[0]), xb = k + 1 < M.length ? X(M[k + 1][0]) : xa + U(4);
+          x.strokeStyle = many ? (SPEAKER[m[2]] || kc) : kc; x.globalAlpha = state === 'dormant' ? .3 : .9; x.lineWidth = w; x.lineCap = 'round';
+          x.beginPath(); x.moveTo(xa, y); x.lineTo(xb, y); x.stroke(); x.globalAlpha = 1;
+          if (m[3] && m[3].length) { x.fillStyle = ink; x.beginPath(); x.arc(xa, y - w / 2 - U(3), U(1.6), 0, 7); x.fill(); }   // an arc stage reached here
+        });
+        x.lineCap = 'butt';
+        const end = M.length ? X(M[M.length - 1][0]) + U(4) : X(t.opened_at), w = U(1.2) + Math.min(U(9), (t.words || 0) * U(.06));
+        if (state === 'dormant') {                                       // dims, and slowly curls
+          x.strokeStyle = sc; x.lineWidth = dpr; x.setLineDash([U(2), U(4)]); x.beginPath(); x.moveTo(end, y); x.lineTo(X(now), y); x.stroke(); x.setLineDash([]);
+          const cx2 = X(now), curl = Math.min(1, (now - t.last_at) / 300); x.beginPath();
+          for (let k = 0; k <= 30; k++) { const a = k / 30 * Math.PI * (1 + 2 * curl), r = U(7) * (1 - k / 40); x.lineTo(cx2 + r * Math.sin(a), y - U(7) + r * Math.cos(a)); } x.stroke();
+        } else if (state !== 'closed') { x.strokeStyle = kc; x.globalAlpha = .25; x.lineWidth = dpr; x.beginPath(); x.moveTo(end, y); x.lineTo(X(now), y); x.stroke(); x.globalAlpha = 1; }
+        if (state === 'ready') {                                         // swells into a bud
+          const b = 1 + .12 * Math.sin(pulseT() * 2.4 + i); glowOn(amber, U(10)); x.fillStyle = 'rgba(255,201,74,.85)';
+          x.beginPath(); x.ellipse(end + U(6), y, U(6) * b, U(4.2) * b, 0, 0, 7); x.fill(); glowOff();
+          x.strokeStyle = '#39ff14'; x.lineWidth = dpr; x.beginPath(); x.moveTo(end, y); x.lineTo(end + U(2), y - U(5)); x.stroke();
+        }
+        if (state === 'closed') {                                        // knots and flowers
+          const fx = t.landing_at ? X(t.landing_at) : end; glowOn('#39ff14', U(8)); x.fillStyle = 'rgba(57,255,20,.85)';
+          for (let k = 0; k < 6; k++) { const a = k / 6 * Math.PI * 2; x.beginPath(); x.ellipse(fx + U(6) * Math.cos(a), y + U(6) * Math.sin(a), U(4), U(2.2), a, 0, 7); x.fill(); }
+          x.fillStyle = '#ffe9a0'; x.beginPath(); x.arc(fx, y, U(2.4), 0, 7); x.fill(); glowOff();
+        }
+        if (state === 'opened') { x.fillStyle = sc; x.beginPath(); x.arc(X(t.opened_at), y, U(3), 0, 7); x.fill(); }
+        for (let r = 0; r < Math.min(5, t.returns || 0); r++) { x.fillStyle = amber; x.beginPath(); x.arc(X(t.opened_at) + U(5) * r, y + w / 2 + U(4), U(1.6), 0, 7); x.fill(); }
+        font(10, t.id === st.active ? '600' : ''); x.textAlign = 'right'; x.textBaseline = 'middle'; x.fillStyle = t.id === st.active ? ink : muted;
+        x.fillText(fit(t.title || 'a thread', labelW - U(8)), left - U(8), y);
+        font(9); x.textAlign = 'left'; x.fillStyle = sc === '#41503f' ? muted : sc;
+        x.fillText(state === 'dormant' ? `dormant ${Math.max(1, Math.round((now - t.last_at) / 60))}m` : STATE_WORD[state], right + U(14), y);
+      });
+      font(8.5); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText('start', left, H - U(6));
+      x.textAlign = 'right'; x.fillText('now', right, H - U(6));
+      if (many) { let lx = right + U(14); x.textAlign = 'left'; (st.talk.speakers || []).forEach(sp => { x.fillStyle = SPEAKER[sp] || ink; x.fillText(sp, lx, H - U(6)); lx += U(14); }); }
+      say('Each line is a thread: it begins when an idea opens and thickens as it is developed' + (many ? ', coloured by who spoke' : '') + '. Dormant threads dim and curl; a thread ready to close swells into a bud; a closed thread flowers. Amber beads are returns; dashed lines from the edge are threads picked up from an earlier recording.');
+    }
+
+    /* ── pulse: the absorption over time as a wave, beating at the pace of the talk ── */
+    function pulseView() {
+      const P = T.phrases.filter(p => p.depth).slice(-40), st = lastWith('steer'), hold = (st && st.hold) || {}; if (!P.length) return empty('The pulse begins as you speak.');
+      const left = U(10), right = W - Math.min(U(150), W * .3), top = U(16), bottom = H - U(26), n = P.length;
+      const X = i => left + (n > 1 ? i / (n - 1) : .5) * (right - left), Y = v => bottom - v * (bottom - top);
+      x.strokeStyle = faint; x.lineWidth = dpr; [0, .5, 1].forEach(v => { x.beginPath(); x.moveTo(left, Y(v)); x.lineTo(right, Y(v)); x.stroke(); });
+      ['listener', 'speaker'].forEach(l => { x.strokeStyle = muted; x.globalAlpha = .45; x.lineWidth = dpr; x.beginPath(); P.forEach((p, i) => x.lineTo(X(i), Y(p.depth.lenses[l].meter))); x.stroke(); x.globalAlpha = 1; });
+      const ab = P.map(p => p.depth.lenses.absorption.meter), tempo = hold.tempo || 1, t = pulseT();
+      const g = x.createLinearGradient(0, top, 0, bottom); g.addColorStop(0, 'rgba(255,201,74,.35)'); g.addColorStop(1, 'rgba(255,201,74,0)');
+      x.beginPath(); x.moveTo(X(0), bottom);
+      const steps = 160; const val = u => { const f = u * (n - 1), i = Math.floor(f), k = f - i; return ab[i] + ((ab[i + 1] ?? ab[i]) - ab[i]) * k; };
+      for (let k = 0; k <= steps; k++) { const u = k / steps, v = val(u); x.lineTo(left + u * (right - left), Y(v) + U(5) * v * Math.sin(u * 40 * tempo - t * 4 * tempo)); }
+      x.lineTo(right, bottom); x.closePath(); x.fillStyle = g; x.fill();
+      x.beginPath(); for (let k = 0; k <= steps; k++) { const u = k / steps, v = val(u); x.lineTo(left + u * (right - left), Y(v) + U(5) * v * Math.sin(u * 40 * tempo - t * 4 * tempo)); }
+      x.strokeStyle = amber; x.lineWidth = U(1.6); x.stroke();
+      /* the beat: a ring that swells at the pace of the words */
+      const bx = (right + W) / 2, by = top + (bottom - top) * .32, base = Math.min(U(30), (W - right) * .28), beat = .5 + .5 * Math.sin(t * Math.PI * 2 * tempo * .6);
+      const racing = hold.cue && hold.cue.type === 'pause';
+      glowOn(racing ? '#ff5a4a' : amber, U(10 + 10 * beat)); x.strokeStyle = racing ? '#ff5a4a' : amber; x.lineWidth = U(2);
+      x.beginPath(); x.arc(bx, by, base * (.75 + .25 * beat) * (.6 + .4 * (hold.meter || 0)), 0, 7); x.stroke(); glowOff();
+      font(10); x.textAlign = 'center'; x.textBaseline = 'top'; x.fillStyle = ink;
+      x.fillText(`${(hold.wps || 0).toFixed(1)} words/s`, bx, by + base + U(8));
+      x.fillStyle = muted; x.fillText(`hold ${Math.round((hold.meter || 0) * 100)}%`, bx, by + base + U(22));
+      let ty = by + base + U(42); font(9.5); x.fillStyle = racing ? '#ff8a7a' : ink;
+      if (hold.cue) wrapText(hold.cue.text, W - right - U(14)).slice(0, 4).forEach(l => { x.fillText(l, bx, ty); ty += U(13); });
+      else if ((hold.held || []).length) { x.fillStyle = muted; wrapText('Held by ' + hold.held.slice(0, 2).join(' and ').toLowerCase() + '.', W - right - U(14)).slice(0, 3).forEach(l => { x.fillText(l, bx, ty); ty += U(13); }); }
+      font(8.5); x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillStyle = amber; x.fillText('absorption', left, H - U(8)); x.fillStyle = muted; x.fillText('  listener, speaker', left + U(66), H - U(8));
+      say('The amber wave is the absorption, phrase by phrase, rippling at the pace of the talk; the grey lines are the listener and speaker lenses. The ring beats with the words a second, and turns red when the talk races.');
+    }
+
+    /* ── airtime: the speakers on a balance ── */
+    function airtimeView() {
+      const st = lastWith('steer'), talk = st && st.talk; if (!talk || !Object.keys(talk.airtime || {}).length) return empty('The balance fills as people speak.');
+      const sp = Object.keys(talk.airtime).sort(), total = sp.reduce((a, k) => a + talk.airtime[k], 0) || 1;
+      const pos = sp.length === 1 ? [-.75] : sp.map((_, i) => -.85 + 1.7 * i / (sp.length - 1));
+      const torque = sp.reduce((a, k, i) => a + pos[i] * talk.airtime[k] / total, 0), tilt = ease('tilt', Math.max(-.38, Math.min(.38, torque * .7)), .05);
+      const cx = W / 2, cy = H * .2, L = Math.min(W * .38, U(260)), big = Math.min(W, H) / U(340);
+      x.fillStyle = faint; x.beginPath(); x.moveTo(cx, cy); x.lineTo(cx - U(16), cy + U(46)); x.lineTo(cx + U(16), cy + U(46)); x.fill();
+      x.strokeStyle = ink; x.lineWidth = U(2.5); x.beginPath(); x.moveTo(cx - L * Math.cos(tilt), cy - L * Math.sin(tilt)); x.lineTo(cx + L * Math.cos(tilt), cy + L * Math.sin(tilt)); x.stroke();
+      x.fillStyle = ink; x.beginPath(); x.arc(cx, cy, U(4), 0, 7); x.fill();
+      let low = cy;
+      sp.forEach((k, i) => {
+        const share = talk.airtime[k] / total, px = cx + pos[i] * L * Math.cos(tilt), py = cy + pos[i] * L * Math.sin(tilt), r = (U(7) + Math.sqrt(share) * U(24)) * Math.min(1.3, Math.max(.55, big));
+        x.strokeStyle = muted; x.lineWidth = dpr; x.beginPath(); x.moveTo(px, py); x.lineTo(px, py + U(18)); x.stroke();
+        glowOn(SPEAKER[k] || ink, U(10)); x.fillStyle = SPEAKER[k] || ink; x.globalAlpha = .85; x.beginPath(); x.arc(px, py + U(18) + r, r, 0, 7); x.fill(); x.globalAlpha = 1; glowOff();
+        font(13, '700'); x.fillStyle = '#000'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(k, px, py + U(18) + r);
+        font(10); x.fillStyle = ink; x.fillText(`${Math.round(share * 100)}%`, px, py + U(18) + 2 * r + U(10)); low = Math.max(low, py + U(18) + 2 * r + U(20));
+      });
+      /* per speaker: words, threads opened and taken up, questions asked and still open */
+      const TH = st.threads || [], Q = talk.questions || [];
+      let y = Math.max(low + U(10), H - U(28) - (sp.length + 1) * U(16)); font(9.5); x.textAlign = 'left'; x.textBaseline = 'middle';
+      if (y + (sp.length + 1) * U(16) > H) {
+        font(10); x.textAlign = 'center'; x.textBaseline = 'alphabetic'; x.fillStyle = muted;
+        x.fillText(fit(sp.map(k => `${k} ${talk.airtime[k]} words`).join(' · ') + (sp.length > 1 ? ` · ${talk.turns} turns` : ''), W - U(16)), W / 2, H - U(8));
+        say('The beam tips toward whoever has spoken most; each weight is a speaker.'); return;
+      }
+      const cw = (W - U(52)) / 4, cols = [U(12), U(40), U(40) + cw, U(40) + 2 * cw, U(40) + 3 * cw];
+      x.fillStyle = muted; ['', 'words', 'opened', 'took up', 'open ?'].forEach((h, j) => x.fillText(h, cols[j], y)); y += U(16);
+      sp.forEach(k => {
+        const opened = TH.filter(t => t.opened_by === k).length, taken = TH.filter(t => t.opened_by !== k && (t.speakers || {})[k]).length, open = Q.filter(q => q.speaker === k && !q.answered_at).length;
+        x.fillStyle = SPEAKER[k] || ink; x.fillText(k, cols[0], y); x.fillStyle = ink;
+        [talk.airtime[k], opened, taken, open].forEach((v, j) => x.fillText(String(v), cols[j + 1], y)); y += U(16);
+      });
+      if (sp.length > 1) { x.fillStyle = muted; x.fillText(`${talk.turns} turns. ${talk.unpicked.length} threads one person opened that nobody else took up.`, U(12), y + U(4)); }
+      say(sp.length > 1 ? 'The beam tips toward whoever has spoken most. Each weight is a speaker, sized by their share of the words. Beneath: what each has opened, taken up from the others, and asked without an answer yet.'
+        : 'One speaker so far. Tap the speaker letter to switch to B or C when a conversation begins, and the balance shows the share of each.');
+    }
+
+    /* ── questions: every question as a mark, open until someone else answers ── */
+    function questionsView() {
+      const st = lastWith('steer'), Q = (st && st.talk && st.talk.questions) || []; if (!Q.length) return empty('No questions yet.');
+      const now = nowOf(), t0 = Math.min(...Q.map(q => q.at)) - 2, t1 = Math.max(now, ...Q.map(q => q.answered_at || q.at)) + 2;
+      const left = U(16), right = W - U(16), y = H * .32, X = t => left + (t - t0) / Math.max(1, t1 - t0) * (right - left);
+      x.strokeStyle = faint; x.lineWidth = dpr; x.beginPath(); x.moveTo(left, y); x.lineTo(right, y); x.stroke();
+      const solo = ((st.talk || {}).speakers || []).length < 2;
+      Q.forEach(q => {
+        const qx = X(q.at), c = SPEAKER[q.speaker] || ink;
+        font(16, '700'); x.fillStyle = c; x.textAlign = 'center'; x.textBaseline = 'bottom'; x.fillText('?', qx, y - U(4));
+        if (q.answered_at) {
+          const ax = X(q.answered_at); x.strokeStyle = SPEAKER[q.answered_by] || ink; x.lineWidth = U(1.4);
+          x.beginPath(); x.moveTo(qx, y + U(6)); x.quadraticCurveTo((qx + ax) / 2, y + U(34), ax, y + U(6)); x.stroke();
+          x.beginPath(); x.arc(ax, y + U(6), U(3), 0, 7); x.fillStyle = SPEAKER[q.answered_by] || ink; x.fill();
+        } else {
+          const beat = .5 + .5 * Math.sin(pulseT() * 2); x.strokeStyle = c; x.lineWidth = U(1.6); glowOn(c, U(4 + 6 * beat));
+          x.beginPath(); x.arc(qx, y + U(14), U(6), -Math.PI / 2 + .5, Math.PI * 1.5 - .5); x.stroke(); glowOff();
+        }
+      });
+      const open = Q.filter(q => !q.answered_at).slice(-5).reverse();
+      let ty = y + U(56); font(10, '600'); x.textAlign = 'left'; x.textBaseline = 'top'; x.fillStyle = ink;
+      x.fillText(solo ? `${open.length} questions put to the listener` : `${open.length} waiting for an answer`, left, ty); ty += U(18); font(10);
+      open.forEach(q => { if (ty > H - U(16)) return; x.fillStyle = SPEAKER[q.speaker] || ink; x.fillText(q.speaker, left, ty); x.fillStyle = muted; x.fillText(fit(`${q.text}  ·  ${Math.max(0, Math.round((now - q.at) / 60))}m ago`, W - left * 2 - U(20)), left + U(18), ty); ty += U(16); });
+      say(solo ? 'Each mark is a question put to the listener. In a conversation, a question stays open, a broken ring, until someone else answers, and then a line joins it to the answer.'
+        : 'Each mark is a question, coloured by who asked it. It stays open, a broken ring, until someone else answers; then a line joins it to the answer, in the answerer\'s colour.');
+    }
+
+    /* ── links: threads arriving from earlier recordings ── */
+    function linksView() {
+      const st = lastWith('steer'), TH = (st && st.threads) || []; if (!TH.length) return empty('Threads appear as ideas open.');
+      const linked = TH.filter(t => t.link), right = W * .64, top = U(20), rowH = Math.min(U(30), (H - top - U(30)) / TH.length);
+      x.strokeStyle = faint; x.lineWidth = dpr; x.setLineDash([U(2), U(5)]); x.beginPath(); x.moveTo(U(8), top); x.lineTo(U(8), H - U(20)); x.stroke(); x.setLineDash([]);
+      font(8.5); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText('earlier recordings', U(14), top - U(6));
+      x.textAlign = 'right'; x.fillText('this recording', W - U(10), top - U(6));
+      const dates = [...new Set(linked.map(t => t.link.date))];
+      TH.forEach((t, i) => {
+        const y = top + rowH * (i + .5), kc = T.color(t.kind), state = live(t, nowOf());
+        x.fillStyle = STATE[state] || kc; hex(right, y, U(5.5)); x.fill();
+        font(10, t.link ? '600' : ''); x.fillStyle = t.link ? ink : muted; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(fit(t.title || '', W - right - U(20)), right + U(12), y);
+        if (!t.link) return;
+        const di = dates.indexOf(t.link.date), ly = top + (H - top - U(30)) * (di + .5) / Math.max(1, dates.length), grow = age('link' + t.id);
+        x.strokeStyle = amber; x.lineWidth = U(1.6); x.globalAlpha = .85; x.beginPath(); x.moveTo(U(8), ly);
+        const ex = lerp(U(8), right - U(8), grow); x.bezierCurveTo(W * .3, ly, W * .35, y, ex, lerp(ly, y, grow)); x.stroke(); x.globalAlpha = 1;
+        font(8.5); x.fillStyle = muted; x.textAlign = 'center'; x.fillText(fit((t.link.shared || []).join(', '), W * .3), W * .36, (ly + y) / 2 - U(8));
+      });
+      dates.forEach((d, i) => { const ly = top + (H - top - U(30)) * (i + .5) / Math.max(1, dates.length); x.fillStyle = amber; x.beginPath(); x.arc(U(8), ly, U(4), 0, 7); x.fill(); font(9.5, '600'); x.textAlign = 'left'; x.fillText(d, U(16), ly - U(10)); });
+      say(linked.length ? 'Amber lines arrive from earlier recordings: a thread opened before and picked up here, joined by the words they share.' : 'No thread here has been picked up from an earlier recording yet. When one is, it arrives from the left edge with its date.');
+    }
+
+    function empty(t) { font(11); x.fillStyle = muted; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t || 'The views fill as you speak.', W / 2, H / 2); say(''); }
     let said = '';
     function say(t) { if (t !== said) { said = t; if (note) note.textContent = t; } }
 
@@ -306,7 +597,7 @@
       const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       W = w; H = h; x.clearRect(0, 0, W, H); hits = [];
-      ({ river, window: windowView, build, shape, ideas, bars })[view]();
+      ({ river, window: windowView, build, shape, ideas, bars, lenses: lensesView, arc: arcView, threads: threadsView, pulse: pulseView, airtime: airtimeView, questions: questionsView, links: linksView })[view]();
     }
     requestAnimationFrame(loop);
     return { set(t) { T = t; }, setView(v) { view = v; }, get view() { return view; }, canvas };
@@ -326,10 +617,12 @@
 
   /* every graph at once, over the whole window */
   const GRID = ['bars', 'river', 'window', 'build', 'shape', 'ideas'];
-  function grid(host, { onPick } = {}) {
+  /* the depth and steering views, together */
+  const STEER = ['lenses', 'arc', 'threads', 'pulse', 'airtime', 'questions', 'links'];
+  function grid(host, { onPick, views = GRID, scale = 1 } = {}) {
     host.classList.add('vgrid');
-    host.innerHTML = GRID.map(v => `<div class="vcell"><div class="vcap"><svg viewBox="0 0 24 24">${ICON[v]}</svg><span>${v}</span></div><canvas></canvas></div>`).join('');
-    const rs = [...host.querySelectorAll('canvas')].map((c, i) => renderer(c, { start: GRID[i], onPick }));
+    host.innerHTML = views.map(v => `<div class="vcell" data-v="${v}"><div class="vcap"><svg viewBox="0 0 24 24">${ICON[v]}</svg><span>${v}</span></div><canvas></canvas></div>`).join('');
+    const rs = [...host.querySelectorAll('canvas')].map((c, i) => renderer(c, { start: views[i], onPick, scale }));
     return { set: t => rs.forEach(r => r.set(t)) };
   }
   let board = null;
@@ -371,5 +664,5 @@
       sync(page, view) { cur = page === 1 ? view : (SCREENS.find(x => x[1] === page) || SCREENS[0])[0]; paint(); }, get current() { return cur; } };
   }
 
-  root.SpeechformViews = { mount, renderer, grid, dashboard, screens, ICON, SCREENS, VIEWS: VIEWS.map(v => v[0]) };
+  root.SpeechformViews = { mount, renderer, grid, dashboard, screens, ICON, SCREENS, VIEWS: VIEWS.map(v => v[0]), STEER, GRID, SPEAKER, STATE, STATE_WORD };
 })(this);

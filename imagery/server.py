@@ -393,17 +393,100 @@ def test_provider():
     except Exception as e:
         return {'ok': False, 'error': str(e)[:300]}
 
-def app_state():
+# ── Jev at a pause ────────────────────────────────────────────────────────────────
+# During a recording, Jev may be asked only at a natural pause (PAUSE_SECONDS of quiet), and only when the last
+# such call was at least JEV_SPACING seconds earlier and at least JEV_WORDS new words have arrived since. Pauses in
+# quick succession do nothing, and the algorithm keeps steering between calls. An answer is applied by the page only
+# while it is still about the current state (the state's revision has not moved since the question was asked).
+PAUSE_SECONDS = 8
+JEV_SPACING = 90
+JEV_WORDS = 60
+pause_jev = {'session': None, 'at': 0.0, 'words': 0, 'answer': None, 'asking': False}
+
+def _session_words(s):
+    return sum(len((e.get('text') or '').split()) for e in s.get('events', []))
+
+def ask_jev_at_pause(quiet_for=0.0):
+    """one spaced-out reading by Jev of the talk so far: the three lenses of the kind in front, the strongest
+    absorption element, the stage of its arc, and the single next move, chosen from the algorithm's candidates"""
+    import depth as dp, steer as st
+    s = read_json(STATE, {})
+    cfg = settings()
+    events = [e for e in s.get('events', []) if e.get('source') in YOURS + ('Test',)]
+    if heavy.service(cfg) != 'typesafe':
+        return {'ok': False, 'why': 'no Jev key is saved; the algorithm steers alone'}
+    if not events:
+        return {'ok': False, 'why': 'nothing said yet'}
+    if pause_jev['session'] != s.get('session'):
+        pause_jev.update(session=s.get('session'), at=0.0, words=0, answer=None)
+    now = time.time(); words = _session_words(s)
+    quiet = max(float(quiet_for or 0), now - float(events[-1].get('at') or now))
+    if quiet < PAUSE_SECONDS:
+        return {'ok': False, 'why': 'words are still arriving'}
+    if now - pause_jev['at'] < JEV_SPACING:
+        return {'ok': False, 'why': f'Jev was asked {round(now - pause_jev["at"])} s ago; the next pause after {JEV_SPACING} s may ask again'}
+    if words - pause_jev['words'] < JEV_WORDS:
+        return {'ok': False, 'why': f'{words - pause_jev["words"]} new words since Jev last read; it waits for {JEV_WORDS}'}
+    if pause_jev['asking']:
+        return {'ok': False, 'why': 'Jev is already reading'}
+    revision = s.get('revision'); snap = s.get('steer') or {}
+    last = events[-1]; kind = last.get('form')
+    window = ' '.join(e['text'] for e in events[-40:])
+    window = ' '.join(window.split()[-160:])
+    qs = dict(cards.lens_questions('The talk so far', kind, ''))
+    arc_ = st.arc(kind)
+    if arc_:
+        qs['stage'] = {'type': 'choice', 'instructions': f'The talk so far is heard as {kind}. Which stage of its arc has it reached?',
+                       'criteria': {x['id']: x['name'] + ': ' + x['move'] for x in arc_}}
+    cands = st.candidates(snap)
+    if len(cands) > 1:
+        qs['move'] = {'type': 'choice', 'instructions': 'The speaker has paused. Which single next move would serve this talk best?',
+                      'criteria': {c['id']: c['text'] for c in cands}}
+    pause_jev.update(asking=True, at=now, words=words)
+    try:
+        a = heavy.typesafe(cfg, heavy.mask(window), qs, timeout=30, limit=4000)
+    except Exception as e:
+        pause_jev['asking'] = False
+        return {'ok': False, 'why': 'Jev did not answer: ' + str(e)[:160]}
+    pause_jev['asking'] = False
+    lens = cards.lens_answers(a, '') or {}
+    stage = (a.get('stage') or {}).get('choice')
+    mv = (a.get('move') or {}).get('choice')
+    move = next((c for c in cands if c['id'] == mv), cands[0] if cands else None)
+    answer = {'revision': revision, 'session': s.get('session'), 'at': now, 'kind': kind, 'lenses': lens, 'stage': stage,
+              'stage_confidence': (a.get('stage') or {}).get('confidence'), 'move': move, 'move_confidence': (a.get('move') or {}).get('confidence')}
+    fresh = read_json(STATE, {})
+    if fresh.get('revision') != revision:
+        # the speaking resumed while Jev was reading: its answer is about a moment that has passed
+        return {'ok': False, 'why': 'the speaking resumed before Jev answered, so its answer was set aside', 'stale': True}
+    pause_jev['answer'] = answer
+    return {'ok': True, **answer}
+
+# ── two screens: the stage window hands its record button to the desk window, which hears ──
+studio_link = {'toggle': 0, 'listening': False, 'rec_at': 0.0, 'desk_seen': 0.0}
+
+def app_state(test=False):
     s = read_json(STATE, {})
     d = read_json(DIRECTION, {})
     mix = growers.mix(s, d)
     grow = growers.growth(s, d)
-    events = [e for e in s.get('events', []) if e.get('source') in YOURS][-60:]
+    events = [e for e in s.get('events', []) if e.get('source') in YOURS + (('Test',) if test else ())][-60:]
+    def why(e, i):
+        # each phrase's steering snapshot is large, so only the newest few carry it; pages keep the ones they have seen
+        w = e.get('why')
+        if not w or i >= len(events) - 4:
+            return w
+        return {k: v for k, v in w.items() if k != 'steer'}
     panel = read_json(PANEL, {})
     return {
         'transcript': [{'id': e.get('id'), 'text': e.get('text'), 'form': e.get('form'), 'speaker': e.get('speaker'),
-                        'idea': e.get('topic'), 'at': e.get('at'), 'source': e.get('source'), 'why': e.get('why'),
-                        'register': growers.FORM_TO_REGISTER.get(e.get('form'), 'kelp')} for e in events],
+                        'idea': e.get('topic'), 'at': e.get('at'), 'source': e.get('source'), 'why': why(e, i),
+                        'register': growers.FORM_TO_REGISTER.get(e.get('form'), 'kelp')} for i, e in enumerate(events)],
+        'revision': s.get('revision'), 'session': s.get('session'), 'steer': s.get('steer'),
+        'jev_pause': pause_jev['answer'] if pause_jev['answer'] and pause_jev['answer'].get('session') == s.get('session') else None,
+        'studio': {'toggle': studio_link['toggle'], 'listening': studio_link['listening'], 'rec_at': studio_link['rec_at'], 'desk': time.time() - studio_link['desk_seen'] < 5},
+        'jev_asking': pause_jev['asking'], 'has_jev': heavy.service(settings()) == 'typesafe',
+        'pause': {'seconds': PAUSE_SECONDS, 'spacing': JEV_SPACING, 'words': JEV_WORDS, 'last_at': pause_jev['at'] if pause_jev['session'] == s.get('session') else 0},
         'form': s.get('form'), 'scores': s.get('scores', []), 'status': s.get('status'), 'processing': s.get('processing'),
         'ideas': [{'id': t['id'], 'title': t.get('title'), 'words': t.get('words'), 'returns': t.get('returns'), 'n': len(t.get('events', []))} for t in s.get('topics', [])],
         'active_idea': s.get('active_topic'), 'radius': s.get('radius'), 'conclusion_at': s.get('conclusion_at'),
@@ -445,7 +528,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == '/listen':
             return self._send(200, listen_payload())
         if path == '/state':
-            return self._send(200, app_state())
+            if 'desk=1' in self.path:
+                studio_link['desk_seen'] = time.time()
+            return self._send(200, app_state(test='test=1' in self.path))
         if path == '/status':
             return self._send(200, status())
         if path == '/memory':
@@ -477,6 +562,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(404, {'error': 'not here'})
         if path == '/sections':
             return self._send(200, {'sections': cards.sections()})
+        if path == '/lenses.json':
+            # the three lenses on every kind of speech, shared by depth.py and light/depth.js
+            return self._send(200, (ROOT / 'lenses.json').read_bytes(), 'application/json')
         if path == '/learned':
             import refine
             return self._send(200, {'learned': cards.learned(), 'jev': cards.jev_status(), 'rules': read_json(refine.RULES, {}), 'refinements': refine.history(10)})
@@ -586,7 +674,7 @@ class Handler(BaseHTTPRequestHandler):
             if not d.get('card'):
                 return self._send(400, {'error': 'no card'})
             return self._send(200, cards.make(settings(), d['card'], str(d.get('text', '')), d.get('abstract'),
-                                              d.get('phrases'), d.get('audio'), d.get('since')))
+                                              d.get('phrases'), d.get('audio'), d.get('since'), d.get('threads'), d.get('session')))
         if path.startswith('/cards/') and path.endswith('/reveal'):
             from urllib.parse import unquote
             folder = (cards.CARDS / unquote(path[7:-7])).resolve()
@@ -615,6 +703,39 @@ class Handler(BaseHTTPRequestHandler):
                     return self._send(200, {'ok': True, **got})
                 time.sleep(.1)
             return self._send(200, {'ok': False, 'error': 'the speech worker did not answer'})
+        if path == '/studio':
+            # the two Studio windows: the stage asks the desk to start or stop; the desk says whether it is recording
+            if d.get('action') == 'toggle':
+                studio_link['toggle'] += 1
+            elif d.get('action') == 'rec':
+                studio_link.update(listening=bool(d.get('on')), rec_at=float(d.get('at') or 0))
+            return self._send(200, {'ok': True, **studio_link})
+        if path == '/pause':
+            # the page has heard a natural pause; Jev may read, if it has not read too recently
+            return self._send(200, ask_jev_at_pause(d.get('quiet', 0)))
+        if path == '/guide':
+            # Guide mode at a pause: the single next move, the algorithm's, or Jev's if its pause answer is current
+            st_ = read_json(STATE, {}); snap = st_.get('steer') or {}
+            import steer as st
+            move = st.next_move(snap); by = 'the algorithm'
+            j = pause_jev['answer']
+            if j and j.get('revision') == st_.get('revision') and j.get('move'):
+                move, by = j['move'], 'Jev'
+            return self._send(200, {'ok': bool(move), 'move': move, 'by': by, 'revision': st_.get('revision')})
+        if path == '/depth/jev':
+            # Jev answers the three lens questions for a passage a person selected; never while the microphone is on
+            cfg = settings()
+            if heavy.service(cfg) != 'typesafe':
+                return self._send(200, {'ok': False, 'error': 'no Jev key is saved'})
+            if read_json(PANEL, {}).get('microphone') or d.get('listening'):
+                return self._send(200, {'ok': False, 'error': 'Jev waits until the speaking is over'})
+            text = str(d.get('text', '')).strip()
+            if not text:
+                return self._send(400, {'error': 'nothing to read'})
+            try:
+                return self._send(200, {'ok': True, 'kind': d.get('kind'), 'jev': cards.jev_passage(cfg, text, d.get('kind'))})
+            except Exception as e:
+                return self._send(200, {'ok': False, 'error': str(e)[:200]})
         if path == '/mask':
             return self._send(200, {'text': heavy.mask(str(d.get('text', '')))})
         if path == '/jev/test':

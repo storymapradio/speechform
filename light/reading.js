@@ -210,6 +210,17 @@
       });
       if (c.jev && c.jev.kind) { y += 6; font(13.5); x.fillStyle = '#ffc94a'; x.fillText(`Jev reads it as ${c.jev.kind} (${Math.round((c.jev.confidence || 0) * 100)}% sure).`, 40, y); y += 20; }
       if (c.jev && c.jev.style) { font(13.5); x.fillStyle = '#ffc94a'; x.fillText(`Jev chose the ${c.jev.style} style.`, 40, y); y += 20; }
+      /* the depth: the three lenses of its kind, as three meters side by side (Jev's reading as an amber tick) */
+      if (c.depth && c.depth.listener != null) {
+        y += 8; font(11.5); const names = ['listener', 'speaker', 'absorption'], cw = (W - 80 - 24) / 3;
+        names.forEach((l, i) => {
+          const bx = 40 + i * (cw + 12), v = c.depth[l] || 0;
+          x.fillStyle = '#7d9a78'; x.fillText(`${l.toUpperCase()} ${Math.round(v * 100)}%`, bx, y);
+          x.fillStyle = '#0d130c'; x.fillRect(bx, y + 10, cw, 7); x.fillStyle = hue; x.fillRect(bx, y + 10, cw * v, 7);
+          const j = c.depth_jev || (c.depth.jev || null); if (j && j[l] != null) { x.fillStyle = '#ffc94a'; x.fillRect(bx + cw * j[l] - 1, y + 6, 3, 15); }
+        });
+        y += 30;
+      }
       /* the clearest moment: the phrase the classifier was surest of */
       if (c.strongest && c.strongest.text) {
         y += 12; font(12); x.fillStyle = '#7d9a78'; x.fillText(`The clearest moment, heard as ${c.strongest.kind}:`, 40, y); y += 22;

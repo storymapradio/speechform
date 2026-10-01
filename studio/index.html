@@ -49,6 +49,46 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .top .gridwrap.vgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: auto; gap: 8px; }
 .top .gridwrap .vcell { min-height: 0; height: calc((52vh - 70px) / 2); }
 [hidden] { display: none !important; }
+.top .head { gap: 8px; flex-wrap: wrap; }
+.top .gridwrap.vgrid#sgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.line .test { color: var(--muted); border-color: var(--faint); }
+.who.B { border-color: #ff9ae066; color: #ff9ae0; } .who.C { border-color: #ffc25a66; color: #ffc25a; } .who.A { color: #5af0f0; border-color: #5af0f055; }
+.bar { flex-wrap: wrap; row-gap: 6px; }
+
+/* two screens: the stage (the growing image alone) and the desk (every view, large) */
+body.stage .bar, body.stage .lower, body.stage .top .head, body.stage .top .note { display: none !important; }
+body.stage .app { max-width: none; padding: 0; }
+body.stage .top { height: 100vh; border: none; border-radius: 0; }
+body.stage .top canvas.image { width: min(100vw, 100vh); height: min(100vw, 100vh); }
+.stagerec { position: fixed; right: 22px; bottom: 22px; z-index: 5; display: none; }
+body.stage .stagerec { display: grid; }
+body.desk { font-size: 17px; }
+body.desk .app { max-width: none; width: 100vw; height: 100vh; max-height: 100vh; overflow: hidden; flex: 1 1 auto; padding: 16px 20px; gap: 14px; }
+body.desk .top, body.desk .lower { display: none !important; }
+body.desk .seg button { width: 46px; height: 40px; } body.desk .seg button svg { width: 25px; height: 25px; }
+body.desk .rec { width: 48px; height: 48px; } body.desk .spk { width: 46px; height: 46px; font-size: 19px; } body.desk .clock { font-size: 18px; }
+.desk { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 3fr) minmax(520px, 1.15fr); grid-template-rows: auto minmax(0, 1fr); gap: 16px; }
+#deskviews.vgrid, .deskviews { grid-column: 1; grid-row: 1 / 3; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 16px; min-height: 0; }
+.deskviews .vcell { min-height: 0; overflow: hidden; border-radius: 18px; padding: 12px 16px; }
+.deskviews .vcell canvas { height: 0; flex: 1 1 0; }
+.top .gridwrap .vcell canvas { height: 0; flex: 1 1 0; }
+.deskviews .vcap { font-size: 15px; } .deskviews .vcap svg { width: 22px; height: 22px; }
+.deskviews .vcell[data-v="threads"], .deskviews .vcell[data-v="links"] { grid-column: span 2; }
+.deskside { grid-column: 2; grid-row: 2; display: flex; flex-direction: column; gap: 16px; min-height: 0; }
+.dp .scroll { min-height: 0; }
+.deskside > .page { overflow: hidden; border: 2px solid var(--green-dim); border-radius: 18px; background: var(--panel); min-height: 0; }
+.deskside > .page[data-p="depth"] { flex: 1.25; } .deskside > .page[data-p="transcript"] { flex: 1; }
+.deskside .say { display: none; }
+body.desk .said { font-size: 19px; } body.desk .chip { font-size: 13px; } body.desk .who { width: 28px; height: 28px; font-size: 14px; }
+body.desk .line { grid-template-columns: 30px 1fr; }
+body.desk .thr { max-width: 300px; font-size: 14px; } body.desk .thr b { font-size: 16px; } body.desk .thr span { font-size: 13px; }
+body.desk .lens .lt { font-size: 13px; } body.desk .lens .lm { font-size: 20px; } body.desk .lq { font-size: 15px; } body.desk .el { font-size: 13px; padding: 4px 10px; }
+body.desk .cue { font-size: 15px; } body.desk .dhead .kind { font-size: 20px; } body.desk .lens details { font-size: 14px; }
+.nextcard { border: 2px solid var(--green); border-radius: 18px; background: #030603; padding: 16px 20px; box-shadow: 0 0 26px rgba(57,255,20,.18); display: none; }
+body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
+.nextcard b { display: block; color: var(--green); font-size: 13px; letter-spacing: .16em; text-transform: uppercase; font-weight: 500; margin-bottom: 8px; }
+.nextcard p { margin: 0; font-size: 24px; line-height: 1.35; } .nextcard small { display: block; margin-top: 8px; color: var(--muted); font-size: 14px; }
+.nextcard.hold { border-color: var(--amber); box-shadow: 0 0 26px rgba(255,201,74,.2); } .nextcard.hold b { color: var(--amber); }
 
 /* the bottom: the transcript, memory and the deck */
 .lower { position: relative; flex: 1 1 auto; min-height: 0; border: 2px solid var(--green-dim); border-radius: 14px; overflow: hidden; background: var(--panel); display: flex; flex-direction: column; }
@@ -82,16 +122,20 @@ body { display: flex; justify-content: center; overflow: hidden; }
   <nav class="bar">
     <span class="seg" id="pages"></span>
     <span class="grow"></span>
+    <span class="seg" id="modes"></span>
+    <button id="spk"></button>
+    <span id="ring"></span>
     <span class="clock" id="clock"></span>
     <button class="rec" id="rec" title="record" aria-label="record"><i></i></button>
     <button class="plain" id="fresh" title="new session" aria-label="new session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
   </nav>
   <section class="top">
-    <div class="head"><span class="seg" id="looks"></span></div>
+    <div class="head"><span class="seg" id="looks"></span><span class="seg" id="steerlooks"></span></div>
     <div class="stage">
       <canvas class="image" id="image"></canvas>
       <canvas class="one" id="one"></canvas><p class="note" id="note"></p>
       <div class="gridwrap" id="grid"></div>
+      <div class="gridwrap" id="sgrid"></div>
     </div>
   </section>
   <section class="lower">
@@ -99,12 +143,14 @@ body { display: flex; justify-content: center; overflow: hidden; }
       <div class="scroll" id="lines"></div>
       <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit" title="send" aria-label="send"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></form>
     </div>
+    <div class="page" data-p="depth" id="depthPage" hidden></div>
     <div class="page" data-p="memory" hidden>
       <div class="mem-head"><input class="find" id="find" autocomplete="off" placeholder="search"><span id="memCount"></span></div>
       <div class="scroll" id="mem"></div>
     </div>
     <div class="page" data-p="cards" id="deckPage" hidden></div>
   </section>
+  <section class="desk" id="desk" hidden><div class="deskviews" id="deskviews"></div><div class="nextcard" id="nextcard"><b>next move</b><p></p><small></small></div><div class="deskside" id="deskside"></div></section>
 </div>
 <script src="/light/classify.js"></script>
 <script src="/light/growers.js"></script>
@@ -112,55 +158,75 @@ body { display: flex; justify-content: center; overflow: hidden; }
 <script src="/light/reading.js"></script>
 <script src="/light/deck.js"></script>
 <script src="/light/hearing.js"></script>
+<script src="/light/depth.js"></script>
+<script src="/studio/steer.js"></script>
 <script>
 'use strict';
 /* Speechform Studio: the full classifier (MiniLM, in the Speechform server's speech worker), heard in the
-   browser on this device, with no TouchDesigner. The top shows any of the classifier's visualizations,
-   the growing image among them; the bottom holds the transcript, memory and the deck. */
+   browser on this device, with no TouchDesigner. The top shows any of the classifier's visualizations, the growing
+   image among them, and the depth and steering views; the bottom holds the transcript, the depth screen, memory and
+   the deck. ?screen=stage shows the growing image alone (one display); ?screen=desk shows every view, large (another).
+   Jev is asked only after a recording stops, or at a natural pause, spaced out; never while words are arriving. */
 const $ = s => document.querySelector(s);
-const VW = window.SpeechformViews, R = window.SpeechformReading, G = window.SpeechformGrowers;
+const VW = window.SpeechformViews, R = window.SpeechformReading, G = window.SpeechformGrowers, DP = window.SpeechformDepth, ST = window.SpeechformSteer;
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const post = (p, b) => fetch(p, { method: 'POST', body: JSON.stringify(b) }).then(r => r.json()).catch(() => null);
 const col = r => `var(--r-${r})`;
+const Q = new URLSearchParams(location.search), SCREEN = Q.get('screen') || '', TEST = Q.get('test') === '1';
+const PAUSE = 8, DORMANT = 90;                 // a natural pause, in seconds; a thread unmentioned this long is dormant
 let S = null, selected = null, interim = '', recStart = 0, pinned = null, pinnedAt = 0;
+const steerOf = {};                            // each phrase's steering snapshot, kept as it arrives (the server sends only the newest)
 
 /* ── the groups of icons ── */
 const icon = k => `<svg viewBox="0 0 24 24">${VW.ICON[k]}</svg>`;
-const PAGES = ['transcript', 'memory', 'cards'];
+const PAGES = ['transcript', 'depth', 'memory', 'cards'];
 const LOOKS = [['image', '<circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/>'],
   ['bars'], ['river'], ['window'], ['build'], ['shape'], ['ideas'], ['all']].map(([k, svg]) => [k, svg || VW.ICON[k]]);
+const STEERS = [...VW.STEER, 'steerall'];
+const TITLE = { all: 'every classifier view', steerall: 'every depth and steering view', lenses: 'the three lenses', arc: 'the arc of the form', threads: 'the threads', pulse: 'the absorption pulse', airtime: 'who speaks', questions: 'questions asked', links: 'threads from earlier recordings' };
 let page = 'transcript', look = 'image';
 $('#pages').innerHTML = PAGES.map(k => `<button data-p="${k}" title="${k}" aria-label="${k}">${icon(k)}</button>`).join('');
-$('#looks').innerHTML = LOOKS.map(([k, svg]) => `<button data-l="${k}" title="${k === 'all' ? 'every visualization' : k}" aria-label="${k}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join('');
+$('#looks').innerHTML = LOOKS.map(([k, svg]) => `<button data-l="${k}" title="${TITLE[k] || k}" aria-label="${k}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join('');
+$('#steerlooks').innerHTML = STEERS.map(k => `<button data-l="${k}" title="${TITLE[k] || k}" aria-label="${k}">${icon(k)}</button>`).join('');
 function showPage(p) {
   page = p;
   document.querySelectorAll('#pages button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
   document.querySelectorAll('.lower .page').forEach(el => el.hidden = el.dataset.p !== p);
   if (p === 'memory') drawMemory(true);
   if (p === 'cards') D.draw();
+  if (p === 'depth') drawDepth();
 }
 function showLook(l) {
   look = l;
-  document.querySelectorAll('#looks button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
-  $('#image').hidden = l !== 'image'; $('#grid').hidden = l !== 'all';
-  $('#one').hidden = $('#note').hidden = l === 'image' || l === 'all';
-  if (l !== 'image' && l !== 'all') one.setView(l);
+  document.querySelectorAll('#looks button, #steerlooks button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
+  $('#image').hidden = l !== 'image'; $('#grid').hidden = l !== 'all'; $('#sgrid').hidden = l !== 'steerall';
+  $('#one').hidden = $('#note').hidden = l === 'image' || l === 'all' || l === 'steerall';
+  if (!['image', 'all', 'steerall'].includes(l)) one.setView(l);
   views();
 }
 document.querySelectorAll('#pages button').forEach(b => b.onclick = () => showPage(b.dataset.p));
-document.querySelectorAll('#looks button').forEach(b => b.onclick = () => showLook(b.dataset.l));
+document.querySelectorAll('#looks button, #steerlooks button').forEach(b => b.onclick = () => showLook(b.dataset.l));
+const ALL_LOOKS = [...LOOKS.map(x => x[0]), ...STEERS];
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
-  const i = LOOKS.findIndex(x => x[0] === look);
-  if (e.key === 'ArrowRight') showLook(LOOKS[Math.min(LOOKS.length - 1, i + 1)][0]);
-  if (e.key === 'ArrowLeft') showLook(LOOKS[Math.max(0, i - 1)][0]);
+  const i = ALL_LOOKS.indexOf(look);
+  if (e.key === 'ArrowRight') showLook(ALL_LOOKS[Math.min(ALL_LOOKS.length - 1, i + 1)]);
+  if (e.key === 'ArrowLeft') showLook(ALL_LOOKS[Math.max(0, i - 1)]);
 });
 
+/* ── the speaker, the steering mode, and the ring while Jev reads ── */
+const SPK = ST.speaker($('#spk'));
+const MODE = ST.modes($('#modes'), m => { if (m !== 'guide') GUIDE.hide(); views(); });
+const RING = ST.ring($('#ring'));
+
 /* ── the visualizations ── */
-const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.documentElement).getPropertyValue('--r-' + ((S && S.form_to_register[k]) || 'kelp')).trim() || '#39ff14');
-const pick = id => { selected = id; pinned = null; drawLines(); views(); };
+const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.documentElement).getPropertyValue('--r-' + ((S && S.form_to_register[k]) || R.IMAGE[k] || 'kelp')).trim() || '#39ff14');
+const pick = id => { selected = id; pinned = null; drawLines(); views(); if (page === 'depth') drawDepth(); };
 const one = VW.renderer($('#one'), { note: $('#note'), start: 'bars', onPick: pick });
 const grid = VW.grid($('#grid'), { onPick: pick });
+const sgrid = VW.grid($('#sgrid'), { onPick: pick, views: VW.STEER });
+/* Jev's answer at the last pause, while it is still about the talk as it stands */
+const jevNow = () => S && S.jev_pause && S.jev_pause.revision === S.revision ? { ...S.jev_pause.lenses, lenses: S.jev_pause.lenses, stage: S.jev_pause.stage, move: S.jev_pause.move, element: (S.jev_pause.lenses || {}).element } : null;
 function trace() {
   const parts = w => Object.fromEntries(Object.entries(w.parts || {}).map(([k, q]) => {
     const cue = (w.cues || []).find(c => c.form === k);
@@ -169,57 +235,123 @@ function trace() {
   }));
   const conv = e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea ?? e.topic, engine: true, speaker: e.speaker,
     ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: parts(e.why), signals: e.why.signals,
-    settled: e.why.settled ? Object.fromEntries(e.why.settled.map(x => [x.form, x.share])) : null, doubt: e.why.doubt, run: e.why.run, reason: e.why.reason });
+    settled: e.why.settled ? Object.fromEntries(e.why.settled.map(x => [x.form, x.share])) : null, doubt: e.why.doubt, run: e.why.run, reason: e.why.reason,
+    depth: e.why.depth || null, steer: e.why.steer || steerOf[e.id] || null });
   return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea, windowWords: 120, recency: 30,
-    phrases: S.transcript.filter(e => e.why && e.why.scores).map(conv), conv };
+    now: S.now, jev: jevNow(), dormantSeconds: DORMANT, phrases: S.transcript.filter(e => e.why && e.why.scores).map(conv), conv };
 }
+let deskGrid = null;
 function views() {
   if (!S) return;
   const t = pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace());
-  if (look === 'all') grid.set(t); else if (look !== 'image') one.set(t);
+  if (look === 'all') grid.set(t); else if (look === 'steerall') sgrid.set(t); else if (look !== 'image') one.set(t);
+  if (deskGrid) deskGrid.set(t);
 }
 
-/* the growing image, drawn here in the browser: the same ten images TouchDesigner and Light grow */
-const IMG = G.Renderer($('#image'), 560);
+/* the growing image, drawn here in the browser: the same ten images TouchDesigner and Light grow, with the
+   steering cues in Nudge and Guide (tips glow, dormant branches dim and curl, buds swell, closed threads open) */
+const IMG = G.Renderer($('#image'), SCREEN === 'stage' ? 1080 : 560);
 let level = 0;
+function threadCues() {
+  const st = S && S.steer; if (!st) return null;
+  const out = {};
+  for (const t of st.threads || []) { const state = ST.live(t, S.now || Date.now() / 1000, DORMANT); out[t.id] = { state, active: t.id === st.active, curl: Math.min(1, ((S.now || 0) - t.last_at) / 300) }; }
+  return out;
+}
 function paintImage(t, dt) {
   if (!S) return;
-  const d = S.direction || {}, order = [];
+  const d = S.direction || {}, order = [], air = (S.steer && S.steer.talk && S.steer.talk.airtime) || {};
   for (const e of S.transcript) { const r = S.form_to_register[e.form] || 'kelp'; if (!order.includes(r)) order.push(r); }
   IMG.draw({ now: t, dt, order: order.length ? order : ['kelp'], lead: S.lead || 'kelp', growth: S.growth || {}, gateAt: (S.gate_at || 0) * 1000 - Date.now() + performance.now(),
     c: { t: t / 1000, e: Math.min(1, level * 12), warm: d.warmth ?? .4, seed: d.seed || 0, density: d.density || 1, speed: d.tempo || 1, memory: d.memory ?? .4,
-         radius: S.radius ?? .85, point: Date.now() / 1000 - (S.conclusion_at || 0) < 7, ideas: S.ideas || [], activeIdea: S.active_idea, speakers: { A: 1, B: 1 } } });
+         radius: S.radius ?? .85, point: Date.now() / 1000 - (S.conclusion_at || 0) < 7, ideas: S.ideas || [], activeIdea: S.active_idea,
+         speakers: { A: (air.A || 1), B: (air.B || 0) + (air.C || 0) || 1 },
+         cues: MODE.mode !== 'mirror', threads: threadCues(), pulse: (S.steer && S.steer.hold && S.steer.hold.tempo) || .8 } });
 }
 let lastDraw = 0;
 (function frame(t) {
   requestAnimationFrame(frame);
   if (document.hidden || t - lastDraw < 1000 / 30) return; lastDraw = t;
   level = H.level();
-  if (look === 'image') paintImage(t);
+  if (look === 'image' && SCREEN !== 'desk') paintImage(t);
   if (H.listening) $('#clock').textContent = clock(Date.now() / 1000 - recStart);
 })(0);
 const clock = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+/* handles for tests over CDP (a hidden or headless tab has no microphone): recordFrom marks where a recording began */
+window.speechformStudio = { paint: (t, dt) => paintImage(t, dt), get state() { return S; }, poll: () => poll(), pause: () => onPause(true), showLook, showPage,
+  recordFrom: t => { recStart = t; }, get presses() { return presses; }, closing: () => closingCheck(), card: () => makeCard(), section: t => sectionFor(t) };
 
-/* ── hearing and recording ── */
+/* ── hearing and recording: one window hears; the stage window hands its record button to the desk ── */
 const H = window.SpeechformHearing({
-  onPhrase: text => { if (text) post('/say', { text, heard: true }); },
-  onInterim: t => { interim = t; drawLines(); },
+  onPhrase: text => { if (text) { post('/say', { text, heard: true, speaker: SPK.who }); activity(); } },
+  onInterim: t => { interim = t; if (t) activity(); drawLines(); },
   onChange: () => paintRec(),
 });
-function paintRec() {
-  $('#rec').classList.toggle('on', H.listening);
-  $('#rec').title = $('#rec').ariaLabel = H.listening ? 'stop recording' : 'record';
-  if (!H.listening) $('#clock').textContent = '';
+const BC = 'BroadcastChannel' in window ? new BroadcastChannel('speechform-studio') : null;
+let deskSeen = 0, remote = { listening: false, at: 0 };
+/* the windows may run in separate browser profiles, so the server carries the hand-off as well as the channel */
+const deskAlive = () => SCREEN === 'stage' && (Date.now() - deskSeen < 5000 || !!(S && S.studio && S.studio.desk));
+if (BC) {
+  BC.onmessage = ({ data }) => {
+    if (data.t === 'desk') deskSeen = Date.now();
+    if (data.t === 'rec') { remote = { listening: data.on, at: data.at }; if (data.on) recStart = data.at; paintRec(); }
+  };
+  if (SCREEN === 'desk') setInterval(() => BC.postMessage({ t: 'desk' }), 2000);
 }
-$('#rec').onclick = async () => {
-  if (H.listening) { H.stop(); setTimeout(makeCard, 2500); return; }       // the last phrase is still being classified
-  recStart = Date.now() / 1000;
+const listening = () => H.listening || (deskAlive() && (remote.listening || !!(S && S.studio && S.studio.listening)));
+function paintRec() {
+  const on = listening();
+  $('#rec').classList.toggle('on', on); $('#stagerec') && $('#stagerec').classList.toggle('on', on);
+  $('#rec').title = $('#rec').ariaLabel = on ? 'stop recording' : 'record';
+  if (!on) $('#clock').textContent = '';
+  if (SCREEN !== 'stage') { if (BC) BC.postMessage({ t: 'rec', on: H.listening, at: recStart }); if (SCREEN === 'desk' && sentRec !== H.listening) { sentRec = H.listening; post('/studio', { action: 'rec', on: H.listening, at: recStart }); } }
+}
+let codaWav = null, codaTaken = false, sentRec = null, seenToggle = null;
+let presses = 0;
+async function toggleRec() {
+  presses++;
+  if (deskAlive()) { post('/studio', { action: 'toggle' }).then(poll); return; }      // the desk hears; the server carries the press
+  if (H.listening) { H.stop(); setTimeout(closingCheck, 2500); return; }       // the last phrase is still being classified
+  if (!codaWav) { recStart = Date.now() / 1000; codaTaken = false; }
+  activity();
   if (!await H.start()) { $('#rec').classList.add('off'); $('#rec').title = 'no on-device hearing on this device'; }
-};
-$('#fresh').onclick = () => { selected = null; pinned = null; post('/intake', { action: 'reset' }).then(poll); };
-$('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim(); if (t) { post('/say', { text: t }); $('#words').value = ''; } };
+  paintRec();
+}
+$('#rec').onclick = toggleRec;
+$('#fresh').onclick = () => { selected = null; pinned = null; sectionDepth = null; post('/intake', { action: 'reset' }).then(poll); };
+$('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim(); if (t) { post('/say', { text: t, speaker: SPK.who, test: TEST || undefined }); $('#words').value = ''; activity(); } };
 
-/* ── the card: a recording, read whole ── */
+/* ── the pause: Jev may read (spaced out by the server), and Guide names one next move ── */
+let lastActivity = Date.now() / 1000, pauseDone = false, asking = null;
+function activity() { lastActivity = Date.now() / 1000; pauseDone = false; GUIDE.hide(); asking = null; RING.set(false); }
+setInterval(() => {
+  if (!H.listening || pauseDone || interim) return;
+  if (Date.now() / 1000 - lastActivity >= PAUSE) onPause();
+}, 1000);
+async function onPause(force) {
+  pauseDone = true; if (!S) return;
+  const rev = S.revision, quiet = force ? PAUSE : Date.now() / 1000 - lastActivity;
+  if (S.has_jev) {
+    asking = rev; RING.set(true);
+    const r = await post('/pause', { quiet });
+    if (asking !== rev) return;                                                // speech resumed: the answer is set aside
+    asking = null; RING.set(false);
+    if (r && r.ok) await poll();
+  }
+  if (MODE.mode === 'guide') {
+    const g = await post('/guide', {});
+    if (g && g.ok && S && g.revision === S.revision && !interim && Date.now() / 1000 - lastActivity >= PAUSE - .5) GUIDE.show(g.move, g.by);
+  }
+}
+
+/* ── the closing check, then the card: a recording, read whole ── */
+const thisRecording = () => ((S && S.steer && S.steer.threads) || []).filter(t => t.last_at >= recStart - 2);
+const CLOSE = ST.closing({ onCoda: () => { codaWav = H.wav(); codaTaken = true; toggleRec(); }, onCard: () => makeCard() });
+async function closingCheck() {
+  await poll();
+  const open = thisRecording().map(t => ({ ...t, state: ST.live(t, S.now, DORMANT) })).filter(t => t.state !== 'closed' && t.n >= 2);
+  if (open.length && !codaTaken) CLOSE.ask(open); else makeCard();
+}
 function grownImage() {
   /* the image this talk grew, painted now so the card holds it whichever visualization is showing */
   const c = document.createElement('canvas'), r = G.Renderer(c, 480), now = performance.now() + 5000;
@@ -227,24 +359,67 @@ function grownImage() {
   for (const e of S.transcript) { const g = S.form_to_register[e.form] || 'kelp'; if (!order.includes(g)) order.push(g); }
   for (let i = 0; i < 60; i++) r.draw({ now: now + i * 33, dt: .033, order: order.length ? order : ['kelp'], lead: S.lead || 'kelp', growth: S.growth || {}, gateAt: -1e9,
     c: { t: (now + i * 33) / 1000, e: 0, warm: d.warmth ?? .4, seed: d.seed || 0, density: d.density || 1, speed: d.tempo || 1, memory: d.memory ?? .4, radius: S.radius ?? .85,
-         point: false, ideas: S.ideas || [], activeIdea: S.active_idea, speakers: { A: 1, B: 1 } } });
+         point: false, ideas: S.ideas || [], activeIdea: S.active_idea, speakers: { A: 1, B: 1 }, cues: true, threads: threadCues(), pulse: .8 } });
   const out = document.createElement('canvas'); out.width = out.height = 480; const x = out.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, 480, 480); x.drawImage(c, 0, 0);
   return out.toDataURL('image/jpeg', .9);
+}
+/* the coda's audio joins the recording's: two 16 kHz WAVs, the second's samples after the first's */
+async function joinWav(a, b) {
+  if (!a) return b; if (!b) return a;
+  const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
+  return window.SpeechformHearing.toWav([new Float32Array(new Int16Array(x, 44)).map(v => v / 32767), new Float32Array(new Int16Array(y, 44)).map(v => v / 32767)], 16000, 16000);
 }
 async function makeCard() {
   await poll();
   if (!S) return;
   const phrases = trace().phrases.filter(p => p.at >= recStart - 2);
+  const wav = await joinWav(codaWav, H.wav()); codaWav = null; codaTaken = false;
   if (!phrases.length) return;                                               // nothing new was said
-  const wav = H.wav();
   const audio = wav ? await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(wav); }) : null;
   showPage('cards');
-  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), audio, since: Math.min(recStart, phrases[0].at - 2) });
+  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), audio, since: Math.min(recStart, phrases[0].at - 2),
+    threads: thisRecording().map(t => ({ ...t, state: ST.live(t, S.now, DORMANT) })), session: S.session });
 }
-const D = window.SpeechformDeck.mount({ page: $('#deckPage'), server: true,
-  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; if (look === 'image') showLook('river'); else views(); } });
+const D = window.SpeechformDeck.mount({ page: $('#deckPage'), server: true, steer: true,
+  onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; sectionDepth = s.depth ? { d: s.depth, text: s.text, jev: s.jev || null } : null;
+    if (look === 'image') showLook('river'); else views(); if (sectionDepth) showPage('depth'); } });
 D.onMake(async () => { await poll(); const phrases = trace().phrases; if (!phrases.length) return;
-  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), since: phrases[0].at - 8 }); });
+  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), since: phrases[0].at - 8, threads: (S.steer && S.steer.threads) || [], session: S.session }); });
+
+/* ── the depth screen ── */
+let sectionDepth = null;                        // a selection read on its own: { d, text, jev }
+let liveWav = null, liveWavAt = 0;
+const player = new Audio();
+const DEPTH = ST.depthPage($('#depthPage'), {
+  /* tapping a thread plays the moment it began, if this recording's audio is here; otherwise its opening words show */
+  onThread: t => {
+    const off = t.opened_at - recStart;
+    if (!recStart || off < 0) return false;
+    if (!liveWav || Date.now() - liveWavAt > 3000) { const w = H.wav(); if (!w) return false; if (liveWav) URL.revokeObjectURL(liveWav); liveWav = URL.createObjectURL(w); liveWavAt = Date.now(); }
+    player.src = liveWav; player.onloadedmetadata = () => { try { player.currentTime = Math.max(0, off - .3); } catch (e) {} player.play().catch(() => {}); };
+    return true;
+  },
+  onAsk: async d => {
+    if (!sectionDepth) return;
+    RING.set(true);
+    const r = await post('/depth/jev', { text: sectionDepth.text, kind: d.kind, listening: H.listening });
+    RING.set(false);
+    if (r && r.ok) { sectionDepth.jev = r.jev; drawDepth(); }
+  },
+});
+function drawDepth() {
+  if (!S || !DP.lenses) return;
+  DEPTH.threads((S.steer && S.steer.threads) || [], S.now || Date.now() / 1000, { dormant: DORMANT, color: colorOf });
+  if (sectionDepth && pinned) {
+    DEPTH.show(sectionDepth.d, { color: colorOf, source: `this section · ${sectionDepth.d.words} words`, section: true, canAsk: S.has_jev && !H.listening, asked: sectionDepth.jev });
+    return;
+  }
+  const P = S.transcript.filter(e => e.why && e.why.depth), e = P.find(x => x.id === selected) || P[P.length - 1];
+  DEPTH.show(e ? e.why.depth : null, { color: colorOf, source: e && selected === e.id ? 'the phrase you chose' : 'live', jev: MODE.mode === 'mirror' ? null : jevNow(),
+    hold: MODE.mode === 'mirror' ? null : S.steer && S.steer.hold, arc: MODE.mode === 'mirror' ? null : S.steer && S.steer.arc });
+}
+const GUIDE = ST.guideCard($('.lower'));
+DP.ready.then(() => drawDepth());
 
 /* ── the transcript ── */
 function drawLines() {
@@ -252,26 +427,29 @@ function drawLines() {
   const titles = Object.fromEntries(S.ideas.map(i => [i.id, i])), seen = new Set();
   const html = S.transcript.map(e => {
     const idea = titles[e.idea] || {}, back = seen.has(e.idea); seen.add(e.idea);
-    return `<div class="line ${selected === e.id ? 'sel' : ''}" data-id="${esc(e.id)}"><span class="who">${esc(e.speaker)}</span>
+    return `<div class="line ${selected === e.id ? 'sel' : ''}" data-id="${esc(e.id)}"><span class="who ${esc(e.speaker)}">${esc(e.speaker)}</span>
       <div><div class="said">${esc(e.text)}</div><div class="meta"><span class="chip" style="color:${col(e.register)}">${esc(e.form)} → ${esc(e.register)}</span>
-      <span class="chip ${back ? 'back' : 'idea'}">${back ? '↺ ' : ''}${esc(idea.title || 'an idea')}</span></div></div></div>`;
+      <span class="chip ${back ? 'back' : 'idea'}">${back ? '↺ ' : ''}${esc(idea.title || 'an idea')}</span>${e.source === 'Test' ? '<span class="chip test">test</span>' : ''}</div></div></div>`;
   }).join('') + (interim ? `<div class="line interim"><span></span><div class="said">${esc(interim)}</div></div>` : '');
   if (html === box._html) return;
   const atEnd = box.scrollTop + box.clientHeight > box.scrollHeight - 30;
   box._html = html; box.innerHTML = html;
-  box.querySelectorAll('.line[data-id]').forEach(l => l.onclick = () => { if (getSelection().toString()) return; pick(l.dataset.id); if (look === 'image') showLook('bars'); });
+  box.querySelectorAll('.line[data-id]').forEach(l => l.onclick = () => { if (getSelection().toString()) return; pick(l.dataset.id); if (look === 'image' && SCREEN !== 'desk') showLook('bars'); });
   if (atEnd) box.scrollTop = box.scrollHeight;
 }
-/* select words in the transcript: the engine reads them on their own, and the section is kept */
-window.SpeechformDeck.selector($('#lines'), async text => {
+/* select words in the transcript: the engine reads them on their own, with their depth, and the section is kept */
+window.SpeechformDeck.selector($('#lines'), text => sectionFor(text));
+async function sectionFor(text) {
   const r = await post('/classify', { text }); if (!r || !r.ok) return;
   const base = trace(), phrases = r.events.map(e => base.conv(e));
-  const tr = { kinds: base.kinds, focus: null, ideas: r.topics, active: null, windowWords: 120, recency: 30, phrases };
+  const tr = { kinds: base.kinds, focus: null, ideas: r.topics, active: null, windowWords: 120, recency: 30, now: phrases.length ? phrases[phrases.length - 1].at : S.now, phrases };
   const reading = R.read(phrases, r.topics);
   await D.keepSection({ text, profile: reading.profile, top: reading.profile[0] && reading.profile[0][0], signals: reading.signals, words: reading.words,
-    windows: reading.windows.map(w => ({ text: w.text, profile: w.profile.slice(0, 5) })), trace: tr });
-  pinned = { ...tr, color: colorOf }; pinnedAt = S.transcript.length; if (look === 'image') showLook('river'); else views();
-});
+    windows: reading.windows.map(w => ({ text: w.text, profile: w.profile.slice(0, 5) })), trace: tr, depth: r.depth });
+  pinned = { ...tr, color: colorOf }; pinnedAt = S.transcript.length; sectionDepth = r.depth ? { d: r.depth, text, jev: null } : null;
+  if (look === 'image' && SCREEN !== 'desk') showLook('river'); else views();
+  showPage('depth');
+}
 
 /* ── memory ── */
 let MEM = [], memAt = 0;
@@ -283,19 +461,52 @@ async function drawMemory(force) {
   let day = '', h = '';
   list.forEach(m => { const d = new Date(m.at * 1000).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
     if (d !== day) { day = d; h += `<div class="day">${esc(d)}</div>`; }
-    h += `<div class="line"><span class="who">${esc(m.speaker)}</span><div><div class="said">${esc(m.text)}</div><div class="meta"><span class="chip" style="color:${col(m.register)}">${esc(m.form)} → ${esc(m.register)}</span></div></div></div>`; });
+    h += `<div class="line"><span class="who ${esc(m.speaker)}">${esc(m.speaker)}</span><div><div class="said">${esc(m.text)}</div><div class="meta"><span class="chip" style="color:${col(m.register)}">${esc(m.form)} → ${esc(m.register)}</span></div></div></div>`; });
   $('#mem').innerHTML = h;
 }
 $('#find').addEventListener('input', () => drawMemory());
 
-/* ── the state, from the Speechform server ── */
-async function poll() {
-  try { S = await (await fetch('/state')).json(); drawLines(); views(); } catch (e) { /* the server is starting */ }
+/* ── the desk: every depth and steering view, large, beside the depth screen and the transcript ── */
+function drawNext() {
+  const box = $('#nextcard'); if (!box || !S || SCREEN !== 'desk') return;
+  const st = S.steer || {}, j = jevNow(), hold = st.hold || {}, mv = (j && j.move) || st.next;
+  box.classList.toggle('hold', !!(hold.cue && mv && mv.id === 'hold'));
+  box.querySelector('b').textContent = MODE.mode === 'mirror' ? 'threads' : mv && mv.id === 'hold' ? (hold.cue.type === 'pause' ? 'pause' : 'hold') : 'next move';
+  box.querySelector('p').textContent = MODE.mode === 'mirror' ? `${(st.threads || []).length} threads, ${(st.threads || []).filter(t => t.state === 'closed').length} closed.` : mv ? mv.text : 'The next move appears as you speak.';
+  box.querySelector('small').textContent = MODE.mode === 'mirror' || !mv ? '' : (mv.why ? mv.why + '. ' : '') + (j && j.move ? 'Chosen by Jev at the last pause.' : 'From the algorithm.');
 }
-/* a new session each time Studio opens: what was said before is kept in memory and in the cards */
-post('/intake', { action: 'reset' }).then(() => setTimeout(poll, 400));
+if (SCREEN === 'desk') {
+  document.body.classList.add('desk'); $('#desk').hidden = false;
+  deskGrid = VW.grid($('#deskviews'), { onPick: pick, views: ['threads', 'lenses', 'arc', 'pulse', 'airtime', 'questions', 'links'], scale: Math.max(1.2, Math.min(1.9, innerWidth / 1460)) });
+  $('#deskside').append($('#depthPage'), document.querySelector('.page[data-p="transcript"]'));
+  $('#depthPage').hidden = false; document.querySelector('.page[data-p="transcript"]').hidden = false;
+}
+if (SCREEN === 'stage') {
+  document.body.classList.add('stage');
+  const b = document.createElement('button'); b.className = 'rec stagerec'; b.id = 'stagerec'; b.innerHTML = '<i></i>'; b.title = 'record'; b.onclick = toggleRec; document.body.appendChild(b);
+  document.addEventListener('dblclick', () => document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}));
+}
+
+/* ── the state, from the Speechform server ── */
+let lastRev = null;
+async function poll() {
+  try {
+    S = await (await fetch('/state?' + (TEST ? 'test=1&' : '') + (SCREEN === 'desk' ? 'desk=1' : ''), { cache: 'no-store' })).json();
+    /* the stage asked, through the server, to start or stop (the channel may have carried it already) */
+    if (SCREEN === 'desk' && S.studio) { if (seenToggle === null) seenToggle = S.studio.toggle; else if (S.studio.toggle > seenToggle) { seenToggle = S.studio.toggle; toggleRec(); } }
+    if (SCREEN === 'stage' && S.studio && S.studio.listening && S.studio.rec_at) recStart = S.studio.rec_at;
+    for (const e of S.transcript) if (e.why && e.why.steer) steerOf[e.id] = e.why.steer;
+    if (S.revision !== lastRev) { if (lastRev !== null) activity(); lastRev = S.revision; }
+    RING.set(!!asking || !!S.jev_asking);
+    drawLines(); views(); drawNext();
+    if (page === 'depth' || SCREEN === 'desk') drawDepth();
+    if (deskAlive()) paintRec();
+  } catch (e) { /* the server is starting */ }
+}
+/* a new session each time Studio opens, unless another window of it is already recording or showing (the two screens share one) */
+(SCREEN ? Promise.resolve() : post('/intake', { action: 'reset' })).then(() => setTimeout(poll, 400));
 setInterval(poll, 800);
-showPage('transcript'); showLook('image'); paintRec();
+showPage(SCREEN === 'desk' ? 'depth' : 'transcript'); showLook('image'); paintRec();
 </script>
 </body>
 </html>

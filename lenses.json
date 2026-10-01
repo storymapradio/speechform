@@ -1,0 +1,4877 @@
+{
+ "about": "Speechform's lenses: for each kind of speech, three questions asked of that form (what the listener must bring, what the speaker must know to deliver its meaning, and what draws a listener in), each answered from the scholarship of oral forms, with elements the algorithm can find in a transcript. Each kind also has an arc: the stages its talk moves through, used to judge where a thread stands and what move comes next. Read by depth.py, steer.py and light/depth.js.",
+ "lexicon": {
+  "you": [
+   "you",
+   "your",
+   "you're",
+   "yours",
+   "yourself",
+   "yourselves",
+   "you'll",
+   "you've",
+   "you'd"
+  ],
+  "we": [
+   "we",
+   "us",
+   "our",
+   "ours",
+   "ourselves",
+   "let's",
+   "we're",
+   "we've",
+   "we'll"
+  ],
+  "i": [
+   "i",
+   "me",
+   "my",
+   "mine",
+   "myself",
+   "i'm",
+   "i've",
+   "i'd",
+   "i'll"
+  ],
+  "third": [
+   "he",
+   "she",
+   "they",
+   "him",
+   "her",
+   "his",
+   "them",
+   "their",
+   "hers",
+   "theirs",
+   "himself",
+   "herself",
+   "themselves"
+  ],
+  "past": [
+   "was",
+   "were",
+   "had",
+   "did",
+   "went",
+   "came",
+   "saw",
+   "said",
+   "told",
+   "took",
+   "found",
+   "made",
+   "knew",
+   "thought",
+   "felt",
+   "gave",
+   "got",
+   "began",
+   "ran",
+   "sat",
+   "stood",
+   "left",
+   "heard",
+   "brought",
+   "became"
+  ],
+  "present": [
+   "is",
+   "are",
+   "am",
+   "does",
+   "has",
+   "goes",
+   "comes",
+   "lives",
+   "stands",
+   "keeps",
+   "holds",
+   "turns",
+   "becomes",
+   "remains",
+   "means",
+   "shows"
+  ],
+  "numbers": [
+   "one",
+   "two",
+   "three",
+   "four",
+   "five",
+   "six",
+   "seven",
+   "eight",
+   "nine",
+   "ten",
+   "eleven",
+   "twelve",
+   "twenty",
+   "thirty",
+   "forty",
+   "fifty",
+   "hundred",
+   "thousand",
+   "first",
+   "second",
+   "third",
+   "half",
+   "dozen",
+   "percent",
+   "minutes",
+   "hours",
+   "degrees"
+  ],
+  "imperative": [
+   "add",
+   "adjust",
+   "allow",
+   "apply",
+   "ask",
+   "avoid",
+   "begin",
+   "bring",
+   "build",
+   "call",
+   "carry",
+   "check",
+   "choose",
+   "clean",
+   "close",
+   "collect",
+   "connect",
+   "continue",
+   "cook",
+   "count",
+   "cover",
+   "cut",
+   "do",
+   "draw",
+   "drink",
+   "drop",
+   "eat",
+   "enter",
+   "fill",
+   "find",
+   "finish",
+   "fold",
+   "follow",
+   "get",
+   "give",
+   "go",
+   "grab",
+   "hold",
+   "insert",
+   "keep",
+   "knead",
+   "lay",
+   "leave",
+   "let",
+   "lift",
+   "listen",
+   "look",
+   "make",
+   "mark",
+   "measure",
+   "mix",
+   "move",
+   "note",
+   "notice",
+   "open",
+   "pack",
+   "paint",
+   "pick",
+   "place",
+   "plant",
+   "plug",
+   "pour",
+   "practise",
+   "practice",
+   "preheat",
+   "press",
+   "pull",
+   "push",
+   "put",
+   "read",
+   "record",
+   "remember",
+   "remove",
+   "repeat",
+   "rest",
+   "roll",
+   "rub",
+   "run",
+   "save",
+   "say",
+   "scoop",
+   "screw",
+   "see",
+   "select",
+   "separate",
+   "set",
+   "shake",
+   "slide",
+   "sit",
+   "slice",
+   "sort",
+   "speak",
+   "spread",
+   "start",
+   "stir",
+   "stop",
+   "take",
+   "tell",
+   "thread",
+   "tie",
+   "try",
+   "turn",
+   "twist",
+   "type",
+   "unplug",
+   "unscrew",
+   "use",
+   "wait",
+   "walk",
+   "wash",
+   "watch",
+   "water",
+   "wipe",
+   "write",
+   "imagine",
+   "picture",
+   "breathe",
+   "close",
+   "sing",
+   "clap",
+   "join"
+  ],
+  "sensory": [
+   "smell",
+   "smelled",
+   "scent",
+   "taste",
+   "tasted",
+   "sweet",
+   "bitter",
+   "salt",
+   "sour",
+   "sound",
+   "sounds",
+   "sang",
+   "hum",
+   "hummed",
+   "ring",
+   "rang",
+   "bell",
+   "whisper",
+   "whispered",
+   "roar",
+   "silence",
+   "quiet",
+   "loud",
+   "soft",
+   "hard",
+   "rough",
+   "smooth",
+   "cold",
+   "warm",
+   "hot",
+   "wet",
+   "dry",
+   "light",
+   "dark",
+   "shadow",
+   "shadows",
+   "glow",
+   "bright",
+   "dim",
+   "red",
+   "green",
+   "blue",
+   "gold",
+   "golden",
+   "silver",
+   "grey",
+   "gray",
+   "white",
+   "black",
+   "colour",
+   "color",
+   "touch",
+   "felt",
+   "rain",
+   "wind",
+   "mist",
+   "smoke",
+   "fog",
+   "breath",
+   "bread",
+   "fire",
+   "stone",
+   "water",
+   "sea",
+   "river",
+   "leaves",
+   "grass",
+   "moss",
+   "dust",
+   "ash",
+   "sun",
+   "moon",
+   "stars",
+   "snow",
+   "ice",
+   "salt",
+   "honey",
+   "velvet",
+   "hush"
+  ],
+  "notnames": [
+   "i",
+   "i'm",
+   "i've",
+   "i'd",
+   "i'll",
+   "the",
+   "a",
+   "an",
+   "and",
+   "but",
+   "or",
+   "so",
+   "then",
+   "when",
+   "once",
+   "in",
+   "on",
+   "at",
+   "of",
+   "to",
+   "for",
+   "with",
+   "he",
+   "she",
+   "they",
+   "we",
+   "you",
+   "it",
+   "this",
+   "that",
+   "there",
+   "here",
+   "my",
+   "your",
+   "his",
+   "her",
+   "their",
+   "our",
+   "chapter",
+   "mr",
+   "mrs",
+   "ms",
+   "dr",
+   "god",
+   "gods"
+  ],
+  "stop": [
+   "the",
+   "and",
+   "that",
+   "this",
+   "with",
+   "from",
+   "have",
+   "were",
+   "they",
+   "them",
+   "their",
+   "there",
+   "then",
+   "when",
+   "what",
+   "which",
+   "would",
+   "could",
+   "should",
+   "about",
+   "into",
+   "your",
+   "just",
+   "like",
+   "been",
+   "some",
+   "very",
+   "over",
+   "also",
+   "more",
+   "than",
+   "only",
+   "will",
+   "said",
+   "says",
+   "know",
+   "think",
+   "really",
+   "yeah",
+   "okay",
+   "right",
+   "going",
+   "want",
+   "thing",
+   "things",
+   "people",
+   "because",
+   "where",
+   "while",
+   "these",
+   "those",
+   "here",
+   "each",
+   "every",
+   "other",
+   "after",
+   "before",
+   "again",
+   "still",
+   "even",
+   "much",
+   "many",
+   "most",
+   "such",
+   "being"
+  ]
+ },
+ "kinds": {
+  "instruction": {
+   "sources": [
+    "John Sweller, Cognitive Load Theory (working memory limits on spoken steps)",
+    "Walter J. Ong, Orality and Literacy (additive, situational oral organization)",
+    "Ruth Finnegan, Oral Literature in Africa (the practical genres of spoken instruction)",
+    "Aristotle, Rhetoric (arrangement and clarity of exposition)",
+    "Milton H. Erickson, The Collected Papers (pacing and leading with direct suggestion)"
+   ],
+   "listener": {
+    "question": "What must a listener have in hand, or in mind, to follow spoken instructions?",
+    "answer": "A listener needs to know the goal of the task, the materials or setting it assumes, and where they stand in the sequence at each moment. John Sweller's cognitive load theory shows that spoken steps live in working memory, so the listener depends on the speaker to name each step and its order. Walter Ong describes oral organization as additive and situational, and instruction works best when it points at the things in front of the listener.",
+    "elements": [
+     {
+      "id": "goal_named",
+      "name": "Goal Named",
+      "meaning": "The listener hears what the steps will achieve before or while they begin.",
+      "try": "Say in one sentence what the listener will have made or done when the steps are finished.",
+      "cue": {
+       "re": "\\b(?:so that|in order to|the goal|you(?:'ll| will) (?:have|end up|get)|to make|to get|to fix|to set up|you want to|until you|as (?:realistically|evenly|smoothly) as)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "materials",
+      "name": "Materials",
+      "meaning": "The tools, ingredients or parts the task needs are named.",
+      "try": "Name each tool or material before the step that uses it.",
+      "cue": {
+       "re": "\\b(?:screwdriver|screws?|tray|oven|bowl|pan|knife|cord|wires?|plate|tool|kit|microphone|headphones|brush|oil|flour|water|cable|button|switch|lid|panel|board)\\b",
+       "need": 3
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "second_person",
+      "name": "Addressed",
+      "meaning": "The listener is spoken to directly as the one who will act.",
+      "try": "Speak to the listener as you, the person whose hands will do this.",
+      "cue": {
+       "signal": "you",
+       "at": 0.5
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "sequence_marks",
+      "name": "Place in Order",
+      "meaning": "Ordinal and sequence words tell the listener where they are in the task.",
+      "try": "Mark each step with first, then, next or finally.",
+      "cue": {
+       "re": "\\b(?:first|then|next|after that|afterwards|finally|before you|once you|now|second|third|last)\\b",
+       "need": 3
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "quantities",
+      "name": "Measures",
+      "meaning": "Amounts, times and sizes let the listener check their work.",
+      "try": "Give a number for how much, how long or how far.",
+      "cue": {
+       "signal": "numbers",
+       "at": 0.6
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the goal of a procedure so the listener can carry it out?",
+    "answer": "The speaker must hold the whole procedure and its purpose, then release it one action at a time in the order the hands will need it. Aristotle asks for clarity and fitting arrangement, and in instruction that means one verb leading each step. The speaker also anticipates mistakes and names the sign that a step has worked, so the listener can correct course alone.",
+    "elements": [
+     {
+      "id": "imperative_steps",
+      "name": "Action Verbs",
+      "meaning": "Each step begins with the verb the listener must perform.",
+      "try": "Begin each step with the action itself: cut, press, turn, pour.",
+      "cue": {
+       "signal": "imperative",
+       "at": 0.6
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "one_at_a_time",
+      "name": "One Step Each",
+      "meaning": "Steps arrive one per sentence, short enough to hold in memory.",
+      "try": "Keep each sentence to a single action and stop before adding the next.",
+      "cue": {
+       "re": "(?:^|[.;,]\\s*)(?:then|next|now|and then|finally|after that)\\s+\\w+",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "check_sign",
+      "name": "Check Sign",
+      "meaning": "The speaker names what the listener should see, hear or feel when a step has worked.",
+      "try": "Tell the listener how they will know the step is done.",
+      "cue": {
+       "re": "\\b(?:until|so (?:that|they)|you(?:'ll| will) (?:see|hear|feel|notice)|make sure|be sure|check (?:that|the)|note what|it should|evenly|stays below)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "warning",
+      "name": "Caution",
+      "meaning": "A warning prevents the most likely mistake.",
+      "try": "Name the one mistake people make here and how to avoid it.",
+      "cue": {
+       "re": "\\b(?:careful|gently|don't|do not|never|avoid|unplug|before you begin|safety|watch out|slowly)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "reason_given",
+      "name": "Reason",
+      "meaning": "A brief reason tells the listener why a step matters.",
+      "try": "Add a short because or so that after the step that seems arbitrary.",
+      "cue": {
+       "re": "\\b(?:because|so that|so they|which (?:keeps|stops|lets)|that way|this (?:keeps|stops|lets|helps))\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of the act and of the task most draw a listener into following instructions?",
+    "answer": "Absorption in instruction is the flow Mihaly Csikszentmihalyi describes, where clear goals and immediate feedback let attention settle on the hands. Milton Erickson used the same structure of pacing and leading: describe what the listener is already doing, then lead the next small action. A steady cadence of short steps and concrete sensory checks keeps the listener inside the task.",
+    "elements": [
+     {
+      "id": "steady_cadence",
+      "name": "Steady Cadence",
+      "meaning": "Steps of similar length give the listening a regular pulse.",
+      "try": "Keep your steps about the same length so the listener can settle into the rhythm.",
+      "cue": {
+       "signal": "rhythm",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "pacing_leading",
+      "name": "Pacing and Leading",
+      "meaning": "The speaker matches what the listener is doing now, then leads the next action.",
+      "try": "Say what the listener has just done, then lead into the next step with now or then.",
+      "cue": {
+       "re": "\\b(?:now that|once you(?:'ve| have)?|when you(?:'ve| have)|as you|while you|now)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "hands_on",
+      "name": "Hands On",
+      "meaning": "Concrete physical verbs keep the body engaged.",
+      "try": "Use verbs the hands can feel: hold, press, pull, brush.",
+      "cue": {
+       "re": "\\b(?:hold|press|pull|push|turn|twist|cut|brush|scoop|thread|tie|place|lift|pour|stir|knead|roll|unscrew|screw|connect)\\b",
+       "need": 3
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "sensory_check",
+      "name": "Sensory Check",
+      "meaning": "Sounds, colours and textures give feedback the listener can perceive.",
+      "try": "Point to what the listener will hear, see or feel as it changes.",
+      "cue": {
+       "signal": "sensory",
+       "at": 0.4
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "direct_you",
+      "name": "Direct Address",
+      "meaning": "Steady second person keeps the listener as the one acting.",
+      "try": "Keep saying you, so the listener stays the actor.",
+      "cue": {
+       "signal": "you",
+       "at": 0.6
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "goal",
+     "name": "Goal",
+     "cue": {
+      "re": "\\b(?:you(?:'ll| will) (?:need|want|end up)|the goal|we(?:'re| are) going to|to make|in order to|so that you)\\b",
+      "need": 1
+     },
+     "move": "Say what the finished result will be.",
+     "need": "needs a goal"
+    },
+    {
+     "id": "materials",
+     "name": "Materials",
+     "cue": {
+      "re": "\\b(?:you(?:'ll| will) need|grab|get (?:a|an|the|some)|tools?|ingredients?|equipment)\\b",
+      "need": 1
+     },
+     "move": "Name what the listener needs before starting.",
+     "need": "needs its materials"
+    },
+    {
+     "id": "steps",
+     "name": "Steps",
+     "cue": {
+      "re": "\\b(?:first|then|next|after that|once you|before you|step \\w+)\\b",
+      "need": 2,
+      "signal": "imperative",
+      "at": 0.5
+     },
+     "move": "Give the next step in order.",
+     "need": "needs its steps"
+    },
+    {
+     "id": "check",
+     "name": "Check",
+     "cue": {
+      "re": "\\b(?:make sure|check (?:that|the)|until (?:it|the|you)|you should (?:see|hear|feel)|if it)\\b",
+      "need": 1
+     },
+     "move": "Tell the listener how to know a step worked.",
+     "need": "needs a check"
+    },
+    {
+     "id": "done",
+     "name": "Done",
+     "cue": {
+      "re": "\\b(?:and that'?s it|you'?re done|that'?s all|finally|when it'?s (?:done|ready)|now you have)\\b",
+      "need": 1
+     },
+     "move": "Say how the listener knows they are finished.",
+     "need": "needs an ending",
+     "landing": true
+    }
+   ]
+  },
+  "lecture": {
+   "sources": [
+    "Aristotle, Rhetoric (ethos, logos and arrangement in exposition)",
+    "Walter J. Ong, Orality and Literacy (the lecture as secondary orality shaped by writing)",
+    "Wallace Chafe, Discourse, Consciousness, and Time (how spoken information flows in idea units)",
+    "Donald A. Bligh, What's the Use of Lectures? (attention and retention in lectures)",
+    "Jerome Bruner, Actual Minds, Possible Worlds (the paradigmatic mode of explanation)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to follow a lecture and take its knowledge away?",
+    "answer": "A lecture assumes the listener can hold a frame, the field and its question, while evidence accumulates inside it. Walter Ong calls the lecture a creature of literacy spoken aloud, so the listener benefits from knowing the key terms and the debate the speaker enters. Donald Bligh found that attention falls after about twenty minutes, so the listener also brings stamina and the habit of noting structure.",
+    "elements": [
+     {
+      "id": "field_named",
+      "name": "Field Named",
+      "meaning": "The discipline or area of inquiry is named.",
+      "try": "Name the field and the question it asks before the first claim.",
+      "cue": {
+       "re": "\\b(?:historians?|scholars?|economists?|biologists?|researchers?|scientists?|the field|this discipline|theory|theories|economics|history of)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "key_terms",
+      "name": "Key Terms",
+      "meaning": "Technical terms are introduced as the vocabulary of the talk.",
+      "try": "Define one key term in plain words when you first use it.",
+      "cue": {
+       "re": "\\b(?:concept|term|defined as|known as|refers to|mechanism|consolidat\\w*|structure|function|principle|phenomenon|hypothesis)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "prior_debate",
+      "name": "The Debate",
+      "meaning": "The listener is told what earlier thinkers have argued.",
+      "try": "Say what others have long believed before you add what is known now.",
+      "cue": {
+       "re": "\\b(?:long debated|generally agree|have argued|it was believed|debate|consensus|first proposed|have long|remains (?:central|an active))\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "time_frame",
+      "name": "Era and Scale",
+      "meaning": "Dates, centuries or magnitudes place the knowledge.",
+      "try": "Give the date, era or scale that places this knowledge.",
+      "cue": {
+       "re": "\\b(?:\\d{3,4}|century|centuries|decades?|years? of|era|period|modern)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the lecturer know to deliver the central finding so it stays with the listener?",
+    "answer": "The lecturer must know the single finding the talk exists to deliver and arrange evidence toward it, as Aristotle advises when he ranks logos and arrangement. Wallace Chafe shows that speech moves one idea unit at a time, so the speaker signposts the plan and returns to the point. Ethos comes from naming the sources of evidence, and clarity comes from a summary the listener can repeat.",
+    "elements": [
+     {
+      "id": "signpost",
+      "name": "Signposting",
+      "meaning": "The speaker announces the plan of the talk and its turns.",
+      "try": "Tell the listener what you will cover and in what order.",
+      "cue": {
+       "re": "\\b(?:today (?:we|i) will|in this (?:session|lecture|talk)|we will (?:look|examine|review|turn)|i will (?:explain|summarize|turn)|turning to|before turning|let us (?:turn|look))\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "evidence",
+      "name": "Evidence",
+      "meaning": "Studies, data and findings support the claims.",
+      "try": "Name the study or data that supports your claim.",
+      "cue": {
+       "re": "\\b(?:research|evidence|studies|study|data|findings?|participants|experiments?|shows that|suggests?)\\b",
+       "need": 3
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "central_finding",
+      "name": "Central Finding",
+      "meaning": "The main point is stated outright as the finding.",
+      "try": "State the central finding in one sentence, then repeat it at the end.",
+      "cue": {
+       "re": "\\b(?:the central (?:finding|point|idea)|the main (?:finding|point)|the key (?:finding|point)|clear pattern|in summary|to summarize|this means)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "consequence",
+      "name": "Consequences",
+      "meaning": "The speaker draws out what the finding implies.",
+      "try": "Say what follows from the finding for the listener's world.",
+      "cue": {
+       "re": "\\b(?:implications?|consequences?|therefore|thus|as a result|profound|which means)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "formal_register",
+      "name": "Measured Register",
+      "meaning": "Long, complete sentences carry qualified claims.",
+      "try": "Qualify your claim with the conditions under which it holds.",
+      "cue": {
+       "signal": "long",
+       "at": 0.4
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of the lecture and of the material most absorb a listener in the line of thought?",
+    "answer": "A lecture absorbs through the pleasure of a question opening and closing, which Jerome Bruner calls the paradigmatic mode carried by the drama of inquiry. Puzzles, surprising numbers and a story of discovery let the mind lean forward. A steady measured voice and recurring framing phrases work as gentle repetition, the device Milton Erickson used to deepen attention.",
+    "elements": [
+     {
+      "id": "puzzle",
+      "name": "The Puzzle",
+      "meaning": "A question or mystery in the material makes the listener want the answer.",
+      "try": "Pose the question the research set out to answer before giving the answer.",
+      "cue": {
+       "re": "\\b(?:why (?:do|did|does)|how (?:do|did|does)|the question (?:is|of)|puzzle|remains (?:an active|unclear|open)|area of inquiry|what causes)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "discovery_story",
+      "name": "Discovery Story",
+      "meaning": "The history of how the knowledge was found gives it a narrative line.",
+      "try": "Tell how the finding was discovered, in order, with who did what.",
+      "cue": {
+       "re": "\\b(?:first proposed|was discovered|refined over|has been refined|began to|in the (?:\\w+ )?century|over (?:several|many) decades|historians)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "striking_number",
+      "name": "Striking Number",
+      "meaning": "A vivid figure anchors attention.",
+      "try": "Give one surprising number and pause after it.",
+      "cue": {
+       "signal": "numbers",
+       "at": 0.5
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "measured_pace",
+      "name": "Measured Pace",
+      "meaning": "Long, even sentences set a steady pace of thought.",
+      "try": "Let your sentences run at an even length so the listener can settle in.",
+      "cue": {
+       "signal": "long",
+       "at": 0.3
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "academic_frame",
+      "name": "Frame Phrases",
+      "meaning": "Recurring scholarly framing returns the listener to the thread.",
+      "try": "Return to your framing phrase each time you add a new piece of evidence.",
+      "cue": {
+       "re": "\\b(?:the evidence|the research|the theory|these studies|this concept|this theory|the data)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "frame",
+     "name": "Frame",
+     "cue": {
+      "re": "\\b(?:today (?:we|i) will|in this (?:lecture|talk|session)|the question (?:is|of)|we will (?:look|examine))\\b",
+      "need": 1
+     },
+     "move": "Frame the question this talk answers.",
+     "need": "needs a frame"
+    },
+    {
+     "id": "concept",
+     "name": "Concept",
+     "cue": {
+      "re": "\\b(?:concept|theory|defined? as|the idea (?:of|that)|what we call|known as)\\b",
+      "need": 1
+     },
+     "move": "Name the central concept plainly.",
+     "need": "needs its concept"
+    },
+    {
+     "id": "evidence",
+     "name": "Evidence",
+     "cue": {
+      "re": "\\b(?:research|evidence|studies|data|findings?|historians|scholars|showed?|suggests?)\\b",
+      "need": 1
+     },
+     "move": "Bring the evidence that supports it.",
+     "need": "needs evidence"
+    },
+    {
+     "id": "implication",
+     "name": "Implication",
+     "cue": {
+      "re": "\\b(?:this means|implications?|consequences?|which is why|matters because|so what)\\b",
+      "need": 1
+     },
+     "move": "Say why it matters.",
+     "need": "needs its implication"
+    },
+    {
+     "id": "summary",
+     "name": "Summary",
+     "cue": {
+      "re": "\\b(?:to sum up|in summary|to summari[sz]e|in short|the key (?:point|idea)|so (?:today|what we))\\b",
+      "need": 1
+     },
+     "move": "Summarize the one thing to remember.",
+     "need": "needs a summary",
+     "landing": true
+    }
+   ]
+  },
+  "lesson": {
+   "sources": [
+    "Lev Vygotsky, Mind in Society (the zone of proximal development and scaffolding)",
+    "Paulo Freire, Pedagogy of the Oppressed (dialogue as the ground of learning)",
+    "Courtney Cazden, Classroom Discourse (the initiation, response and evaluation pattern)",
+    "Jerome Bruner, The Process of Education (scaffolding and discovery)",
+    "Plato, Meno (the Socratic question that leads the learner to find)"
+   ],
+   "listener": {
+    "question": "What must a learner bring to take part in a spoken lesson?",
+    "answer": "A lesson asks the learner to be a participant, ready to answer, try and be corrected. Lev Vygotsky locates learning in the zone just beyond what the learner can do alone, so the learner brings what they already know and a willingness to stretch. Courtney Cazden shows that classroom talk runs in turns of question, response and evaluation, and learners who know that rhythm join in sooner.",
+    "elements": [
+     {
+      "id": "invited",
+      "name": "Invited In",
+      "meaning": "The learner is addressed and invited to take part.",
+      "try": "Speak to the learners as you and invite them in by name or by group.",
+      "cue": {
+       "signal": "you",
+       "at": 0.4
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "class_setting",
+      "name": "Class Setting",
+      "meaning": "Words of the classroom place the learner in a shared space.",
+      "try": "Name the shared space: the board, the page, the partner beside them.",
+      "cue": {
+       "re": "\\b(?:class|everyone|board|notebooks?|books?|page \\w+|partner|exercises?|problems? below|homework|desk)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "prior_knowledge",
+      "name": "What They Know",
+      "meaning": "The lesson connects to something the learner already knows.",
+      "try": "Ask what they already know before you show the new thing.",
+      "cue": {
+       "re": "\\b(?:remember (?:when|how)|you already|last time|we learned|you know|as we saw|which word|tell me)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "shared_we",
+      "name": "We Together",
+      "meaning": "Teacher and learners work as one group.",
+      "try": "Say let us or we to bring the group into the task together.",
+      "cue": {
+       "re": "\\b(?:let'?s|we are going to|we'?re going to|together|we will)\\b",
+       "need": 1,
+       "signal": "we",
+       "at": 0.5
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the teacher know to deliver the takeaway so the learner owns it?",
+    "answer": "The teacher must know the one thing the learner should be able to do by the end, and stage the lesson so the learner does it. Jerome Bruner names this scaffolding: model the task, share it, then hand it over. Socratic questioning, as in Plato's Meno, leads the learner to find the answer rather than receive it, and timely praise confirms each step.",
+    "elements": [
+     {
+      "id": "model_first",
+      "name": "Model It",
+      "meaning": "The teacher demonstrates one example first.",
+      "try": "Do the first example aloud while they watch.",
+      "cue": {
+       "re": "\\b(?:watch (?:how|me)|here is an example|look at the first|i'?ll do|the first one|for example|example on the board)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "hand_over",
+      "name": "Hand It Over",
+      "meaning": "The learner tries the next example alone.",
+      "try": "Hand the next one to the learners with now you try.",
+      "cue": {
+       "re": "\\b(?:now you|you try|try (?:the next|it|this|the second)|on your own|yourselves|your turn)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "checking_question",
+      "name": "Checking Question",
+      "meaning": "Questions check understanding at each step.",
+      "try": "Ask a question that shows whether they have it.",
+      "cue": {
+       "signal": "question",
+       "at": 0.4
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "praise",
+      "name": "Feedback",
+      "meaning": "The teacher confirms and praises correct answers.",
+      "try": "Answer each attempt with a word of feedback such as good or exactly.",
+      "cue": {
+       "re": "\\b(?:good|great|exactly|well done|nice|right|that'?s it|correct)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "explain_why",
+      "name": "Explain Why",
+      "meaning": "Learners are asked to explain their reasoning.",
+      "try": "Ask them to explain their answer to a partner.",
+      "cue": {
+       "re": "\\b(?:explain|why do you think|how do you know|show (?:the class|me)|tell me (?:which|why|what))\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of the lesson and of the task most draw learners into absorbed practice?",
+    "answer": "Learners become absorbed when the task is just hard enough and the turns come quickly, the balance of challenge and skill that Mihaly Csikszentmihalyi calls flow. Paulo Freire places learning in dialogue, so questions that hand the floor to the learner keep attention alive. A brisk rhythm of call and response, like the call and response of oral traditions, sustains the group.",
+    "elements": [
+     {
+      "id": "call_response",
+      "name": "Call and Response",
+      "meaning": "Questions and answers alternate quickly.",
+      "try": "Ask, wait for the answer, and answer back in a quick rhythm.",
+      "cue": {
+       "signal": "question",
+       "at": 0.5
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "noticing",
+      "name": "Noticing",
+      "meaning": "Learners are asked what they notice or see.",
+      "try": "Ask what they notice before you explain anything.",
+      "cue": {
+       "re": "\\b(?:what do you (?:notice|see|think)|notice|look at|what happens)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "safe_try",
+      "name": "Safe to Try",
+      "meaning": "The teacher makes it safe to guess.",
+      "try": "Tell them a guess is welcome and wrong answers help.",
+      "cue": {
+       "re": "\\b(?:take a guess|no wrong answers|have a go|try it|it'?s okay|give it a try|just try)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "brisk_turns",
+      "name": "Brisk Turns",
+      "meaning": "Short sentences keep the pace moving.",
+      "try": "Keep your sentences short so the turns come fast.",
+      "cue": {
+       "signal": "short",
+       "at": 0.3
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "practice_now",
+      "name": "Practice Now",
+      "meaning": "The lesson moves into doing.",
+      "try": "Give them a problem to work on right now.",
+      "cue": {
+       "re": "\\b(?:practi[cs]e|exercises?|problems?|try the|work on|solve)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "hook",
+     "name": "Hook",
+     "cue": {
+      "re": "\\b(?:have you ever|what do you (?:notice|think)|imagine|let'?s (?:start|begin)|who (?:here|can))\\b",
+      "need": 1
+     },
+     "move": "Open with a question the class can answer.",
+     "need": "needs a hook"
+    },
+    {
+     "id": "example",
+     "name": "Example",
+     "cue": {
+      "re": "\\b(?:for example|for instance|here is (?:an|one)|look at|watch (?:how|me)|like this)\\b",
+      "need": 1
+     },
+     "move": "Show one worked example.",
+     "need": "needs an example"
+    },
+    {
+     "id": "practice",
+     "name": "Practice",
+     "cue": {
+      "re": "\\b(?:now you|your turn|try (?:it|this|the)|on your own|with (?:a|your) partner|practi[cs]e)\\b",
+      "need": 1
+     },
+     "move": "Hand the next one to the learners.",
+     "need": "needs practice"
+    },
+    {
+     "id": "takeaway",
+     "name": "Takeaway",
+     "cue": {
+      "re": "\\b(?:so (?:remember|the rule)|the (?:rule|key|lesson) is|what we learned|today you learned|remember that)\\b",
+      "need": 1
+     },
+     "move": "State the takeaway in one sentence.",
+     "need": "needs its takeaway",
+     "landing": true
+    }
+   ]
+  },
+  "dialogue": {
+   "sources": [
+    "Deborah Tannen, Talking Voices (repetition and involvement in conversation)",
+    "H. P. Grice, Logic and Conversation (cooperative principle and implicature)",
+    "Harvey Sacks, Emanuel Schegloff and Gail Jefferson, A Simplest Systematics for the Organization of Turn-Taking for Conversation",
+    "Mikhail Bakhtin, The Dialogic Imagination (every utterance answers another)",
+    "Plato, Dialogues (the question and answer as a way of thinking together)"
+   ],
+   "listener": {
+    "question": "What must a listener know to follow and enjoy a dialogue between voices?",
+    "answer": "A listener must track who is speaking and what each voice wants, often from the turns alone. Sacks, Schegloff and Jefferson show that conversation is built from turns that answer one another, so the listener follows the pairing of question and reply. Grice adds that speakers mean more than they say, and the listener enjoys dialogue by reading those implications.",
+    "elements": [
+     {
+      "id": "turns",
+      "name": "Turn Taking",
+      "meaning": "Questions are met by answers in alternating turns.",
+      "try": "Let one voice ask and the other answer, back and forth.",
+      "cue": {
+       "signal": "question",
+       "at": 0.5
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "two_voices",
+      "name": "Two Voices",
+      "meaning": "Both I and you are present as speakers.",
+      "try": "Let each speaker say I and address the other as you.",
+      "cue": {
+       "re": "\\b(?:i|i'm|i'd|i'll)\\b[^.?!]*\\byou\\b|\\byou\\b[^.?!]*\\b(?:i|me)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "reference_back",
+      "name": "Reference Back",
+      "meaning": "A speaker refers to what the other just said.",
+      "try": "Have a speaker quote or point back to the other's words.",
+      "cue": {
+       "re": "\\b(?:you said|you mean|what did you mean|i meant|i thought you|that'?s what|you asked)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "direct_reply",
+      "name": "Direct Reply",
+      "meaning": "Short replies like yes, no, oh and really mark responses.",
+      "try": "Begin a reply with yes, no, oh or really.",
+      "cue": {
+       "re": "(?:^|[.?!,]\\s*)(?:yes|no|oh|okay|really|well|of course|i know|i agree)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speakers know to carry the point of a dialogue through its turns?",
+    "answer": "Each speaker must know what they want from the exchange and let it show through what they ask and refuse. Mikhail Bakhtin teaches that every utterance answers another, so meaning lives in the response more than in any single line. Grice's cooperative principle explains why an unexpected answer lands, because the listener works out what the speaker implied.",
+    "elements": [
+     {
+      "id": "want",
+      "name": "What Each Wants",
+      "meaning": "Speakers state wishes, needs and intentions.",
+      "try": "Let each speaker say what they want or mean to do.",
+      "cue": {
+       "re": "\\b(?:i want|i wanted|i need|i'?d like|you wanted|i meant|i asked because|i'?ll come|let'?s go)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "agree_disagree",
+      "name": "Agreement",
+      "meaning": "Speakers agree, concede or push back.",
+      "try": "Let one speaker agree with part and push back on the rest.",
+      "cue": {
+       "re": "\\b(?:i agree|i hear you|but|i disagree|of course|fair enough|you'?re right|i know)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "answer_given",
+      "name": "The Answer",
+      "meaning": "A question receives an explicit answer.",
+      "try": "Let the key question get a plain answer.",
+      "cue": {
+       "re": "\\b(?:let me answer|because|the answer|yes|no)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "resolution",
+      "name": "Resolution",
+      "meaning": "The exchange arrives at a shared decision.",
+      "try": "End the exchange with what the two decide together.",
+      "cue": {
+       "re": "\\b(?:then let'?s|let'?s|okay then|the two of us|both|together|deal|fine)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "implicature",
+      "name": "Implied Meaning",
+      "meaning": "Speakers imply more than they say through hedges and turns.",
+      "try": "Let one reply say less than it means and trust the listener to hear it.",
+      "cue": {
+       "re": "\\b(?:really\\?|nothing|just|well|i thought|then why)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of the exchange and of the situation most draw a listener into a dialogue?",
+    "answer": "Deborah Tannen shows that repetition and quick rhythm in conversation create involvement, so listeners feel inside the exchange. Tension between what the voices want, and the pull of an unanswered question, holds attention from turn to turn. Short lines and quick returns work like the call and response of ballad and work song.",
+    "elements": [
+     {
+      "id": "quick_turns",
+      "name": "Quick Turns",
+      "meaning": "Short lines pass quickly between voices.",
+      "try": "Shorten the lines so the voices answer each other fast.",
+      "cue": {
+       "signal": "short",
+       "at": 0.4
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "open_question",
+      "name": "Open Question",
+      "meaning": "A question hangs in the air and pulls the next turn.",
+      "try": "Leave one question hanging for the other voice to answer.",
+      "cue": {
+       "signal": "question",
+       "at": 0.6
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "echo",
+      "name": "Echo",
+      "meaning": "Speakers echo each other's words.",
+      "try": "Let one speaker repeat a word the other used.",
+      "cue": {
+       "signal": "refrain",
+       "at": 0.2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "tension",
+      "name": "Tension",
+      "meaning": "A disagreement or surprise sharpens the exchange.",
+      "try": "Let one voice resist or surprise the other.",
+      "cue": {
+       "re": "\\b(?:why|but|sorry|nothing|really|then why|i thought|tired|wait)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "address",
+      "name": "Address",
+      "meaning": "The voices speak straight to each other.",
+      "try": "Have the speakers address each other directly.",
+      "cue": {
+       "signal": "you",
+       "at": 0.6
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "opening",
+     "name": "Opening",
+     "cue": {
+      "re": "\\b(?:hey|hi|hello|so,? (?:what|how)|can i ask|did you|have you)\\b",
+      "need": 1
+     },
+     "move": "Open with a question to the other person.",
+     "need": "needs an opening"
+    },
+    {
+     "id": "exchange",
+     "name": "Exchange",
+     "cue": {
+      "re": "\\b(?:you said|i (?:agree|hear you|see)|what do you (?:mean|think)|really\\?|why)\\b",
+      "need": 2,
+      "signal": "question",
+      "at": 0.4
+     },
+     "move": "Answer what was just asked, then ask back.",
+     "need": "needs an exchange"
+    },
+    {
+     "id": "tension",
+     "name": "Tension",
+     "cue": {
+      "re": "\\b(?:but|no,|i don'?t (?:think|agree)|that'?s not|wait|actually)\\b",
+      "need": 1
+     },
+     "move": "Name where you differ.",
+     "need": "needs a point of difference"
+    },
+    {
+     "id": "settle",
+     "name": "Settle",
+     "cue": {
+      "re": "\\b(?:okay,? (?:then|so)|let'?s|we (?:could|can|should)|deal|fine|agreed|so we)\\b",
+      "need": 1
+     },
+     "move": "Agree on what happens next.",
+     "need": "needs a settlement",
+     "landing": true
+    }
+   ]
+  },
+  "reflective monologue": {
+   "sources": [
+    "Jerome Bruner, Acts of Meaning (narrative as the making of the self)",
+    "Dan P. McAdams, The Stories We Live By (redemption sequences in life stories)",
+    "Donald A. Schön, The Reflective Practitioner (reflection on action)",
+    "William Labov, Language in the Inner City (evaluation in personal narrative)",
+    "Pauline Oliveros, Deep Listening (listening inward as practice)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to receive a reflective monologue with care?",
+    "answer": "A listener must be willing to hold someone else's memory and its meaning without hurrying it. Jerome Bruner argues that we make ourselves through the stories we tell about our past, so the listener receives a self being made. It helps to know the then and the now, the time remembered and the vantage from which the speaker looks back.",
+    "elements": [
+     {
+      "id": "then_and_now",
+      "name": "Then and Now",
+      "meaning": "The speaker marks a past time and the present vantage.",
+      "try": "Name when it happened and where you stand now.",
+      "cue": {
+       "re": "\\b(?:back then|at the time|in those years|those years|looking back|now i|now,? i|years later|i used to|when i was)\\b",
+       "need": 2
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "first_person",
+      "name": "First Person",
+      "meaning": "The speaker speaks as I about their own life.",
+      "try": "Speak as I and stay with your own experience.",
+      "cue": {
+       "signal": "i",
+       "at": 0.6
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "memory_anchor",
+      "name": "Memory Anchor",
+      "meaning": "A remembered place, person or object anchors the memory.",
+      "try": "Name one place or person the memory belongs to.",
+      "cue": {
+       "re": "\\b(?:i remember|grandmother|grandfather|mother|father|kitchen|house|home|that job|that summer|childhood)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "past_tense",
+      "name": "Remembered Past",
+      "meaning": "The past tense carries the remembered events.",
+      "try": "Tell the remembered moment in the past tense.",
+      "cue": {
+       "signal": "past",
+       "at": 0.5
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the meaning they have found in their own experience?",
+    "answer": "The speaker must know what the experience taught them and state it as an understanding reached. William Labov calls this the evaluation, the part of a personal narrative that says why it matters. Dan McAdams finds that life stories carry meaning through turns from difficulty toward growth, and Donald Schön describes reflection on action as the source of practical wisdom.",
+    "elements": [
+     {
+      "id": "realization",
+      "name": "Realization",
+      "meaning": "The speaker states what they understand now.",
+      "try": "Say plainly what you understand now that you did not then.",
+      "cue": {
+       "re": "\\b(?:i realize|i realized|i understand now|i've come to|i have come to|i see now|i learned|i know now|i came to see)\\b",
+       "need": 1
+      },
+      "weight": 1.5
+     },
+     {
+      "id": "evaluation",
+      "name": "Evaluation",
+      "meaning": "The speaker says why the experience matters.",
+      "try": "Tell the listener why this memory still matters to you.",
+      "cue": {
+       "re": "\\b(?:taught me|grateful|it mattered|what it meant|i needed|the first (?:decision|time)|for myself|it gave me)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "feeling_named",
+      "name": "Feeling Named",
+      "meaning": "The speaker names a feeling then and now.",
+      "try": "Name the feeling you had then and the one you have now.",
+      "cue": {
+       "re": "\\b(?:i felt|i feel|felt (?:safe|alone|afraid|lost)|afraid|safe|grateful|ashamed|proud|failed|lonely)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "turn_in_view",
+      "name": "Turn in View",
+      "meaning": "The speaker shows how their view changed.",
+      "try": "Contrast how you saw it then with how you see it now.",
+      "cue": {
+       "re": "\\b(?:differently|at the time i|now i (?:understand|see|know)|i never noticed|i thought .{0,30} but|though i never)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of the telling and of the memory chosen most draw a listener into reflection?",
+    "answer": "Reflection absorbs when sensory memory makes the past present, the specific smell or sound that Milton Erickson used to invite listeners into their own recollections. A slow, inward voice invites the kind of attention Pauline Oliveros calls deep listening. The listener drifts into their own memories, which is the trance of reflection.",
+    "elements": [
+     {
+      "id": "sensory_memory",
+      "name": "Sensory Memory",
+      "meaning": "A remembered smell, sound or light makes the past vivid.",
+      "try": "Recall one smell, sound or light from the memory.",
+      "cue": {
+       "signal": "sensory",
+       "at": 0.3
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "remembering_verb",
+      "name": "Remembering",
+      "meaning": "Verbs of memory open the past.",
+      "try": "Begin with I remember and let the image follow.",
+      "cue": {
+       "re": "\\b(?:i remember|i recall|i can still|looking back|i think about|when i think)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "inward_voice",
+      "name": "Inward Voice",
+      "meaning": "The speaker turns inward with feeling words.",
+      "try": "Speak slowly about what was happening inside you.",
+      "cue": {
+       "re": "\\b(?:i felt|i feel|quiet|safe|inside|alone|listen|grateful)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "quiet_place",
+      "name": "Quiet Place",
+      "meaning": "A still, intimate setting holds the memory.",
+      "try": "Place the memory in a small, quiet room or landscape.",
+      "cue": {
+       "re": "\\b(?:kitchen|quiet|room|garden|window|porch|bed|table|house)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "memory",
+     "name": "Memory",
+     "cue": {
+      "re": "\\b(?:i remember|back then|when i was|years ago|at the time|i used to)\\b",
+      "need": 1
+     },
+     "move": "Begin from a remembered moment.",
+     "need": "needs a memory"
+    },
+    {
+     "id": "feeling",
+     "name": "Feeling",
+     "cue": {
+      "re": "\\b(?:i felt|i was (?:afraid|happy|sad|lonely|proud|angry)|it hurt|i loved|i missed)\\b",
+      "need": 1
+     },
+     "move": "Say what it felt like then.",
+     "need": "needs the feeling"
+    },
+    {
+     "id": "turn",
+     "name": "Turn",
+     "cue": {
+      "re": "\\b(?:but now|now i|looking back|i (?:have )?come to|i realize|i understand now|i see now)\\b",
+      "need": 1
+     },
+     "move": "Turn from then to now.",
+     "need": "needs the turn"
+    },
+    {
+     "id": "meaning",
+     "name": "Meaning",
+     "cue": {
+      "re": "\\b(?:it taught me|i learned|that'?s (?:how|why) i|it means|i am grateful|what (?:it|that) gave me)\\b",
+      "need": 1
+     },
+     "move": "Say what it means to you now.",
+     "need": "needs its meaning",
+     "landing": true
+    }
+   ]
+  },
+  "thinking aloud": {
+   "sources": [
+    "K. Anders Ericsson and Herbert A. Simon, Protocol Analysis: Verbal Reports as Data",
+    "Donald A. Schön, The Reflective Practitioner (reflection in action)",
+    "Lev Vygotsky, Thought and Language (inner speech made audible)",
+    "Wallace Chafe, Discourse, Consciousness, and Time (hesitation and the flow of thought in speech)",
+    "George Pólya, How to Solve It (heuristics of problem solving)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to follow someone thinking aloud?",
+    "answer": "A listener must know the problem the speaker is trying to solve and be patient with false starts. Ericsson and Simon showed that thinking aloud reports the contents of attention as they pass, so the listener hears the path of a mind more than a finished answer. Vygotsky describes this as inner speech made audible, compressed and full of turns.",
+    "elements": [
+     {
+      "id": "problem_stated",
+      "name": "Problem Stated",
+      "meaning": "The speaker names what they are trying to work out.",
+      "try": "Say what you are trying to work out before you begin.",
+      "cue": {
+       "re": "\\b(?:let me think|think this through|the (?:problem|question) is|doesn'?t add up|don'?t add up|figure out|work out|how do i|what should i)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "first_person",
+      "name": "First Person",
+      "meaning": "The speaker thinks as I.",
+      "try": "Keep speaking as I, from inside the problem.",
+      "cue": {
+       "signal": "i",
+       "at": 0.4
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "options",
+      "name": "Options",
+      "meaning": "Possibilities are laid out to weigh.",
+      "try": "Lay out each option as a what if.",
+      "cue": {
+       "re": "\\b(?:what if|maybe|or (?:i|we) could|could take|instead|either|option)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "self_question",
+      "name": "Self Question",
+      "meaning": "The speaker asks themselves questions.",
+      "try": "Ask yourself the question out loud.",
+      "cue": {
+       "signal": "question",
+       "at": 0.4
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the line of reasoning toward a decision?",
+    "answer": "The speaker must keep the goal in view while voicing each step, its test and its result. Donald Schön calls this reflection in action, where the thinker tries a move, sees what happens and adjusts. George Pólya's heuristics show the shape: understand, plan, try, look back, and the listener receives the reasoning when each check and correction is spoken.",
+    "elements": [
+     {
+      "id": "test_option",
+      "name": "Testing",
+      "meaning": "Each option is tested against a condition.",
+      "try": "Test each option out loud with if and then.",
+      "cue": {
+       "re": "\\b(?:if (?:the|i|we|it)|then the|then i|that would|that won'?t|would be right|might be)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "self_correction",
+      "name": "Self Correction",
+      "meaning": "The speaker catches and corrects a mistake.",
+      "try": "Say no, wait, when you catch a mistake, and name the fix.",
+      "cue": {
+       "re": "\\b(?:wait|no,? (?:that|wait)|actually|hold on|that won'?t work|not quite|on second thought)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "check_again",
+      "name": "Checking",
+      "meaning": "The speaker checks before deciding.",
+      "try": "Say let me check, and check.",
+      "cue": {
+       "re": "\\b(?:let me (?:check|see)|check (?:that|again)|double.?check|make sure|count)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "decision",
+      "name": "Decision",
+      "meaning": "The reasoning arrives at a choice.",
+      "try": "End with what you have decided and why.",
+      "cue": {
+       "re": "\\b(?:i'?ll|i will|so i|okay,? so|i decide|before i decide|then the total|that'?s it|the answer)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "reason_marker",
+      "name": "Reason Markers",
+      "meaning": "Because and so link the steps.",
+      "try": "Join your steps with because and so.",
+      "cue": {
+       "re": "\\b(?:because|so|since|though|but)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of thinking aloud and of the problem chosen most draw a listener into the reasoning?",
+    "answer": "Listeners are drawn in by suspense: a real problem with an uncertain answer, voiced as it unfolds. Wallace Chafe shows that hesitations and false starts mark the edge of consciousness at work, and hearing them invites the listener to think alongside. A problem with a felt stake, a train to catch or a sum that must balance, gives the listener a reason to stay.",
+    "elements": [
+     {
+      "id": "hesitation",
+      "name": "Hesitation",
+      "meaning": "Fillers and pauses show thought in motion.",
+      "try": "Let your hesitations stay audible instead of smoothing them out.",
+      "cue": {
+       "re": "\\b(?:hmm+|um+|uh+|let'?s see|okay|so,|well)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "suspense",
+      "name": "Suspense",
+      "meaning": "The answer stays uncertain while options are weighed.",
+      "try": "Hold off the answer while you weigh the options aloud.",
+      "cue": {
+       "re": "\\b(?:maybe|what if|might|i'?m not sure|i guess|could|probably)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "stakes",
+      "name": "Stakes",
+      "meaning": "A practical consequence gives the problem weight.",
+      "try": "Name what happens if you get it wrong.",
+      "cue": {
+       "re": "\\b(?:problem|won'?t work|late|miss|wrong|too (?:slow|late|much)|right|total|leaves at)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "turns_of_mind",
+      "name": "Turns of Mind",
+      "meaning": "Reversals show the mind turning.",
+      "try": "Let your reasoning turn on actually or but.",
+      "cue": {
+       "re": "\\b(?:actually|but|though|instead|no,|wait)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "quick_steps",
+      "name": "Quick Steps",
+      "meaning": "Short broken sentences track fast thought.",
+      "try": "Let the sentences stay short as thought moves fast.",
+      "cue": {
+       "signal": "short",
+       "at": 0.3
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "problem",
+     "name": "Problem",
+     "cue": {
+      "re": "\\b(?:so the (?:problem|question)|i need to|how (?:do|can|would) i|let me (?:think|figure))\\b",
+      "need": 1
+     },
+     "move": "State the problem you are working on.",
+     "need": "needs its problem"
+    },
+    {
+     "id": "try",
+     "name": "Attempt",
+     "cue": {
+      "re": "\\b(?:maybe|what if|let'?s (?:try|see)|i could|suppose)\\b",
+      "need": 1
+     },
+     "move": "Try one possibility out loud.",
+     "need": "needs an attempt"
+    },
+    {
+     "id": "test",
+     "name": "Test",
+     "cue": {
+      "re": "\\b(?:wait|no,? that|that won'?t|hold on|actually|let me check|but then)\\b",
+      "need": 1
+     },
+     "move": "Test the attempt against what you know.",
+     "need": "needs a test"
+    },
+    {
+     "id": "decide",
+     "name": "Decision",
+     "cue": {
+      "re": "\\b(?:okay,? so|i'?ll (?:go with|do)|that works|that'?s it|got it|so i'?ll|decided)\\b",
+      "need": 1
+     },
+     "move": "Say what you decided.",
+     "need": "needs a decision",
+     "landing": true
+    }
+   ]
+  },
+  "stream of consciousness": {
+   "sources": [
+    "William James, The Principles of Psychology (thought as a stream with substantive and transitive parts)",
+    "Dorothy Richardson, Pilgrimage (the first sustained English novel of the stream)",
+    "Virginia Woolf, Modern Fiction (the mind receiving a myriad impressions)",
+    "Walter Ong, Orality and Literacy (additive rather than subordinative style)",
+    "Pauline Oliveros, Deep Listening (attention that includes everything at once)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to follow a mind as it moves from one impression to the next?",
+    "answer": "William James described thought as a stream with resting places and flights, and the listener follows it best by riding the flights rather than waiting for a thesis. Ong names the additive style of oral speech, the \"and, and, and\", and a listener who accepts that chain hears association as the organizing logic. It helps to hold a present scene steady in mind, because the stream returns to it between excursions into memory.",
+    "elements": [
+     {
+      "id": "present_scene",
+      "name": "Present Scene",
+      "meaning": "A here and now the mind keeps returning to anchors the drift.",
+      "try": "Name what is in front of you right now, the cup, the window, the sound outside.",
+      "cue": {
+       "re": "\\b(?:is|are) (?:cold|warm|late|fogged|open|empty|quiet|still|wet|dark)\\b|\\b(?:right now|again|outside|this morning|the window|the coffee|the bus)\\b",
+       "need": 2,
+       "signal": "present",
+       "at": 0.6
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "additive_chain",
+      "name": "Additive Chain",
+      "meaning": "Clauses joined by \"and\" rather than \"because\" let the listener move with the mind instead of ahead of it.",
+      "try": "Let one image lead to the next with \"and\", without explaining why they follow.",
+      "cue": {
+       "re": "\\band (?:the|my|i|then|it|a)\\b",
+       "need": 4,
+       "signal": "runon",
+       "at": 0.8
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "first_person_mind",
+      "name": "A Mind Inside",
+      "meaning": "An \"I\" who thinks and keeps thinking gives the stream a consciousness to belong to.",
+      "try": "Say what you keep thinking of, in the first person, as it arrives.",
+      "cue": {
+       "re": "\\bi keep (?:thinking|seeing|hearing|remembering)\\b|\\bi (?:think of|thought of|wonder)\\b",
+       "need": 1,
+       "signal": "i",
+       "at": 0.5
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "memory_drift",
+      "name": "Memory Drift",
+      "meaning": "The mind slips from the present into a remembered moment and back without announcing it.",
+      "try": "Let a remembered summer or a person drift in mid-sentence, without a \"once\" or a \"back then\".",
+      "cue": {
+       "re": "\\b(?:the one from|that summer|the summer|when i was|my mother|my father|years ago|as a child)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "long_breath",
+      "name": "Long Breath",
+      "meaning": "Sentences that run long without a full stop let the listener feel the flow of thought.",
+      "try": "Keep going past where you would usually stop, joining the next thought with a comma.",
+      "cue": {
+       "signal": "long",
+       "at": 0.6
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to let a stream of thought carry its feeling without stating it?",
+    "answer": "Woolf asked writers to record the atoms as they fall, and the speaker delivers meaning through which impressions return rather than through a stated point. James observed that the transitive parts of thought, the \"and\" and the \"if\", carry as much feeling as the nouns, so the speaker trusts the joins. A recurring image becomes the quiet meaning of the stream, the way a motif works in music.",
+    "elements": [
+     {
+      "id": "recurring_image",
+      "name": "Recurring Image",
+      "meaning": "An image or phrase that comes back carries the feeling the speaker never names.",
+      "try": "Let one image return two or three times as the thoughts move around it.",
+      "cue": {
+       "re": "\\b(?:always|again|still|keep|keeps)\\b",
+       "need": 2,
+       "signal": "refrain",
+       "at": 0.3
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "repetition_echo",
+      "name": "Echoed Phrase",
+      "meaning": "Repeating a just-said word, as in \"late, it is always late\", lets a feeling surface by insistence.",
+      "try": "Repeat a word you just said and add one thing to it.",
+      "cue": {
+       "re": "\\b(\\w{4,})\\b,? (?:it is|it's|so|always|always so) (?:always )?\\1\\b|\\b(late|again|always|cold)\\b[^.]{0,30}\\b(?:late|again|always|cold)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "sensory_texture",
+      "name": "Sensory Texture",
+      "meaning": "Colour, temperature and sound give the stream a body for its feeling.",
+      "try": "Name a colour, a temperature or a sound as it reaches you.",
+      "cue": {
+       "re": "\\b(?:the colou?r of|smell of|sound of|taste of)\\b",
+       "need": 1,
+       "signal": "sensory",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "unsubordinated",
+      "name": "Equal Clauses",
+      "meaning": "Clauses set side by side with commas keep every thought at the same weight, which is the speaker's honesty.",
+      "try": "Set thoughts side by side with commas instead of ranking them with \"because\" or \"although\".",
+      "cue": {
+       "signal": "runon",
+       "at": 0.9
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "present_tense_flow",
+      "name": "Present Tense",
+      "meaning": "The present tense keeps the speaker inside the moment of thinking.",
+      "try": "Speak in the present tense, as if the thoughts are happening now.",
+      "cue": {
+       "re": "\\b(?:is|are|keep|keeps|am)\\b",
+       "need": 4
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of a stream of consciousness draw a listener into the drift of another mind?",
+    "answer": "Erickson used long, linked sentences and sensory detail to lead attention inward, and the stream of consciousness does the same by never pausing for argument. Oliveros taught listening that includes every sound at once, and a stream that lets the bus, the light and a memory share one breath invites that open attention. The listener is absorbed when the joins are soft and the images are concrete.",
+    "elements": [
+     {
+      "id": "linked_breath",
+      "name": "Linked Breath",
+      "meaning": "A long run of \"and\" keeps the listener moving without a place to step out.",
+      "try": "Join your next five thoughts with \"and\", in one breath.",
+      "cue": {
+       "re": "\\band\\b",
+       "need": 6,
+       "signal": "runon",
+       "at": 0.8
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "soft_images",
+      "name": "Concrete Images",
+      "meaning": "Plain things seen and felt hold attention gently.",
+      "try": "Name small concrete things: a cup, a window, an umbrella, a light.",
+      "cue": {
+       "signal": "sensory",
+       "at": 0.6
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "colour_light",
+      "name": "Colour and Light",
+      "meaning": "Naming the quality of light pulls the listener into a visual reverie.",
+      "try": "Say what colour the light is.",
+      "cue": {
+       "re": "\\b(?:the light|colou?r of|red|blue|grey|gray|golden|pale|fogged|misted)\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "no_full_stops",
+      "name": "Few Full Stops",
+      "meaning": "Few sentence breaks make the passage feel like one continuous thought.",
+      "try": "Let your sentences run long and stop rarely.",
+      "cue": {
+       "signal": "long",
+       "at": 0.5
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "mood_of_return",
+      "name": "Return of Mood",
+      "meaning": "Words such as \"again\" and \"always\" let a familiar feeling come round like a tide.",
+      "try": "Notice what is happening again and say so.",
+      "cue": {
+       "re": "\\b(?:again|always|still|keep)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "anchor",
+     "name": "Anchor",
+     "cue": {
+      "re": "\\b(?:the (?:coffee|window|light|room|street|rain)|i'?m (?:sitting|standing|lying)|here)\\b",
+      "need": 1,
+      "signal": "sensory",
+      "at": 0.5
+     },
+     "move": "Anchor in what is in front of you now.",
+     "need": "needs an anchor"
+    },
+    {
+     "id": "drift",
+     "name": "Drift",
+     "cue": {
+      "re": "\\b(?:and then|and i keep|i keep thinking|reminds me|like (?:the|that)|which makes me)\\b",
+      "need": 1,
+      "signal": "runon",
+      "at": 0.6
+     },
+     "move": "Let one thing lead to the next.",
+     "need": "needs drift"
+    },
+    {
+     "id": "return",
+     "name": "Return",
+     "cue": {
+      "re": "\\b(?:again|still|back to|always|the same)\\b",
+      "need": 2
+     },
+     "move": "Come back to the first image.",
+     "need": "needs a return",
+     "landing": true
+    }
+   ]
+  },
+  "reading aloud": {
+   "sources": [
+    "Walter Ong, Orality and Literacy (the voice reanimating written, subordinative prose)",
+    "Alberto Manguel, A History of Reading (reading aloud as a shared act)",
+    "Ruth Finnegan, Oral Poetry (performance as part of the text)",
+    "Dell Hymes, In Vain I Tried to Tell You (lines and verses within prose)",
+    "Walter Benjamin, The Storyteller (the novel and the told tale)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to hear a written text read aloud?",
+    "answer": "Ong observed that written prose is subordinative, built of long sentences with clauses nested inside clauses, and the listener needs patience to hold a clause open until it closes. Manguel describes reading aloud as a shared act in which the listener lends the reader their trust. A listener appreciates it most by hearing the author's voice behind the reader's, including the formal words, the narrator's asides and the measured pace of the page.",
+    "elements": [
+     {
+      "id": "framing_heading",
+      "name": "Framing Heading",
+      "meaning": "A chapter title or a named author tells the listener a written text is being voiced.",
+      "try": "Announce the chapter or the author before you begin.",
+      "cue": {
+       "re": "\\b(?:chapter|part|book|volume|page)\\s+\\w+|\\bby [A-Z]\\w+|\\bthe author\\b|\\bwrites\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "formal_diction",
+      "name": "Formal Diction",
+      "meaning": "Literary words such as \"however\", \"whom\" and \"obliged\" mark the voice of the page.",
+      "try": "Keep the author's formal words exactly as written.",
+      "cue": {
+       "re": "\\b(?:however|whom|whose|thus|obliged|whereupon|nevertheless|accordingly|considerably|it may have|account|custom|in those days)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "nested_clauses",
+      "name": "Nested Clauses",
+      "meaning": "Long sentences with clauses inside them ask the listener to hold a thought open.",
+      "try": "Read the long sentence through without breaking it, letting the voice carry the clause.",
+      "cue": {
+       "re": ",\\s*(?:which|who|whose|whom|however|so that|though)\\b",
+       "need": 1,
+       "signal": "long",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "narrator_distance",
+      "name": "Narrator's Distance",
+      "meaning": "A third-person narrator speaking of \"the family\" or \"it\" places the listener outside the scene, looking in.",
+      "try": "Let the narrator describe from a distance in the third person.",
+      "cue": {
+       "signal": "third",
+       "at": 0.5
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "past_record",
+      "name": "Past Record",
+      "meaning": "A settled past tense tells the listener the events are already written down.",
+      "try": "Keep the past tense of the text steady.",
+      "cue": {
+       "re": "\\b(?:had been|had belonged|it was|there was|stood|was the)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the reader know to deliver an author's voice and syntax faithfully?",
+    "answer": "Finnegan shows that performance is part of the text, so the reader must know where each sentence goes before voicing it, to place stress on the main verb and let subordinate clauses fall. Hymes found lines and verses hiding inside prose, and a reader who hears those measures can pace them. The meaning belongs to the author, so the reader serves the syntax and lets the narrator's irony and judgement arrive through tone.",
+    "elements": [
+     {
+      "id": "sentence_shape",
+      "name": "Sentence Shape",
+      "meaning": "Knowing where a long sentence lands lets the reader carry it to its end.",
+      "try": "Look ahead to where the sentence ends and aim your voice there.",
+      "cue": {
+       "signal": "long",
+       "at": 0.5
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "narrator_judgement",
+      "name": "Narrator's Judgement",
+      "meaning": "Phrases such as \"however sensible it may have appeared\" carry the author's irony.",
+      "try": "Give the narrator's judging phrases a lighter, knowing tone.",
+      "cue": {
+       "re": "\\b(?:however|may have|it seemed|appeared|so that|a great deal|quiet|patient|without)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "period_detail",
+      "name": "Period Detail",
+      "meaning": "Words of custom and era place the text in its time.",
+      "try": "Read the words of the period plainly and let them set the age.",
+      "cue": {
+       "re": "\\b(?:in those days|the custom|generations?|magistrates?|inherit\\w*|estate|the family|by the time of|fortunes?)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "orderly_past",
+      "name": "Orderly Past Tense",
+      "meaning": "A consistent past tense marks the reading as record rather than live speech.",
+      "try": "Keep every verb in the text's own tense.",
+      "cue": {
+       "signal": "past",
+       "at": 0.5
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "heading_voice",
+      "name": "Heading Voice",
+      "meaning": "Reading the chapter heading in a separate tone frames what follows.",
+      "try": "Pause after the heading and begin the text in a fresh breath.",
+      "cue": {
+       "re": "\\b(?:chapter|part|book)\\s+\\w+",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of reading aloud let a listener sink into the world of the page?",
+    "answer": "Benjamin wrote that the listener to a tale is in the company of the teller, and reading aloud restores that company to printed prose. An even, unhurried pace and long, well-formed sentences work like the rhythm Erickson used to settle attention. Description of a place that stands still, a house, a lane, a room, gives the listener somewhere to rest while the voice continues.",
+    "elements": [
+     {
+      "id": "still_setting",
+      "name": "Still Setting",
+      "meaning": "A described place that holds still gives the mind a room to sit in.",
+      "try": "Linger on the description of the place before the action begins.",
+      "cue": {
+       "re": "\\b(?:the house|a house|the lane|the room|the hall|the mill|windows?|the end of|stood at|belonged to)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "measured_length",
+      "name": "Measured Length",
+      "meaning": "Long sentences read at an even pace lull the listener into the text's time.",
+      "try": "Slow down and give each long sentence its full length.",
+      "cue": {
+       "signal": "long",
+       "at": 0.5
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "omniscient_voice",
+      "name": "Omniscient Voice",
+      "meaning": "A narrator who knows generations of history invites the listener to trust and follow.",
+      "try": "Let the narrator's knowledge of the past carry the listener.",
+      "cue": {
+       "re": "\\b(?:for (?:four|three|many|several) generations|in those days|it was the custom|by the time|had belonged|each had)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "third_person_world",
+      "name": "Third-Person World",
+      "meaning": "Characters seen from outside let the listener watch a whole world unfold.",
+      "try": "Describe the people of the text from the narrator's distance.",
+      "cue": {
+       "signal": "third",
+       "at": 0.4
+      },
+      "weight": 0.8
+     },
+     {
+      "id": "literary_cadence",
+      "name": "Literary Cadence",
+      "meaning": "Balanced, formal phrasing has its own cadence that rocks the ear.",
+      "try": "Let the formal phrasing set the rise and fall of your voice.",
+      "cue": {
+       "re": "\\b(?:however|which|whose|so that|without removing|a great deal)\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "heading",
+     "name": "Heading",
+     "cue": {
+      "re": "\\b(?:chapter|part|book|section|by [A-Z]\\w+)\\b",
+      "need": 1
+     },
+     "move": "Give the heading or the author.",
+     "need": "needs a heading"
+    },
+    {
+     "id": "setting",
+     "name": "Setting",
+     "cue": {
+      "re": "\\b(?:it was|there (?:was|stood|lived)|in those days|the (?:house|town|village|room) (?:stood|was))\\b",
+      "need": 1
+     },
+     "move": "Read the setting slowly.",
+     "need": "needs its setting"
+    },
+    {
+     "id": "development",
+     "name": "Development",
+     "cue": {
+      "re": "\\b(?:however|whom|whose|which|accordingly|thus|so that)\\b",
+      "need": 3,
+      "signal": "long",
+      "at": 0.5
+     },
+     "move": "Carry the long sentence through to its end.",
+     "need": "needs development"
+    },
+    {
+     "id": "close",
+     "name": "Close",
+     "cue": {
+      "re": "\\b(?:the end|end of (?:the )?chapter|and so|thus it was|from that day)\\b",
+      "need": 1
+     },
+     "move": "Read the closing line and let it rest.",
+     "need": "needs a close",
+     "landing": true
+    }
+   ]
+  },
+  "song": {
+   "sources": [
+    "Ruth Finnegan, Oral Poetry (song as performed and shared)",
+    "Albert Lord, The Singer of Tales (formula and the singer in performance)",
+    "Francis James Child, The English and Scottish Popular Ballads (refrain and incremental repetition)",
+    "John Blacking, How Musical Is Man? (music as shared bodily activity)",
+    "Pauline Oliveros, Deep Listening (attention to sound itself)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to join a song as it is sung?",
+    "answer": "Finnegan reminds us that song is a performance in which the audience often takes part, so the listener comes ready to sing along, clap or answer. Blacking argued that music is a shared bodily activity, and the listener appreciates a song through the body, by keeping time. Knowing the chorus is coming, because the singer says so, lets the listener lean toward it.",
+    "elements": [
+     {
+      "id": "call_to_join",
+      "name": "Call to Join",
+      "meaning": "An invitation such as \"sing it with me\" turns listeners into singers.",
+      "try": "Invite everyone in: say \"sing it with me\" before the chorus.",
+      "cue": {
+       "re": "\\b(?:sing (?:it )?with me|everybody|all together|join in|sing along|clap|come on|with me now)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "vocables",
+      "name": "Vocables",
+      "meaning": "Syllables such as \"la la\" and \"oh oh\" carry the tune without words to understand.",
+      "try": "Sing a line on \"la la la\" or \"oh oh\" so anyone can join.",
+      "cue": {
+       "re": "\\b(?:la|na|oh|ooh|hey|yeah|whoa|da)(?:,? (?:la|na|oh|ooh|hey|yeah|whoa|da))+\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "chorus_signpost",
+      "name": "Chorus Signpost",
+      "meaning": "Naming the chorus or the verse tells the listener where they are in the song.",
+      "try": "Say \"here comes the chorus\" so the listener can find it.",
+      "cue": {
+       "re": "\\b(?:chorus|verse|bridge|refrain|one more time|again|round again)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "group_we",
+      "name": "Group Voice",
+      "meaning": "A shared \"we\" makes the song belong to the room.",
+      "try": "Sing \"we\" so the song belongs to everyone.",
+      "cue": {
+       "re": "\\b(?:we sing|we|together|everybody|everyone)\\b",
+       "need": 2,
+       "signal": "we",
+       "at": 0.4
+      },
+      "weight": 0.8
+     },
+     {
+      "id": "imperative_cue",
+      "name": "Sung Commands",
+      "meaning": "Short commands like \"hold that note\" lead the group through the song.",
+      "try": "Lead with a short command: hold it, bring it round, sing out.",
+      "cue": {
+       "re": "\\b(?:hold (?:that|the|it)|bring it|sing (?:it|out)|clap|raise|let it)\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the singer know to deliver a song's feeling and bring the group with them?",
+    "answer": "Lord showed that the singer composes in performance from formulas, so the song leader must know the returning lines well enough to call them at the right moment. In the Child ballads, refrain and incremental repetition carry the meaning, and the singer delivers feeling by returning to the same line with more force. The singer also knows how to lead the group in, much as a hymn leader lines out each phrase in common metre.",
+    "elements": [
+     {
+      "id": "refrain_return",
+      "name": "Refrain Return",
+      "meaning": "A line that comes back carries the song's heart.",
+      "try": "Bring the main line back one more time, a little stronger.",
+      "cue": {
+       "signal": "refrain",
+       "at": 0.4
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "lining_out",
+      "name": "Lining Out",
+      "meaning": "Calling the next line or action before the group sings it leads them as hymn leaders do.",
+      "try": "Call the next line before the group sings it.",
+      "cue": {
+       "re": "\\b(?:sing it|hold that note|bring it|one more time|everybody sing|now|again)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "vocable_hook",
+      "name": "Vocable Hook",
+      "meaning": "A hook sung on open syllables is easy for anyone to carry.",
+      "try": "Make the hook a run of open syllables like \"oh oh oh\".",
+      "cue": {
+       "re": "\\b(?:la|na|oh|ooh|hey|yeah)(?:,? (?:la|na|oh|ooh|hey|yeah))+\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "loud_together",
+      "name": "Out Loud",
+      "meaning": "Naming the volume and the togetherness gives the group permission to be loud.",
+      "try": "Ask the room to sing it out loud together.",
+      "cue": {
+       "re": "\\b(?:out loud|loud|together|sing out|all of us)\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "formula_lines",
+      "name": "Formula Lines",
+      "meaning": "Stock phrases such as \"one more time\" are the formulas a song leader relies on.",
+      "try": "Use a stock song phrase like \"one more time\" to carry the group.",
+      "cue": {
+       "re": "\\b(?:one more time|round again|from the top|take it home|here we go)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of singing together draw a group into a shared trance?",
+    "answer": "Erickson used repetition and rhythm to lead attention, and group song does this with every returning chorus. Blacking described the trance of communal music in which bodies keep one time, and Oliveros taught listening to sound for its own sake, which vocables invite. The more the song repeats and the more voices join, the deeper the shared absorption.",
+    "elements": [
+     {
+      "id": "repetition_loop",
+      "name": "Repetition Loop",
+      "meaning": "Repeated lines and sounds lull the group into one pulse.",
+      "try": "Repeat the chorus until the room sings it without you.",
+      "cue": {
+       "signal": "refrain",
+       "at": 0.35
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "open_syllables",
+      "name": "Open Syllables",
+      "meaning": "Wordless syllables free the mind from meaning so the body takes the song.",
+      "try": "Drop the words and sing the tune on \"la\".",
+      "cue": {
+       "re": "\\b(?:la|na|oh|ooh|hey)(?:,? (?:la|na|oh|ooh|hey))+\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "many_voices",
+      "name": "Many Voices",
+      "meaning": "Everybody singing at once dissolves the listener into the group.",
+      "try": "Bring every voice in at once.",
+      "cue": {
+       "re": "\\b(?:everybody|everyone|together|with me|all of us|we)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "held_note",
+      "name": "Held Note",
+      "meaning": "A sustained note suspends time and breath.",
+      "try": "Hold one note longer than feels usual.",
+      "cue": {
+       "re": "\\b(?:hold (?:that|the|it)|long note|sustain|stretch it)\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "circling_back",
+      "name": "Circling Back",
+      "meaning": "Going \"round again\" makes the song a circle that is easy to stay inside.",
+      "try": "Bring it round again from the top.",
+      "cue": {
+       "re": "\\b(?:round again|comes back|back round|once more|one more time|again)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "call",
+     "name": "Call",
+     "cue": {
+      "re": "\\b(?:sing (?:it|with|along)|everybody|come on|here we go|one,? two)\\b",
+      "need": 1
+     },
+     "move": "Call the room in to sing.",
+     "need": "needs a call"
+    },
+    {
+     "id": "verse",
+     "name": "Verse",
+     "cue": {
+      "re": "\\b(?:and (?:the|i|we)|when (?:the|i|we))\\b",
+      "need": 2
+     },
+     "move": "Sing the verse that carries the story.",
+     "need": "needs a verse"
+    },
+    {
+     "id": "chorus",
+     "name": "Chorus",
+     "cue": {
+      "re": "\\b(?:la la|na na|oh oh|hey hey|one more time|chorus)\\b",
+      "need": 1,
+      "signal": "refrain",
+      "at": 0.5
+     },
+     "move": "Bring the chorus round.",
+     "need": "needs a chorus"
+    },
+    {
+     "id": "last_chorus",
+     "name": "Last Chorus",
+     "cue": {
+      "re": "\\b(?:one (?:last|more) time|all together|together now|everybody now)\\b",
+      "need": 1
+     },
+     "move": "Sing it one last time, all together.",
+     "need": "needs a last chorus",
+     "landing": true
+    }
+   ]
+  },
+  "lyrics": {
+   "sources": [
+    "Ruth Finnegan, Oral Poetry (the lyric in performance)",
+    "Simon Frith, Performing Rites (the voice and the \"you\" of popular song)",
+    "Northrop Frye, Anatomy of Criticism (the lyric as overheard address)",
+    "Francis James Child, The English and Scottish Popular Ballads (refrain and incremental repetition)",
+    "Milton H. Erickson, Hypnotic Realities (repetition and embedded suggestion)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to feel the words of a song lyric?",
+    "answer": "Frye described the lyric as speech overheard, addressed to a \"you\" the listener can step into. Frith observed that popular song works through the singer's voice and a person addressed, so the listener appreciates a lyric by imagining themselves as the one sung to or the one singing. A listener who knows the hook is coming hears each verse as a road back to it.",
+    "elements": [
+     {
+      "id": "address_you",
+      "name": "Addressed You",
+      "meaning": "A beloved \"you\" lets every listener stand in the place of the one sung to.",
+      "try": "Sing the line straight to \"you\".",
+      "cue": {
+       "re": "\\b(?:you'?re the one|to you|for you|with you|back to you|about you|without you)\\b",
+       "need": 1,
+       "signal": "you",
+       "at": 0.6
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "hook_phrase",
+      "name": "Hook Phrase",
+      "meaning": "A short phrase repeated at once fixes the song in memory.",
+      "try": "Say your hook twice in a row.",
+      "cue": {
+       "re": "\\b(\\w+ \\w+(?: \\w+)?), \\1\\b",
+       "need": 1,
+       "signal": "refrain",
+       "at": 0.4
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "love_vocabulary",
+      "name": "Song Vocabulary",
+      "meaning": "Familiar words of popular song such as \"baby\", \"forever\" and \"tonight\" signal the lyric genre.",
+      "try": "Reach for the plain words of song: tonight, forever, always.",
+      "cue": {
+       "re": "\\b(?:baby|forever|tonight|always|my heart|every time|hold me|don'?t let go|the one|the night)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "i_to_you",
+      "name": "I to You",
+      "meaning": "An \"I\" singing to a \"you\" sets up the intimate scene of the lyric.",
+      "try": "Put \"I\" and \"you\" in the same line.",
+      "cue": {
+       "re": "\\bi(?:'ll| will| want| need| love)?\\b[^.]{0,20}\\byou\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "end_rhyme",
+      "name": "End Rhyme",
+      "meaning": "Rhymes at the ends of phrases, such as \"long\" and \"song\", tell the ear a line is complete.",
+      "try": "End two phrases on words that rhyme.",
+      "cue": {
+       "re": "\\b\\w*(?:ew|oo|ue)\\b[^.,]{3,40}\\b\\w*(?:ew|oo|ue)\\b|\\b\\w*ong\\b[^.,]{3,40}\\b\\w*ong\\b|\\b\\w*ight\\b[^.,]{3,40}\\b\\w*ight\\b|\\b\\w*art\\b[^.,]{3,40}\\b\\w*art\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the singer know to deliver a lyric's hook and feeling?",
+    "answer": "In the ballad tradition, incremental repetition changes one word of a returning line so the feeling grows, and the lyricist knows which word to turn. Erickson showed how a phrase repeated and slightly varied carries an embedded suggestion, which is what a hook does. The singer must know the single feeling the lyric holds, a promise or a longing, and return every verse to it.",
+    "elements": [
+     {
+      "id": "promise",
+      "name": "The Promise",
+      "meaning": "A vow such as \"I will always\" states the lyric's single feeling.",
+      "try": "State the promise plainly: I will always, I will never let go.",
+      "cue": {
+       "re": "\\b(?:i will always|i'?ll always|i will never|i'?ll be|forever|always come back|still about you)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "incremental_repeat",
+      "name": "Incremental Repeat",
+      "meaning": "A line returned with one word changed lets the feeling grow.",
+      "try": "Repeat your hook and change one word.",
+      "cue": {
+       "signal": "refrain",
+       "at": 0.35
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "time_frame",
+      "name": "Night and Road",
+      "meaning": "Images of night, road and time frame the longing.",
+      "try": "Place the feeling in a night, a road, or a time of day.",
+      "cue": {
+       "re": "\\b(?:when the night|the road|the night|every time|tonight|all night|long)\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "second_person_focus",
+      "name": "One Listener",
+      "meaning": "Keeping the words on one \"you\" holds the lyric's intimacy.",
+      "try": "Keep every line pointed at one \"you\".",
+      "cue": {
+       "signal": "you",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "this_song",
+      "name": "This Song",
+      "meaning": "A lyric that names itself, \"this song\", folds the performance into the meaning.",
+      "try": "Let the song name itself: every time I sing this song.",
+      "cue": {
+       "re": "\\b(?:this song|sing this|i sing|the song)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of a lyric draw the listener into its feeling?",
+    "answer": "Repetition and rhythm, the core of Erickson's trance language, are the lyric's own devices, and a hook repeated across verses lulls attention onto the feeling. Frith noted that listeners take up the \"you\" of a song as their own, which deepens absorption through identification. Rhyme and a steady line length let the ear predict and settle.",
+    "elements": [
+     {
+      "id": "hook_loop",
+      "name": "Hook Loop",
+      "meaning": "The hook returning again and again becomes a gentle loop for the mind.",
+      "try": "Return to the hook after every few lines.",
+      "cue": {
+       "re": "\\b(?:back to you|you'?re the one|every time|always)\\b",
+       "need": 2,
+       "signal": "refrain",
+       "at": 0.35
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "identification",
+      "name": "Identification",
+      "meaning": "A \"you\" the listener can occupy draws them inside the song.",
+      "try": "Address the listener as \"you\" so they become the one sung to.",
+      "cue": {
+       "signal": "you",
+       "at": 0.6
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "rhyme_settle",
+      "name": "Rhyme",
+      "meaning": "Rhyme lets the ear predict the line's end and relax into it.",
+      "try": "Close two lines with a rhyme.",
+      "cue": {
+       "re": "\\b\\w*(?:ew|oo|ue)\\b[^.,]{3,40}\\b\\w*(?:ew|oo|ue)\\b|\\b\\w*ong\\b[^.,]{3,40}\\b\\w*ong\\b|\\b\\w*ight\\b[^.,]{3,40}\\b\\w*ight\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "longing",
+      "name": "Longing",
+      "meaning": "A held longing or return gives the absorption an emotional pull.",
+      "try": "Name what you long to come back to.",
+      "cue": {
+       "re": "\\b(?:come back|always|miss|need|still|long|without you|hold me)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "i_and_you_bond",
+      "name": "I and You",
+      "meaning": "The bond between an \"I\" and a \"you\" makes the song a private room.",
+      "try": "Keep \"I\" and \"you\" close together in each line.",
+      "cue": {
+       "re": "\\bi\\b[^.]{0,25}\\byou\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "scene",
+     "name": "Scene",
+     "cue": {
+      "re": "\\b(?:tonight|the night|the road|this town|the rain|the light)\\b",
+      "need": 1
+     },
+     "move": "Set the scene in one line.",
+     "need": "needs a scene"
+    },
+    {
+     "id": "address",
+     "name": "Address",
+     "cue": {
+      "re": "\\b(?:you|your|baby|darling|my love)\\b",
+      "need": 3
+     },
+     "move": "Speak to the one the song is for.",
+     "need": "needs its address"
+    },
+    {
+     "id": "hook",
+     "name": "Hook",
+     "cue": {
+      "re": "\\b(?:you'?re the one|back to you|every time|forever|hold me|don'?t let go)\\b",
+      "need": 1,
+      "signal": "refrain",
+      "at": 0.5
+     },
+     "move": "Land the hook line.",
+     "need": "needs a hook"
+    },
+    {
+     "id": "resolve",
+     "name": "Resolve",
+     "cue": {
+      "re": "\\b(?:still|always|forever|all along|in the end)\\b",
+      "need": 1
+     },
+     "move": "Return the hook changed by the verses.",
+     "need": "needs a resolution",
+     "landing": true
+    }
+   ]
+  },
+  "poetry": {
+   "sources": [
+    "Aristotle, Poetics (metaphor as the mark of genius)",
+    "Ruth Finnegan, Oral Poetry (the poem as performed utterance)",
+    "Dell Hymes, In Vain I Tried to Tell You (lines and measured verse)",
+    "Gaston Bachelard, The Poetics of Space (the image and reverie)",
+    "Walter Ong, Orality and Literacy (sound and memory)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to receive a poem spoken aloud?",
+    "answer": "Aristotle held that the gift of metaphor is seeing likeness in unlike things, and the listener appreciates a poem by letting one thing stand for another, a moon for a wound, a wind for a scholar. Hymes showed that oral poetry is organized in lines and measures, so the listener hears the line breaks in the breath. A poem rewards a listener who lets images arrive without asking for their argument.",
+    "elements": [
+     {
+      "id": "metaphor",
+      "name": "Metaphor",
+      "meaning": "One thing named as another asks the listener to hold two images at once.",
+      "try": "Say what one thing is, as if it were another: the moon is a wound.",
+      "cue": {
+       "re": "\\b(?:is|was|are) (?:a|an|the) \\w+ (?:of|upon|in|against|that)\\b|\\b(?:that|the) (?:careless|slow|grey|silver|patient|cold) \\w+\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "simile",
+      "name": "Simile",
+      "meaning": "A likeness spoken with \"like\" or \"as\" opens the image gently.",
+      "try": "Compare one thing to another with \"like\" or \"as if\".",
+      "cue": {
+       "re": "\\b(?:like a|like the|as if|as though|as a)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "line_breath",
+      "name": "Line Breath",
+      "meaning": "Short measured phrases mark the lines of the poem.",
+      "try": "Speak in short lines and breathe at each break.",
+      "cue": {
+       "re": "[,;]\\s",
+       "need": 4,
+       "signal": "short",
+       "at": 0.4
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "image_words",
+      "name": "Images",
+      "meaning": "Concrete sensory words carry the poem's meaning to the senses.",
+      "try": "Name what can be seen, heard or touched.",
+      "cue": {
+       "signal": "sensory",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "personification",
+      "name": "Personification",
+      "meaning": "Things of nature given human acts, a willow that reads, invite empathy with the world.",
+      "try": "Let something in nature do what a person does.",
+      "cue": {
+       "re": "\\b(?:the )?(?:wind|river|willow|tide|moon|sea|stone|night|sky|earth)\\b \\b(?:bends|reads|sleeps|keeps|lays|turns|weeps|speaks|breathes|dreams|sings|remembers)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the poet know to deliver a poem's image and its turn?",
+    "answer": "Finnegan shows that the meaning of an oral poem lives in its performance, so the poet must know where the image lands and where the poem turns. The turn, the volta of the sonnet tradition, is the moment the image opens into feeling, and the poet slows into it. Ong observes that sound patterns aid memory, so alliteration, assonance and repeated structure carry the meaning to the ear.",
+    "elements": [
+     {
+      "id": "central_image",
+      "name": "Central Image",
+      "meaning": "One governing image holds the poem together.",
+      "try": "Choose one image and let every line touch it.",
+      "cue": {
+       "re": "\\b(?:moon|sea|river|stone|tide|willow|wind|star|stars|heart|rose|wound|bird|wings|petals?|leaf|leaves)\\b",
+       "need": 3
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "the_turn",
+      "name": "The Turn",
+      "meaning": "A turn such as \"and the\" or \"yet\" moves the image into feeling.",
+      "try": "Turn the poem with \"yet\" or \"and then\" toward what the image means.",
+      "cue": {
+       "re": "(?:;|, and the|\\byet\\b|\\band yet\\b|\\bbut\\b)",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "sound_pattern",
+      "name": "Sound Pattern",
+      "meaning": "Alliteration and repeated sounds carry the line in the ear.",
+      "try": "Let two neighbouring words begin with the same sound.",
+      "cue": {
+       "re": "\\b(\\w)\\w+ \\1\\w+\\b",
+       "need": 3,
+       "signal": "alliteration",
+       "at": 0.15
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "compression",
+      "name": "Compression",
+      "meaning": "Few words per line press meaning into each word.",
+      "try": "Cut your line to its strongest words.",
+      "cue": {
+       "signal": "short",
+       "at": 0.3
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "lyric_heart",
+      "name": "Lyric Heart",
+      "meaning": "A quiet first person, \"my heart\", gives the image an inner life.",
+      "try": "Let the image touch your own heart once.",
+      "cue": {
+       "re": "\\b(?:my heart|my soul|we gave|our names|i hold|my memory)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of a spoken poem draw the listener into reverie?",
+    "answer": "Bachelard described the poetic image as a call to reverie, a still moment in which the listener dwells inside the image. Erickson used sensory detail, rhythm and slowness to lead attention inward, and a poem spoken with measured lines and rich images does the same. Personified nature, the tide that sleeps, softens the boundary between listener and world.",
+    "elements": [
+     {
+      "id": "reverie_image",
+      "name": "Reverie Image",
+      "meaning": "A still, luminous image invites the listener to dwell rather than follow.",
+      "try": "Hold one image long enough for the listener to rest in it.",
+      "cue": {
+       "re": "\\b(?:moon|silver|hush|petals?|stars?|willow|tide|mist|silence|grey|cold|wound|ash|bone)\\b",
+       "need": 3
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "slow_rhythm",
+      "name": "Slow Rhythm",
+      "meaning": "Even, measured phrases slow the breath.",
+      "try": "Slow down and give each phrase the same length.",
+      "cue": {
+       "re": "[,;]\\s",
+       "need": 4,
+       "signal": "rhythm",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "sleep_and_hush",
+      "name": "Hush and Sleep",
+      "meaning": "Words of quiet and rest suggest stillness to the listener.",
+      "try": "Bring in a word of quiet: hush, sleep, still.",
+      "cue": {
+       "re": "\\b(?:hush|sleep|sleeps|still|quiet|silence|rest|dream|slow)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "living_nature",
+      "name": "Living Nature",
+      "meaning": "Nature that breathes and sleeps draws the listener into the scene.",
+      "try": "Let the sea or the wind act like a living thing.",
+      "cue": {
+       "re": "\\b(?:wind|river|willow|tide|moon|sea|night)\\b[^.]{0,20}\\b(?:bends|reads|sleeps|keeps|lays|turns|breathes|dreams|animal|scholar)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "sensory_density",
+      "name": "Sensory Density",
+      "meaning": "Many sensory words close together fill the listener's inner senses.",
+      "try": "Name colours and textures in each line.",
+      "cue": {
+       "signal": "sensory",
+       "at": 0.6
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "image",
+     "name": "Image",
+     "cue": {
+      "re": "\\b(?:like a|as if|is a|the (?:moon|sea|river|stone|light|wind))\\b",
+      "need": 1,
+      "signal": "sensory",
+      "at": 0.5
+     },
+     "move": "Give one concrete image.",
+     "need": "needs an image"
+    },
+    {
+     "id": "extension",
+     "name": "Extension",
+     "cue": {
+      "re": "\\b(?:and the|beneath|beyond|against|upon|within)\\b",
+      "need": 2
+     },
+     "move": "Extend the image one step further.",
+     "need": "needs extension"
+    },
+    {
+     "id": "volta",
+     "name": "Turn",
+     "cue": {
+      "re": "\\b(?:but|yet|and still|and now|until)\\b",
+      "need": 1
+     },
+     "move": "Turn the poem with but or yet.",
+     "need": "needs a turn"
+    },
+    {
+     "id": "closing_image",
+     "name": "Closing Image",
+     "cue": {
+      "re": "\\b(?:sleeps?|rests?|again|at last|nothing|only)\\b",
+      "need": 1
+     },
+     "move": "End on a still image.",
+     "need": "needs a closing image",
+     "landing": true
+    }
+   ]
+  },
+  "story": {
+   "sources": [
+    "William Labov and Joshua Waletzky, Narrative Analysis (abstract, orientation, complicating action, evaluation, resolution, coda)",
+    "Jerome Bruner, Actual Minds, Possible Worlds (the narrative mode of thought)",
+    "Walter Benjamin, The Storyteller (counsel woven into the tale)",
+    "Melanie Green and Timothy Brock, The Role of Transportation in the Persuasiveness of Public Narratives",
+    "Richard Gerrig, Experiencing Narrative Worlds (transportation)",
+    "Albert Lord, The Singer of Tales (formulaic openings and themes)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to follow a story and feel its pull?",
+    "answer": "Labov found that told stories open with an orientation, who, where and when, and the listener needs that ground before the action can matter. Bruner calls narrative a mode of thought about intention and its trouble, so the listener brings a readiness to care what a character wants. Formulaic openings such as \"once there was\" tell the listener to set aside the present and enter the tale.",
+    "elements": [
+     {
+      "id": "opening_formula",
+      "name": "Opening Formula",
+      "meaning": "A formula such as \"once there was\" signals that a tale begins.",
+      "try": "Begin with \"once there was\" or \"one morning\".",
+      "cue": {
+       "re": "\\b(?:once upon a time|once there was|once there lived|long ago|one (?:day|morning|night|evening)|there once was)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "orientation",
+      "name": "Orientation",
+      "meaning": "A character placed in a setting gives the listener someone to follow.",
+      "try": "Say who it is and where they live before anything happens.",
+      "cue": {
+       "re": "\\b(?:a (?:girl|boy|man|woman|king|old man|old woman|child|farmer)|the old (?:man|woman)|who lived|lived (?:by|in|near))\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "protagonist",
+      "name": "Protagonist",
+      "meaning": "A third-person hero, \"she\" or \"he\", carries the listener through events.",
+      "try": "Keep one character at the centre and follow what they do.",
+      "cue": {
+       "re": "\\b(?:she|he) (?:found|climbed|walked|ran|opened|sat|turned|reached|saw|took|woke|laughed|set out)\\b",
+       "need": 2,
+       "signal": "third",
+       "at": 0.5
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "past_narration",
+      "name": "Past Narration",
+      "meaning": "The narrative past tense tells the listener these events have happened.",
+      "try": "Tell it in the past tense, as something that happened.",
+      "cue": {
+       "signal": "past",
+       "at": 0.6
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "when_clause",
+      "name": "Time Markers",
+      "meaning": "Markers such as \"when\", \"then\" and \"finally\" let the listener track time.",
+      "try": "Mark each step of time with \"then\" or \"when\".",
+      "cue": {
+       "re": "\\b(?:when (?:she|he|they|the)|then|finally|at last|that night|the next (?:day|morning))\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the storyteller know to deliver the moral within the story?",
+    "answer": "Benjamin wrote that every real story carries counsel, something useful, woven into the events rather than stated, and the teller must know that counsel before beginning. In Labov's terms the evaluation tells the listener why the story is worth telling, and the resolution and coda bring the moral home to the present. The teller delivers the moral through the change in the character, so the turning point must be clear.",
+    "elements": [
+     {
+      "id": "complicating_action",
+      "name": "Complicating Action",
+      "meaning": "A sequence of acts that raises a question drives the story forward.",
+      "try": "Give your character something to do that changes their situation.",
+      "cue": {
+       "re": "\\b(?:(?:she|he|they) (?:found|climbed|opened|took|set out|reached|carried|followed)|carried (?:her|him|them)|suddenly)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "turning_point",
+      "name": "Turning Point",
+      "meaning": "A moment such as \"for the first time\" marks the change that holds the meaning.",
+      "try": "Mark the turn: \"and for the first time\" or \"then everything changed\".",
+      "cue": {
+       "re": "\\b(?:for the first time|suddenly|but then|everything changed|at last|finally|in that moment)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "resolution",
+      "name": "Resolution",
+      "meaning": "An ending that settles the action lets the moral land.",
+      "try": "Close the action: say how it ended and where they went.",
+      "cue": {
+       "re": "\\b(?:turned (?:back )?(?:toward|for) home|went home|came home|ever after|from then on|in the end|and so)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "evaluation",
+      "name": "Evaluation",
+      "meaning": "Feeling words and emphasis tell the listener why this matters.",
+      "try": "Say how it felt, so the listener knows why the story matters.",
+      "cue": {
+       "re": "\\b(?:laughed|wept|cried|smiled|afraid|glad|astonished|out loud|no one knew|never seen)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "moral_marker",
+      "name": "Moral",
+      "meaning": "A spoken lesson, \"and that is why\", states the counsel the story carries.",
+      "try": "If you wish, say plainly what the story teaches: \"and that is why\".",
+      "cue": {
+       "re": "\\b(?:that is why|the moral|the lesson|and so (?:it is|we)|teaches us|ever since)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of telling, and of choosing the story, draw the listener into the tale?",
+    "answer": "Green and Brock call it transportation, the sense of being carried into a story world, and it deepens with vivid scenes, a character to identify with and a suspense of what comes next. Gerrig adds that listeners participate by filling gaps and anticipating. A teller who moves step by step through concrete places, past the mill, past the bridge, uses the same pacing and leading Erickson used to deepen attention.",
+    "elements": [
+     {
+      "id": "journey",
+      "name": "Journey",
+      "meaning": "Movement through named places carries the listener along with the hero.",
+      "try": "Take your character past one place and then another.",
+      "cue": {
+       "re": "\\b(?:past the|over the|through the|across the|out to|up the|down the|to the top of|toward)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "cumulative_pacing",
+      "name": "Cumulative Pacing",
+      "meaning": "Repeated steps, \"past the mill, past the bridge\", lead the listener deeper one step at a time.",
+      "try": "Repeat a step pattern: past the mill, past the bridge, past the town.",
+      "cue": {
+       "re": "\\b(\\w+ the) \\w+, \\1\\b",
+       "need": 1,
+       "signal": "anaphora",
+       "at": 0.3
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "anticipation",
+      "name": "Anticipation",
+      "meaning": "Something unknown, a boat never seen or a letter unopened, makes the listener lean forward.",
+      "try": "Give the listener something unknown to wonder about.",
+      "cue": {
+       "re": "\\b(?:never seen|no one knew|a letter|a door|a box|a key|a stranger|what (?:was|lay) inside|had given)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "scene_detail",
+      "name": "Scene Detail",
+      "meaning": "Concrete objects and places make the story world visible.",
+      "try": "Name one concrete object in the scene.",
+      "cue": {
+       "re": "\\b(?:the river|the hill|the mill|the bridge|the forest|a boat|a rock|the storm|the road|the post|the town)\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "identification",
+      "name": "Someone to Follow",
+      "meaning": "A single hero seen closely lets the listener travel in their place.",
+      "try": "Stay close to one character so the listener rides with them.",
+      "cue": {
+       "signal": "third",
+       "at": 0.5
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "orientation",
+     "name": "Orientation",
+     "cue": {
+      "re": "\\b(?:once (?:upon a time|there was)|there (?:was|lived)|long ago|one (?:day|morning|night|evening))\\b",
+      "need": 1
+     },
+     "move": "Say who, where and when.",
+     "need": "needs an orientation"
+    },
+    {
+     "id": "complication",
+     "name": "Complication",
+     "cue": {
+      "re": "\\b(?:then|suddenly|but|until|one day|when (?:he|she|they))\\b",
+      "need": 1
+     },
+     "move": "Let something go wrong or change.",
+     "need": "needs a complication"
+    },
+    {
+     "id": "evaluation",
+     "name": "Evaluation",
+     "cue": {
+      "re": "\\b(?:and (?:that was|it was)|the (?:strange|worst|best) (?:thing|part)|you see|never (?:before|again)|for the first time)\\b",
+      "need": 1
+     },
+     "move": "Say why this moment mattered.",
+     "need": "needs an evaluation"
+    },
+    {
+     "id": "resolution",
+     "name": "Resolution",
+     "cue": {
+      "re": "\\b(?:finally|at last|in the end|so (?:he|she|they)|from then on|ever after)\\b",
+      "need": 1
+     },
+     "move": "Tell how it came out.",
+     "need": "needs an ending",
+     "landing": true
+    },
+    {
+     "id": "coda",
+     "name": "Coda",
+     "cue": {
+      "re": "\\b(?:and that'?s (?:why|how)|to this day|the end|and so|the moral)\\b",
+      "need": 1
+     },
+     "move": "Bring it back to now with a coda.",
+     "need": "needs a coda",
+     "landing": true
+    }
+   ]
+  },
+  "character development": {
+   "sources": [
+    "E. M. Forster, Aspects of the Novel (flat and round characters)",
+    "Aristotle, Poetics (character revealed through choice, and the tragic flaw)",
+    "Jerome Bruner, Actual Minds, Possible Worlds (the landscape of consciousness)",
+    "Joseph Campbell, The Hero with a Thousand Faces (transformation of the hero)",
+    "Lisa Zunshine, Why We Read Fiction (theory of mind in narrative)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to follow a character's change?",
+    "answer": "Forster called a character round when it can surprise us convincingly, and the listener appreciates development by remembering who the character was so the change can register. Bruner describes the landscape of consciousness that runs beside the landscape of action, so the listener attends to fears, wants and pride as much as to events. Zunshine shows that we enjoy tracking minds, so the listener brings a readiness to infer motive.",
+    "elements": [
+     {
+      "id": "inner_state",
+      "name": "Inner State",
+      "meaning": "Named fears, wants and pride give the listener a mind to track.",
+      "try": "Name what the character fears or wants.",
+      "cue": {
+       "re": "\\b(?:afraid|fear|feared|pride|proud|wanted|longed|ashamed|jealous|lonely|loyal(?:ty)?|shame|desire)\\b",
+       "need": 2
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "trait_before",
+      "name": "Starting Trait",
+      "meaning": "A trait stated at the outset gives the change a starting point.",
+      "try": "Say what the character was like at the start.",
+      "cue": {
+       "re": "\\b(?:(?:she|he|they) was|(?:she|he) had always been|at first)\\b \\b(?:afraid|cruel|proud|shy|selfish|cold|angry|kind|vain|timid)\\b|\\bmade (?:her|him|them) \\w+",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "third_person_focus",
+      "name": "Character Focus",
+      "meaning": "A steady \"she\" or \"he\" keeps the listener with one person.",
+      "try": "Keep the focus on one character throughout.",
+      "cue": {
+       "signal": "third",
+       "at": 0.6
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "motive_link",
+      "name": "Motive",
+      "meaning": "Links between feeling and act, \"that fear made her cruel\", show why the character acts.",
+      "try": "Connect a feeling to what it made the character do.",
+      "cue": {
+       "re": "\\b(?:made (?:her|him|them)|because (?:she|he|they)|out of (?:fear|pride|love)|so (?:she|he) )\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "relationships",
+      "name": "Relationships",
+      "meaning": "A brother, mother or friend reveals character in relation to others.",
+      "try": "Show the character with someone they love or resist.",
+      "cue": {
+       "re": "\\b(?:her|his|their) (?:brother|sister|mother|father|friend|son|daughter|husband|wife)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the arc of a character's change?",
+    "answer": "Aristotle held that character is revealed through choice, so the speaker must know the decision that shows who the character becomes. The arc moves from a flaw to its transformation, the movement Campbell traced through the hero's return, and the speaker marks its beginning, its pressure and its end. Time markers such as \"as the winter went on\" and \"by spring\" let the listener feel the change take time.",
+    "elements": [
+     {
+      "id": "arc_change",
+      "name": "Arc of Change",
+      "meaning": "Words of becoming, \"became\", \"grew\", \"turned into\", state the change itself.",
+      "try": "Say what the character became.",
+      "cue": {
+       "re": "\\b(?:became|become|had become|grew (?:stronger|kinder|colder|braver|wiser)|turned into|changed|someone who)\\b",
+       "need": 2
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "flaw",
+      "name": "The Flaw",
+      "meaning": "A named weakness gives the arc something to overcome.",
+      "try": "Name the character's flaw out loud.",
+      "cue": {
+       "re": "\\b(?:flaw|weakness|cruel|pride|selfish|vain|cowardice|fault)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "pressure",
+      "name": "Pressure",
+      "meaning": "A \"but\" that sets loyalty against pride shows the conflict that forces change.",
+      "try": "Set two of the character's values against each other with \"but\".",
+      "cue": {
+       "re": "\\bbut (?:as|then|her|his|their|she|he)\\b|\\bstronger than\\b|\\bmore than (?:her|his)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "passage_of_time",
+      "name": "Passage of Time",
+      "meaning": "Seasons and stages show that change takes time.",
+      "try": "Mark time passing: as the winter went on, by spring.",
+      "cue": {
+       "re": "\\b(?:as the (?:winter|summer|years?|months?|days?) went on|by (?:spring|summer|autumn|winter|the end)|over the years|in time|years later)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "choice_revealed",
+      "name": "Revealing Choice",
+      "meaning": "A decision, someone who stayed, reveals who the character now is.",
+      "try": "Show the character choosing, and let the choice speak.",
+      "cue": {
+       "re": "\\b(?:stayed|chose|decided|refused|forgave|forgiven|kept (?:her|his) word|gave up)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of telling a character's change draw the listener into that person's life?",
+    "answer": "Green and Brock found that identification with a character deepens transportation, and a listener absorbed in a character feels the change as their own. Erickson's pacing and leading applies here, matching the listener's experience of fear or pride before leading them toward strength. A clear before and after, held across seasons, gives the listener a slow arc to settle into.",
+    "elements": [
+     {
+      "id": "identification_feeling",
+      "name": "Shared Feeling",
+      "meaning": "Feelings any listener knows, fear and loyalty, invite identification.",
+      "try": "Name a feeling every listener has known.",
+      "cue": {
+       "re": "\\b(?:afraid|fear|left behind|alone|loyal(?:ty)?|love|pride|grateful|ashamed)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "before_after",
+      "name": "Before and After",
+      "meaning": "A visible contrast between old and new self rewards the listener's attention.",
+      "try": "Say plainly who the character was and who they became.",
+      "cue": {
+       "re": "\\b(?:old (?:flaw|self|fear|pride)|her old|his old|no longer|now (?:she|he)|had become|turned into)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "slow_seasons",
+      "name": "Slow Seasons",
+      "meaning": "Seasons turning give the change a slow, absorbing rhythm.",
+      "try": "Let the seasons turn while the character changes.",
+      "cue": {
+       "re": "\\b(?:winter|spring|summer|autumn|seasons?|years? went)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "strength_found",
+      "name": "Strength Found",
+      "meaning": "The flaw becoming strength gives the listener a moment of release.",
+      "try": "Let the flaw turn into a strength at the end.",
+      "cue": {
+       "re": "\\b(?:strength|stronger|courage|brave|became someone|found (?:her|his) way|turned into (?:her|his))\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "close_third",
+      "name": "Close Third Person",
+      "meaning": "Staying close inside \"she\" lets the listener live in the character.",
+      "try": "Stay inside your character's feelings in the third person.",
+      "cue": {
+       "signal": "third",
+       "at": 0.6
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "trait",
+     "name": "Trait",
+     "cue": {
+      "re": "\\b(?:(?:he|she|they) (?:was|were) (?:afraid|proud|cruel|kind|shy|stubborn)|flaw|always (?:wanted|feared))\\b",
+      "need": 1
+     },
+     "move": "Name the character's defining trait.",
+     "need": "needs a trait"
+    },
+    {
+     "id": "want",
+     "name": "Want",
+     "cue": {
+      "re": "\\b(?:wanted|longed|wished|needed|dreamed|hoped)\\b",
+      "need": 1
+     },
+     "move": "Say what the character wants.",
+     "need": "needs a want"
+    },
+    {
+     "id": "pressure",
+     "name": "Pressure",
+     "cue": {
+      "re": "\\b(?:but|until|when|forced|had to|could not)\\b",
+      "need": 2
+     },
+     "move": "Put pressure on the trait.",
+     "need": "needs pressure"
+    },
+    {
+     "id": "change",
+     "name": "Change",
+     "cue": {
+      "re": "\\b(?:became|grew|changed|turned into|learned|by (?:spring|then|the end)|no longer)\\b",
+      "need": 1
+     },
+     "move": "Show who they became.",
+     "need": "needs the change",
+     "landing": true
+    }
+   ]
+  },
+  "scenery": {
+   "sources": [
+    "Yi-Fu Tuan, Space and Place (place as space made meaningful by attention)",
+    "Gaston Bachelard, The Poetics of Space (the felt interiority of places)",
+    "Keith Basso, Wisdom Sits in Places (Western Apache placenames that hold stories)",
+    "Milton Erickson, as recorded in Haley's Uncommon Therapy (sensory detail and pacing in trance language)",
+    "Pauline Oliveros, Deep Listening (attention to the whole field of sound)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to see a place through spoken words?",
+    "answer": "A listener brings a store of remembered places, and Yi-Fu Tuan shows that space becomes place through the attention a person gives it. The words call up the listener's own valleys and streets, so the listener needs a willingness to build the scene inwardly from each named feature. Keith Basso found among the Western Apache that a named place carries its whole history, and even a stranger's description works best when the listener can place each feature in relation to the others.",
+    "elements": [
+     {
+      "id": "named_features",
+      "name": "Named Features",
+      "meaning": "The listener receives concrete features of land, water or town to build the scene from.",
+      "try": "Name two or three concrete features of the place, such as a river, a ridge or a square.",
+      "cue": {
+       "re": "\\b(?:valley|valleys|hill|hills|mountain|mountains|ridge|river|rivers|field|fields|meadow|forest|woods|lake|shore|coast|sea|harbou?r|street|square|plain|desert|dunes?|horizon|cliff|bay|garden|path|road|village|town|pines?|trees?|sky)\\b",
+       "need": 3
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "orientation",
+      "name": "Spatial Orientation",
+      "meaning": "Words of position tell the listener where each feature stands in relation to the others.",
+      "try": "Place each feature with a word of position, such as below, beyond or across.",
+      "cue": {
+       "re": "\\b(?:below|above|beyond|across|along|behind|beneath|beside|over|under|through|toward|towards|far|near|distant|ahead|around|between|somewhere)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "vantage",
+      "name": "A Vantage Point",
+      "meaning": "A viewer stands somewhere in the scene, so the listener knows where to stand too.",
+      "try": "Say where you are standing as you look, so the listener stands there with you.",
+      "cue": {
+       "re": "\\b(?:below us|before us|around us|we stood|i stood|from (?:the|here|where)|looking (?:out|down|up)|in front of|at our feet|opened (?:below|before))\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "time_of_day",
+      "name": "Time and Weather",
+      "meaning": "The hour and the weather set the light the listener sees by.",
+      "try": "Tell the hour or the weather, so the scene has its own light.",
+      "cue": {
+       "re": "\\b(?:light|lit|shadow|shadows|dusk|dawn|sunset|sunrise|glow|gleam|shone|shining|haze|mist|fog|rain|snow|wind|cloud|clouds|storm|sun|moon|late light|afternoon|evening)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "scale",
+      "name": "Near and Far",
+      "meaning": "The scene moves between near detail and far distance, giving it depth.",
+      "try": "Move the eye from something close at hand to something on the far horizon.",
+      "cue": {
+       "re": "\\b(?:far|distant|near|close|wide|vast|narrow|tops? of|edge of|horizon|faraway)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the felt sense of a place?",
+    "answer": "The speaker must know the feeling the place holds and choose the details that carry it, because Bachelard shows that a described space is always a felt space. The meaning of scenery lies in mood, so the speaker selects light, sound and motion that agree with one another. Ordering the details as the eye would travel lets the listener arrive at the feeling without being told it.",
+    "elements": [
+     {
+      "id": "dominant_mood",
+      "name": "A Dominant Mood",
+      "meaning": "The details agree on one feeling, such as calm, menace or longing.",
+      "try": "Choose one feeling for the place and keep every detail in its key.",
+      "cue": {
+       "re": "\\b(?:quiet|still|calm|peaceful|lonely|wild|gentle|soft|heavy|bright|dark|cold|warm|green|silver|grey|gray|golden)\\b",
+       "need": 2,
+       "signal": "sensory",
+       "at": 0.6
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "eye_path",
+      "name": "The Eye's Path",
+      "meaning": "The description travels in an order the eye could follow, from one feature to the next.",
+      "try": "Lead the eye in one direction, from near to far or from ground to sky.",
+      "cue": {
+       "re": "\\b(?:below|above|beyond|across|along|behind|beneath|beside|over|under|through|toward|towards|far|near|distant|ahead|around|between|somewhere)\\b",
+       "need": 3
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "living_motion",
+      "name": "Living Motion",
+      "meaning": "The land seems to move or breathe through verbs of winding, hanging and opening.",
+      "try": "Give the land a verb, so the river winds and the mist hangs.",
+      "cue": {
+       "re": "\\b(?:winding|wound|opened|stretched|rolled|hung|drifted|rose|fell away|sloped|curved|spread|ran down|caught)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "light_quality",
+      "name": "Quality of Light",
+      "meaning": "The particular light of the moment colours the whole place.",
+      "try": "Describe how the light falls and what it touches.",
+      "cue": {
+       "re": "\\b(?:light|lit|shadow|shadows|dusk|dawn|sunset|sunrise|glow|gleam|shone|shining|haze|mist|fog|rain|snow|wind|cloud|clouds|storm|sun|moon|late light|afternoon|evening)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "beyond_sight",
+      "name": "Beyond the Eye",
+      "meaning": "Sound, smell and touch reach past what the eye can see.",
+      "try": "Add one sound or smell that comes from out of sight.",
+      "cue": {
+       "re": "\\b(?:smell|scent|sound|rang|ringing|bell|hum|whisper|murmur|rustle|birdsong|silence|quiet|still|stillness|echo)\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of a described scene most draw a listener into it?",
+    "answer": "Milton Erickson built trance by pacing a listener through sensory detail, one sense after another, until the inner scene feels present. Long, flowing sentences joined by and let the listener drift, and a sound heard somewhere out of sight widens attention the way Pauline Oliveros describes in Deep Listening. Choosing a place with distance and weather in it gives the imagination room to travel.",
+    "elements": [
+     {
+      "id": "sensory_layering",
+      "name": "Sensory Layering",
+      "meaning": "Sight, sound, smell and touch arrive one after another and fill the scene.",
+      "try": "Move through the senses, adding what is heard and smelled after what is seen.",
+      "cue": {
+       "signal": "sensory",
+       "at": 0.6
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "flowing_sentences",
+      "name": "Flowing Sentences",
+      "meaning": "Long sentences joined by and and commas carry the listener along without a break.",
+      "try": "Let one sentence run on with and, carrying the eye across the land.",
+      "cue": {
+       "signal": "runon",
+       "at": 0.4
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "distant_sound",
+      "name": "A Distant Sound",
+      "meaning": "A sound from somewhere unseen widens the listener's attention to the whole field.",
+      "try": "Let a bell, a bird or the wind sound from somewhere out of sight.",
+      "cue": {
+       "re": "\\b(?:somewhere|far off|in the distance|from (?:far|afar|beyond)|a bell|bells?|birds? (?:called|sang)|wind)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "weather_atmosphere",
+      "name": "Atmosphere",
+      "meaning": "Mist, rain, wind or haze soften the edges and make the scene feel close and dreamlike.",
+      "try": "Bring in mist, rain or a change of wind.",
+      "cue": {
+       "re": "\\b(?:mist|rain|fog|haze|wind|snow|cloud|clouds|storm|dew|smoke)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "present_presence",
+      "name": "Present Presence",
+      "meaning": "Stillness words and lingering phrases slow the listener down inside the place.",
+      "try": "Pause on one still thing and let it rest a moment.",
+      "cue": {
+       "re": "\\b(?:still|stillness|hung|lingered|rested|waited|slept|silent|silence|hush|quiet)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "frame",
+     "name": "Frame",
+     "cue": {
+      "re": "\\b(?:below|above|before (?:us|me)|in the distance|on the horizon|the (?:valley|field|street|shore) (?:opened|lay))\\b",
+      "need": 1
+     },
+     "move": "Frame the whole view first.",
+     "need": "needs a frame"
+    },
+    {
+     "id": "detail",
+     "name": "Detail",
+     "cue": {
+      "re": "\\b(?:the (?:light|mist|smell|sound)|caught|glint|shadow|green|grey|silver)\\b",
+      "need": 1,
+      "signal": "sensory",
+      "at": 0.5
+     },
+     "move": "Move in to one close detail.",
+     "need": "needs detail"
+    },
+    {
+     "id": "movement",
+     "name": "Movement",
+     "cue": {
+      "re": "\\b(?:somewhere|a bell|wind|drifted|moved|rang|flowed|winding)\\b",
+      "need": 1
+     },
+     "move": "Let one thing move in the scene.",
+     "need": "needs movement"
+    },
+    {
+     "id": "stillness",
+     "name": "Stillness",
+     "cue": {
+      "re": "\\b(?:still|silent|quiet|hush|nothing moved|at rest|settled)\\b",
+      "need": 1
+     },
+     "move": "Close on stillness.",
+     "need": "needs stillness",
+     "landing": true
+    }
+   ]
+  },
+  "lore": {
+   "sources": [
+    "Bronislaw Malinowski, Myth in Primitive Psychology (lore as a charter for social order)",
+    "Walter Ong, Orality and Literacy (oral memory as communal, conservative and situational)",
+    "Jan Vansina, Oral Tradition as History (how oral societies keep lineages and institutions)",
+    "Ruth Finnegan, Oral Literature in Africa (genealogies, praise and historical narration as performed forms)",
+    "Albert Lord, The Singer of Tales (formulaic transmission across generations)"
+   ],
+   "listener": {
+    "question": "What must a listener know to receive the lore of a people or a world?",
+    "answer": "A listener of lore needs the frame of a community whose customs are being explained, since Ong describes oral knowledge as kept for the group and tied to its life. The names of houses, orders and places become meaningful once the listener accepts that each stands for an inheritance. Jan Vansina shows that oral tradition carries history as lineage and custom, so the listener follows best by holding who belongs to whom and what is owed to whom.",
+    "elements": [
+     {
+      "id": "polity",
+      "name": "A Named People",
+      "meaning": "The lore belongs to a kingdom, clan, city or order the listener can hold in mind.",
+      "try": "Name the people, realm or order this lore belongs to.",
+      "cue": {
+       "re": "\\b(?:kingdom|realm|empire|city|cities|clan|clans|tribe|tribes|house of|houses|order of|guild|guilds|people of|northern|southern|eastern|western|isles?|province|valley folk)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "institution",
+      "name": "Institutions",
+      "meaning": "Orders, guilds, councils and houses give the world a social shape.",
+      "try": "Name the order, guild or council that keeps this knowledge.",
+      "cue": {
+       "re": "\\b(?:order|guild|council|priesthood|brotherhood|sisterhood|keepers|lamplighters|wardens|houses?|courts?|temple|throne)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "proper_names",
+      "name": "Proper Names",
+      "meaning": "Names of places, houses and persons anchor the lore in particulars.",
+      "try": "Give the house, the founder or the city its own name.",
+      "cue": {
+       "signal": "names",
+       "at": 0.6
+      },
+      "weight": 0.8
+     },
+     {
+      "id": "custom_frame",
+      "name": "Custom as Frame",
+      "meaning": "The listener learns what is done here and what is never done.",
+      "try": "State one custom plainly: what is always done, or what no one may do.",
+      "cue": {
+       "re": "\\b(?:by custom|custom|customs|tradition|traditions|it is said|they say|law|laws|rite|rites|oath|oaths|forbidden|may not|must not|no one may|no \\w+ may|always|every year|each year|never)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "time_depth",
+      "name": "Depth of Time",
+      "meaning": "Generations and ages tell the listener how old the inheritance is.",
+      "try": "Say how many generations or ages this custom has lasted.",
+      "cue": {
+       "re": "\\b(?:generations?|ages?|centuries|of old|old|ancient|since the|from the time of|in those days|first)\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to hand down the customs and lineage of lore?",
+    "answer": "The speaker must know the charter, in Malinowski's sense: which custom the lore justifies and which lineage gives it authority. Lore delivers its meaning by tracing a present practice back to a founder or first event, so the speaker keeps the chain of descent unbroken. Speaking as a keeper of records lends the ethos Aristotle names, because the listener trusts a voice that knows the old accounts.",
+    "elements": [
+     {
+      "id": "charter",
+      "name": "The Charter",
+      "meaning": "A present practice is traced back to the founding that authorises it.",
+      "try": "Trace the custom back to the founding or the first keeper who began it.",
+      "cue": {
+       "re": "\\b(?:traces? (?:its|their|back)|back to|charter|since the founding|from the founding|was founded|founded by|by decree|granted)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "lineage",
+      "name": "Lineage",
+      "meaning": "Ancestors, founders and heirs form a chain the speaker keeps whole.",
+      "try": "Name the ancestor or founder and who inherited after them.",
+      "cue": {
+       "re": "\\b(?:ancestors?|founders?|founding|founded|lineage|line of|descendants?|heirs?|forebears|elders?|first city|first king|generations?|traces?|charter|bloodline|dynasty)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "custom_rule",
+      "name": "The Rule Kept",
+      "meaning": "A custom is stated with its obligation, such as no lamp may be lit without a word.",
+      "try": "State the rule with its obligation, using may, must or by custom.",
+      "cue": {
+       "re": "\\b(?:by custom|no \\w+ may|may not|must not|must|is forbidden|is required|is owed|is kept)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "keeper_voice",
+      "name": "The Keeper's Voice",
+      "meaning": "The speaker speaks as one who holds the records or the memory of the people.",
+      "try": "Speak as the keeper of the records, naming where the memory is kept.",
+      "cue": {
+       "re": "\\b(?:records?|chronicles?|annals|scrolls?|archives?|books? of|histories|remembered|keeps? the|keepers?|lamps?|seals?|banners?|crest)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "present_tense_custom",
+      "name": "Living Custom",
+      "meaning": "Present tense shows the custom is still kept today.",
+      "try": "Say what the people still do today, in the present tense.",
+      "cue": {
+       "signal": "present",
+       "at": 0.35
+      },
+      "weight": 0.7
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of telling lore most draw a listener into another world's order?",
+    "answer": "Lore absorbs through the density of a world that holds together, as each new name confirms the ones before it. Parry and Lord showed that formulaic, catalogue-like speech lets listeners settle into a rhythm of recognition, and lore uses lists of houses, oaths and rites in the same way. A ceremonial cadence and a word spoken to the ancestors invite the listener to stand inside the custom as one of its keepers.",
+    "elements": [
+     {
+      "id": "catalogue",
+      "name": "The Catalogue",
+      "meaning": "Lists of houses, guilds, oaths or places build a world through accumulation.",
+      "try": "List the houses, orders or places in a steady sequence.",
+      "cue": {
+       "re": "\\b(?:every|each|all the|and the|no \\w+)\\b",
+       "need": 3
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "ritual_words",
+      "name": "Ritual Words",
+      "meaning": "Rites, oaths and words spoken to ancestors bring the listener into ceremony.",
+      "try": "Describe the words or gesture that every keeper makes at the rite.",
+      "cue": {
+       "re": "\\b(?:rite|rites|oath|oaths|vow|vows|word spoken|blessing|prayer|offering|ceremony|ancestors)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "archaic_texture",
+      "name": "Old Texture",
+      "meaning": "Old words such as kingdom, lamplighter and charter give the speech the patina of age.",
+      "try": "Use the old names for things, the words this people would use.",
+      "cue": {
+       "re": "\\b(?:kingdom|charter|order of|guild|lamplighters?|keepers?|realm|oath|ancestors|elders|hall|throne|banner)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "consistency",
+      "name": "A Consistent World",
+      "meaning": "Customs agree with one another, so the world feels whole and real.",
+      "try": "Connect this custom to another one already told.",
+      "cue": {
+       "re": "\\b(?:by custom|custom|customs|tradition|traditions|it is said|they say|law|laws|rite|rites|oath|oaths|forbidden|may not|must not|no one may|no \\w+ may|always|every year|each year|never)\\b",
+       "need": 2
+      },
+      "weight": 0.9
+     },
+     {
+      "id": "ceremonial_rhythm",
+      "name": "Ceremonial Cadence",
+      "meaning": "Measured, even sentences give the telling the gravity of ritual.",
+      "try": "Slow down and give each sentence the same measured length.",
+      "cue": {
+       "signal": "rhythm",
+       "at": 0.6
+      },
+      "weight": 0.7
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "place",
+     "name": "Place",
+     "cue": {
+      "re": "\\b(?:in the (?:northern|southern|eastern|western|old|high) \\w+|kingdom|realm|city of)\\b",
+      "need": 1
+     },
+     "move": "Name the place the lore belongs to.",
+     "need": "needs a place"
+    },
+    {
+     "id": "order",
+     "name": "Order",
+     "cue": {
+      "re": "\\b(?:order of|guild|clan|house of|keepers?|council)\\b",
+      "need": 1
+     },
+     "move": "Name who keeps the custom.",
+     "need": "needs its keepers"
+    },
+    {
+     "id": "custom",
+     "name": "Custom",
+     "cue": {
+      "re": "\\b(?:by custom|no (?:one|lamp|man) may|must|it is (?:said|forbidden)|every \\w+ (?:must|shall))\\b",
+      "need": 1
+     },
+     "move": "State the custom or rule.",
+     "need": "needs a custom"
+    },
+    {
+     "id": "lineage",
+     "name": "Lineage",
+     "cue": {
+      "re": "\\b(?:traces?|descends?|founding|founders?|ancestors?|since the|charter)\\b",
+      "need": 1
+     },
+     "move": "Trace it back to its founding.",
+     "need": "needs a lineage",
+     "landing": true
+    }
+   ]
+  },
+  "myth": {
+   "sources": [
+    "Mircea Eliade, Myth and Reality (sacred time, illud tempus, and myth as the story of origins)",
+    "Bronislaw Malinowski, Myth in Primitive Psychology (myth as charter for present practice)",
+    "Claude Levi-Strauss, The Structural Study of Myth (myth working through binary oppositions)",
+    "Joseph Campbell, The Hero with a Thousand Faces (recurring mythic patterns)",
+    "Walter Ong, Orality and Literacy (heavy, agonistic figures of oral memory)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to receive a myth as sacred truth?",
+    "answer": "A listener of myth enters what Mircea Eliade calls illud tempus, the time of beginnings, and so must accept that the events stand before ordinary history. The listener needs to recognise the great elements, sky, sea, fire and earth, as actors with wills of their own. Levi-Strauss shows that myth thinks in opposed pairs, so a listener appreciates it most by noticing what was one and became two.",
+    "elements": [
+     {
+      "id": "origin_time",
+      "name": "The Time of Beginnings",
+      "meaning": "The myth opens in a time before ordinary time, such as in the beginning.",
+      "try": "Open in the time before time, with in the beginning or long ago.",
+      "cue": {
+       "re": "\\b(?:in the beginning|before (?:there was|the world|time)|long ago|at first|when the world was|in the first days|the first (?:people|man|woman|fire|day|morning))\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "elemental_actors",
+      "name": "Elemental Actors",
+      "meaning": "Sky, sea, sun, fire and earth act and are acted upon.",
+      "try": "Let the sky, the sea or the fire act as a character.",
+      "cue": {
+       "re": "\\b(?:sky|sea|earth|fire|sun|moon|stars?|mountain|mountains|flame|flood|darkness|water|thunder|dawn|night)\\b",
+       "need": 3
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "divine_figures",
+      "name": "Divine Figures",
+      "meaning": "Gods, tricksters and spirits act on the world.",
+      "try": "Name the god, trickster or spirit who changes the world.",
+      "cue": {
+       "re": "\\b(?:gods?|goddess(?:es)?|trickster|spirits?|creator|heavens?|divine|sacred|immortals?|titans?|serpent|giant|giants|the great)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "oppositions",
+      "name": "Opposed Pairs",
+      "meaning": "The world is cut into pairs such as sky and sea, light and dark.",
+      "try": "Set two great things against each other, such as light and dark.",
+      "cue": {
+       "re": "\\b(?:sky and (?:the )?(?:sea|earth)|sea and (?:the )?sky|light and (?:the )?dark|day and night|life and death|heaven and earth|were one|became two|split|divided|separated)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the sacred truth or origin a myth carries?",
+    "answer": "The speaker must know which present thing the myth explains, because Malinowski calls myth a charter that justifies how the world and its customs are now. The meaning arrives in the etiological turn, that is why the mountains smoke, which ties the origin to what the listener can still see. Telling it with the authority of the tradition, as handed down, gives the ethos that sacred speech requires.",
+    "elements": [
+     {
+      "id": "etiology",
+      "name": "That Is Why",
+      "meaning": "The myth ends by explaining a present thing, such as why the mountains smoke.",
+      "try": "Close by saying what in the world today this story explains, with that is why.",
+      "cue": {
+       "re": "\\b(?:that is why|this is why|and so (?:it is|ever since)|ever since|to this day|which is why|why the|why people|and that is how|how the \\w+ got)\\b",
+       "need": 1
+      },
+      "weight": 1.5
+     },
+     {
+      "id": "transformation",
+      "name": "The Great Change",
+      "meaning": "A divine act changes the world: something is stolen, made, split or hidden.",
+      "try": "Tell the one act that changed the world forever.",
+      "cue": {
+       "re": "\\b(?:stole|became|turned into|made|shaped|created|hid|split|divided|separated|gave|brought|was born|were born|rose from)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "obligation",
+      "name": "The Obligation",
+      "meaning": "The myth leaves people with a duty, such as keeping the flame alive.",
+      "try": "Say what people must do ever since, because of what happened.",
+      "cue": {
+       "re": "\\b(?:must|shall|forever|every winter|every spring|always|for all time|keep the|remember)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "sequence_of_creation",
+      "name": "Order of Creation",
+      "meaning": "Events come in a sacred order, first this and then that.",
+      "try": "Tell what came first and then what followed.",
+      "cue": {
+       "re": "\\b(?:then|first|and then|after that|at last|before that)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     },
+     {
+      "id": "mythic_past",
+      "name": "Mythic Past",
+      "meaning": "The past tense places the events in a completed sacred time.",
+      "try": "Keep the great events in the past, finished and fixed.",
+      "cue": {
+       "signal": "past",
+       "at": 0.5
+      },
+      "weight": 0.6
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of telling a myth most draw a listener into sacred time?",
+    "answer": "Eliade describes the recitation of myth as a return to the time of origins, and the listener is absorbed when the telling leaves ordinary time behind. Elemental images such as fire hidden in a mountain carry the force of dream, and Campbell notes that these images recur across peoples because they speak to shared depths. The chain of and then, and that is why, gives the cadence of a hymn, and Erickson's repetition and rhythm deepen the same absorption.",
+    "elements": [
+     {
+      "id": "elemental_imagery",
+      "name": "Elemental Imagery",
+      "meaning": "Fire, sun, mountain and sea appear as vast, dreamlike images.",
+      "try": "Give one image of fire, water or stone on a cosmic scale.",
+      "cue": {
+       "re": "\\b(?:sky|sea|earth|fire|sun|moon|stars?|mountain|mountains|flame|flood|darkness|water|thunder|dawn|night)\\b",
+       "need": 3,
+       "signal": "sensory",
+       "at": 0.8
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "chain_of_and",
+      "name": "The Chain of And",
+      "meaning": "Clauses linked by and then carry the listener through the sacred sequence.",
+      "try": "Link the great acts with and then, so they flow as one telling.",
+      "cue": {
+       "re": "\\band (?:then|that|so|the|why|hid|stole)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "sacred_vocabulary",
+      "name": "Sacred Vocabulary",
+      "meaning": "Words of the sacred, heaven, holy and divine, set the speech apart.",
+      "try": "Use the words of the sacred: the heavens, the holy fire, the gods.",
+      "cue": {
+       "re": "\\b(?:gods?|goddess(?:es)?|trickster|spirits?|creator|heavens?|divine|sacred|immortals?|titans?|serpent|giant|giants|the great)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "return_to_now",
+      "name": "Return to Now",
+      "meaning": "The telling returns from the origin to the listener's own world, closing the circle.",
+      "try": "Bring the story back to the present, to what we still see and do.",
+      "cue": {
+       "re": "\\b(?:to this day|still|every winter|every year|today|now|ever since|forever)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "timelessness",
+      "name": "Timelessness",
+      "meaning": "Words of always and forever lift the events out of ordinary time.",
+      "try": "Say what has been so forever, and will always be.",
+      "cue": {
+       "re": "\\b(?:forever|always|for all time|eternal|never again|ever since|every)\\b",
+       "need": 1
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "origin",
+     "name": "Origin",
+     "cue": {
+      "re": "\\b(?:in the beginning|before (?:there was|the world)|long before|at first there was)\\b",
+      "need": 1
+     },
+     "move": "Begin before the world was as it is.",
+     "need": "needs an origin"
+    },
+    {
+     "id": "transgression",
+     "name": "Transgression",
+     "cue": {
+      "re": "\\b(?:stole|broke|disobeyed|tricked|trickster|forbidden|defied)\\b",
+      "need": 1
+     },
+     "move": "Let someone break the first order.",
+     "need": "needs a transgression"
+    },
+    {
+     "id": "transformation",
+     "name": "Transformation",
+     "cue": {
+      "re": "\\b(?:became|turned into|was changed|ever since|and so the)\\b",
+      "need": 1
+     },
+     "move": "Show how the world was changed.",
+     "need": "needs a transformation"
+    },
+    {
+     "id": "etiology",
+     "name": "Why It Is So",
+     "cue": {
+      "re": "\\b(?:that is why|this is why|and so (?:now|today)|to this day|ever since)\\b",
+      "need": 1
+     },
+     "move": "Say what it explains about the world now.",
+     "need": "needs its why",
+     "landing": true
+    }
+   ]
+  },
+  "cosmology": {
+   "sources": [
+    "Carl Sagan, Cosmos (the scientific account of the universe told as a story of origins)",
+    "Mircea Eliade, The Sacred and the Profane (cosmogony as the model of all creation)",
+    "Jerome Bruner, Actual Minds, Possible Worlds (paradigmatic and narrative modes of thought)",
+    "Brian Swimme and Thomas Berry, The Universe Story (the cosmos told as one narrative)",
+    "Walter Ong, Orality and Literacy (how spoken accounts organise knowledge)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to grasp an account of the order of the cosmos?",
+    "answer": "A listener of cosmology needs a sense of scale, the willingness to hold billions of years and vast distances as real. Bruner distinguishes the paradigmatic mode of explanation from the narrative mode, and cosmology asks the listener to hold both at once, the law and the unfolding. The listener appreciates it best by treating space, time and matter as characters in one long story, as Carl Sagan taught.",
+    "elements": [
+     {
+      "id": "cosmic_terms",
+      "name": "Cosmic Terms",
+      "meaning": "Words for the universe, stars, galaxies and atoms name the field of the account.",
+      "try": "Name the great bodies: the stars, the galaxies, the atoms.",
+      "cue": {
+       "re": "\\b(?:universe|cosmos|galax(?:y|ies)|stars?|planets?|atoms?|matter|energy|space|spacetime|time itself|light-years?|orbit|orbits|gravity|nebula|filaments?|voids?|big bang|black holes?)\\b",
+       "need": 3
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "scale_words",
+      "name": "Scale",
+      "meaning": "Words of vastness and smallness give the listener a sense of proportion.",
+      "try": "Give a sense of scale, how vast or how small.",
+      "cue": {
+       "re": "\\b(?:vast|billions?|millions?|trillions?|immense|infinite|tiny|smallest|largest|entire|whole|all of|everything|every)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "quantities",
+      "name": "Quantities",
+      "meaning": "Numbers and measures ground the vastness in reckoning.",
+      "try": "Give one number or measure to hold the scale.",
+      "cue": {
+       "signal": "numbers",
+       "at": 0.4
+      },
+      "weight": 0.7
+     },
+     {
+      "id": "origin_state",
+      "name": "The First State",
+      "meaning": "The account names the state from which everything began.",
+      "try": "Describe the first state of everything, before anything formed.",
+      "cue": {
+       "re": "\\b(?:began|beginning|first|at first|origin|in a (?:hot|dense|single)|before (?:there|anything)|the start)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the order of the world in a cosmology?",
+    "answer": "The speaker must know the sequence and the law: what formed from what, and what governs the whole. Eliade shows that every cosmogony is a model of order emerging from formlessness, and the scientific account keeps that same arc from a hot dense state to galaxies. The meaning is delivered when the speaker places the listener inside the order, so that space and time become characters in the story itself.",
+    "elements": [
+     {
+      "id": "process",
+      "name": "Unfolding Process",
+      "meaning": "Verbs of expanding, cooling and forming tell how the order emerged.",
+      "try": "Tell how each stage grew out of the one before: cooled, formed, gathered.",
+      "cue": {
+       "re": "\\b(?:began|begins|expanding|expanded|cooled|cooling|formed|forming|gathered|collapsed|evolved|unfolding|unfolds|emerged|ever since|then|as it)\\b",
+       "need": 3
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "sequence",
+      "name": "Sequence of Ages",
+      "meaning": "The stages arrive in order, then stars, then galaxies.",
+      "try": "Order the stages: first this, then this, then that.",
+      "cue": {
+       "re": "\\b(?:then|first|after|next|later|ever since|until|as it)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "governing_order",
+      "name": "Governing Order",
+      "meaning": "Laws and structures explain why the whole holds together.",
+      "try": "Name the law or structure that holds it all together.",
+      "cue": {
+       "re": "\\b(?:laws?|structure|order|pattern|part of|made of|built from|consists? of|governs?|cycle|cycles|hierarchy|levels?|layers?)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "present_law",
+      "name": "Present Law",
+      "meaning": "Present tense statements describe how the cosmos is now and always.",
+      "try": "State one thing that is true of the universe now, in the present tense.",
+      "cue": {
+       "signal": "present",
+       "at": 0.3
+      },
+      "weight": 0.7
+     },
+     {
+      "id": "reframing",
+      "name": "The Reframe",
+      "meaning": "A closing turn changes how the listener sees space, time or self.",
+      "try": "End with a turn that changes how we see our own place in it.",
+      "cue": {
+       "re": "\\b(?:themselves|itself|not a stage|part of (?:this|the)|we are|made of|is itself|are themselves)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of telling the cosmos most draw a listener into wonder?",
+    "answer": "Cosmology absorbs through scale, and Carl Sagan held audiences by moving from the vast to the intimate and back. A steady, unhurried unfolding of stages works like Erickson's pacing and leading, carrying the listener step by step beyond ordinary sense. Images of light, filaments and voids give the mind something to see in the dark, and the closing turn toward ourselves turns wonder into belonging.",
+    "elements": [
+     {
+      "id": "vastness",
+      "name": "Vastness",
+      "meaning": "Images of immense space and time stretch the listener's attention outward.",
+      "try": "Pause on the vastness, the filaments and the voids between them.",
+      "cue": {
+       "re": "\\b(?:vast|immense|infinite|endless|billions?|light-years?|filaments?|voids?|across (?:the|all)|the whole)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "stepwise_unfolding",
+      "name": "Stepwise Unfolding",
+      "meaning": "Stages arrive one after another in a calm, leading rhythm.",
+      "try": "Let each stage arrive in turn, slowly, one after another.",
+      "cue": {
+       "re": "\\b(?:then|and then|as it|ever since|until)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "celestial_imagery",
+      "name": "Celestial Imagery",
+      "meaning": "Stars, light and galaxies give the listener something to see in the dark.",
+      "try": "Give one image the listener can see: stars gathering, light crossing the dark.",
+      "cue": {
+       "re": "\\b(?:stars?|light|galax(?:y|ies)|glow|dark|darkness|sun|moon|planets?)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "awe_turn",
+      "name": "The Turn to Wonder",
+      "meaning": "The account turns to wonder or to our own place within it.",
+      "try": "Turn toward wonder, and toward where we stand within all of it.",
+      "cue": {
+       "re": "\\b(?:themselves|ourselves|we are|wonder|mystery|astonishing|beautiful|strange|deep|deeper|beyond|edge of|before time|not a stage|imagine)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "long_breath",
+      "name": "Long Breath",
+      "meaning": "Long sentences carry the listener across ages in a single breath.",
+      "try": "Let one long sentence carry the listener across the ages.",
+      "cue": {
+       "signal": "long",
+       "at": 0.4
+      },
+      "weight": 0.6
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "scale",
+     "name": "Scale",
+     "cue": {
+      "re": "\\b(?:universe|cosmos|billions?|light[- ]years?|vast|everything)\\b",
+      "need": 1
+     },
+     "move": "Set the scale of everything.",
+     "need": "needs a scale"
+    },
+    {
+     "id": "beginning",
+     "name": "Beginning",
+     "cue": {
+      "re": "\\b(?:began|in the beginning|first|origin|big bang|before time)\\b",
+      "need": 1
+     },
+     "move": "Say how it began.",
+     "need": "needs a beginning"
+    },
+    {
+     "id": "process",
+     "name": "Process",
+     "cue": {
+      "re": "\\b(?:expand\\w*|cool\\w*|formed|gathered|collapsed|orbit\\w*|then)\\b",
+      "need": 2
+     },
+     "move": "Follow one process forward.",
+     "need": "needs a process"
+    },
+    {
+     "id": "place_in_it",
+     "name": "Our Place",
+     "cue": {
+      "re": "\\b(?:we are|us|our|ourselves|part of (?:it|this)|not a stage)\\b",
+      "need": 1
+     },
+     "move": "Place us inside it.",
+     "need": "needs our place",
+     "landing": true
+    }
+   ]
+  },
+  "mystery": {
+   "sources": [
+    "Tzvetan Todorov, The Typology of Detective Fiction (the two stories: the crime and its investigation)",
+    "Roland Barthes, S/Z (the hermeneutic code of questions, delays and answers)",
+    "William Labov, Language in the Inner City (complicating action and evaluation in told narrative)",
+    "Peter Brooks, Reading for the Plot (desire for the ending as the engine of narrative)",
+    "Milton Erickson, as recorded in Haley's Uncommon Therapy (confusion and suspense as focusing attention)"
+   ],
+   "listener": {
+    "question": "What must a listener hold in mind to follow a mystery?",
+    "answer": "A listener of a mystery holds two stories at once, as Todorov describes: the hidden story of what happened and the told story of finding it out. The listener must remember each clue, each suspect and each contradiction, because the pleasure lies in reasoning toward the answer alongside the teller. Barthes calls this the hermeneutic code, a question posed and its answer held back.",
+    "elements": [
+     {
+      "id": "the_question",
+      "name": "The Open Question",
+      "meaning": "A question of who, why or how is posed and left open.",
+      "try": "Pose the question plainly: who did it, and why?",
+      "cue": {
+       "re": "\\b(?:who|why|how could|what had|whoever|someone had|somebody had|someone|somebody|nobody|no one knew)\\b",
+       "need": 2,
+       "signal": "question",
+       "at": 0.3
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "clues",
+      "name": "Clues",
+      "meaning": "Concrete objects and traces are given for the listener to weigh.",
+      "try": "Place one concrete clue before the listener, an object or a trace.",
+      "cue": {
+       "re": "\\b(?:clues?|key|keys|locked|drawer|door|footprints?|letter|note|stain|missing|vanished|disappeared|found|evidence|trace)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "suspects",
+      "name": "Suspects",
+      "meaning": "People with alibis, motives or secrets are set before the listener.",
+      "try": "Introduce a suspect and what they claim.",
+      "cue": {
+       "re": "\\b(?:suspects?|alibi|alibis|butler|maid|witness(?:es)?|detective|inspector|stranger|guilty|innocent|motive|culprit|accused)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "hidden_past",
+      "name": "The Hidden Past",
+      "meaning": "What already happened is told in the past perfect, as a story to be reconstructed.",
+      "try": "Tell what had already happened before the discovery.",
+      "cue": {
+       "re": "\\b(?:had been|had \\w+ed|was found|were found|had moved|had taken|had gone)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the withheld answer of a mystery?",
+    "answer": "The speaker must know the answer fully and decide what to withhold, since Barthes shows suspense lives in the delay between the question and its resolution. Each clue must be fair, so the solution feels both surprising and inevitable when it arrives. The speaker places contradictions deliberately, an impossible locked room or an alibi that holds, because these are what turn the listener into an investigator.",
+    "elements": [
+     {
+      "id": "contradiction",
+      "name": "The Contradiction",
+      "meaning": "An impossibility or a but sharpens the puzzle.",
+      "try": "Set one fact against another with but or yet, so the puzzle tightens.",
+      "cue": {
+       "re": "\\b(?:but|yet|and yet|although|though|impossible|could not have|couldn't have|from the inside|no way|unless|except)\\b",
+       "need": 2
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "withholding",
+      "name": "Withholding",
+      "meaning": "Someone and something stand in for the answer the speaker holds back.",
+      "try": "Say someone did it, and hold back who.",
+      "cue": {
+       "re": "\\b(?:someone|somebody|something|whoever|no one knew|nobody knew|a figure|the stranger)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "investigation",
+      "name": "The Investigation",
+      "meaning": "The teller seeks, finds out, searches and discovers.",
+      "try": "Say what must be found out next, and how.",
+      "cue": {
+       "re": "\\b(?:find out|figure out|needed to find|had to know|wondered|discover|uncover|solve|search(?:ed)?|investigat\\w*|reveal\\w*|truth)\\b",
+       "need": 1
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "fair_clue",
+      "name": "A Fair Clue",
+      "meaning": "Each clue is concrete and checkable by the listener.",
+      "try": "Describe exactly where the clue was found and what state it was in.",
+      "cue": {
+       "re": "\\b(?:in the|on the|under the|behind the|from the inside|locked|open|closed|broken|moved)\\b",
+       "need": 2
+      },
+      "weight": 0.8
+     },
+     {
+      "id": "suspect_alibi",
+      "name": "Alibi and Motive",
+      "meaning": "The speaker gives each suspect an account that the answer must overturn.",
+      "try": "Give each suspect an alibi or a motive.",
+      "cue": {
+       "re": "\\b(?:alibi|motive|was asleep|was away|had been (?:in|at|away)|claimed|swore|insisted)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of telling a mystery most hold a listener in suspense?",
+    "answer": "A mystery absorbs through suspense, and Peter Brooks calls the desire for the ending the engine of every plot. Erickson used confusion to narrow attention, and a locked room or a contradiction does the same, so the listener leans in to resolve it. Direct questions pull the listener into the search, and the shared we of the investigators makes them a partner in it.",
+    "elements": [
+     {
+      "id": "direct_questions",
+      "name": "Questions Aloud",
+      "meaning": "Spoken questions draw the listener into the search.",
+      "try": "Ask the question aloud, as though the listener might answer.",
+      "cue": {
+       "signal": "question",
+       "at": 0.3
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "impossibility",
+      "name": "The Impossible",
+      "meaning": "A locked room or a vanished object narrows attention to the puzzle.",
+      "try": "Make one fact seem impossible, a door locked from the inside.",
+      "cue": {
+       "re": "\\b(?:impossible|locked|from the inside|vanished|disappeared|without a trace|no way in|could not have|couldn't have)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "shared_search",
+      "name": "Shared Search",
+      "meaning": "We and us make the listener a partner in the investigation.",
+      "try": "Speak as we who are searching together.",
+      "cue": {
+       "re": "\\b(?:we needed|we had to|we must|we found|let us|let's|we would|we still)\\b",
+       "need": 1,
+       "signal": "we",
+       "at": 0.4
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "suspense_marker",
+      "name": "And Yet",
+      "meaning": "And yet, but and still delay the answer and stretch the tension.",
+      "try": "Hold the answer back once more with and yet.",
+      "cue": {
+       "re": "\\b(?:and yet|yet|but|still|until|no one|nobody)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "dark_detail",
+      "name": "Dark Detail",
+      "meaning": "Shadows, silence and night set the atmosphere of unease.",
+      "try": "Add one shadow, silence or night sound to the scene.",
+      "cue": {
+       "re": "\\b(?:dark|darkness|shadow|shadows|night|silent|silence|creak|cold|blood|scream|missing)\\b",
+       "need": 1
+      },
+      "weight": 0.7
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "puzzle",
+     "name": "Puzzle",
+     "cue": {
+      "re": "\\b(?:who (?:could|had|did|took)|why (?:had|would)|how could|locked|missing|strange)\\b",
+      "need": 1
+     },
+     "move": "Pose the puzzle plainly.",
+     "need": "needs a puzzle"
+    },
+    {
+     "id": "clues",
+     "name": "Clues",
+     "cue": {
+      "re": "\\b(?:clue|found|noticed|footprints?|the key|evidence|alibi)\\b",
+      "need": 1
+     },
+     "move": "Lay down a clue.",
+     "need": "needs clues"
+    },
+    {
+     "id": "suspicion",
+     "name": "Suspicion",
+     "cue": {
+      "re": "\\b(?:suspect|but (?:the|who)|and yet|someone had|could it be)\\b",
+      "need": 1
+     },
+     "move": "Cast suspicion somewhere.",
+     "need": "needs suspicion"
+    },
+    {
+     "id": "reveal",
+     "name": "Reveal",
+     "cue": {
+      "re": "\\b(?:it was|the answer|the truth|revealed|so it was|had been all along)\\b",
+      "need": 1
+     },
+     "move": "Reveal the answer.",
+     "need": "needs a reveal",
+     "landing": true
+    }
+   ]
+  },
+  "argument": {
+   "sources": [
+    "Aristotle, Rhetoric (ethos, pathos, logos and the enthymeme)",
+    "Stephen Toulmin, The Uses of Argument (claim, data, warrant, backing, rebuttal)",
+    "Chaim Perelman and Lucie Olbrechts-Tyteca, The New Rhetoric (argument as adherence of an audience)",
+    "Cicero, De Oratore (the parts of an oration and the orator's duties)",
+    "Walter Ong, Orality and Literacy (the agonistic tone of oral thought)"
+   ],
+   "listener": {
+    "question": "What must a listener bring to weigh a spoken argument?",
+    "answer": "A listener of an argument needs to know what is at stake and what is being claimed, because Perelman shows an argument aims at the adherence of a particular audience. The listener weighs the claim against the evidence, so the listener needs the claim stated early and plainly. Aristotle notes that the enthymeme leaves a premise for the audience to supply, so the listener brings shared values for the argument to stand on.",
+    "elements": [
+     {
+      "id": "stated_claim",
+      "name": "A Stated Claim",
+      "meaning": "The point is announced plainly, so the listener knows what to weigh.",
+      "try": "State your claim in one plain sentence near the start.",
+      "cue": {
+       "re": "\\b(?:the point (?:of all of this|is)|my claim|i claim|i argue|i would argue|the case|we should|we must|should|ought to|it is (?:clear|true|wrong|right) that|simple)\\b",
+       "need": 1
+      },
+      "weight": 1.5
+     },
+     {
+      "id": "stakes",
+      "name": "The Stakes",
+      "meaning": "The listener hears what is gained or lost, in value, cost or fairness.",
+      "try": "Say what is gained or lost if the listener agrees.",
+      "cue": {
+       "re": "\\b(?:more|less|better|worse|value|cost|costs|benefit|benefits|worth|return|returns|fair|unfair|just|right|wrong)\\b",
+       "need": 2
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "evidence_offered",
+      "name": "Evidence Offered",
+      "meaning": "Facts, figures or examples are put forward for the listener to judge.",
+      "try": "Offer one fact, figure or example the listener can judge.",
+      "cue": {
+       "re": "\\b(?:the evidence|evidence|data|studies|study|research|statistics?|percent|every dollar|for example|for instance|in fact|shows?|proves?|demonstrates?)\\b",
+       "need": 1,
+       "signal": "numbers",
+       "at": 0.4
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "shared_value",
+      "name": "Shared Value",
+      "meaning": "We and should appeal to values the speaker and listener hold in common.",
+      "try": "Appeal to something we all value, using we.",
+      "cue": {
+       "signal": "we",
+       "at": 0.3
+      },
+      "weight": 0.8
+     }
+    ]
+   },
+   "speaker": {
+    "question": "What must the speaker know to deliver the claim of an argument?",
+    "answer": "The speaker must know the claim, the data and the warrant that links them, which Stephen Toulmin set out as the layout of every argument. Anticipating the rebuttal shows the strength of the claim, and Aristotle counts such fairness as part of ethos. The meaning lands when the speaker closes by drawing the conclusion explicitly, with therefore, so the listener carries the claim away.",
+    "elements": [
+     {
+      "id": "warrant",
+      "name": "The Warrant",
+      "meaning": "Because, therefore and it follows tie the evidence to the claim.",
+      "try": "Link your evidence to your claim with because or therefore.",
+      "cue": {
+       "re": "\\b(?:because|since|therefore|thus|so we|it follows|which means|that means|hence|consequently|as a result)\\b",
+       "need": 1
+      },
+      "weight": 1.4
+     },
+     {
+      "id": "data",
+      "name": "Data",
+      "meaning": "Specific evidence, figures and studies support the claim.",
+      "try": "Add one specific figure or study.",
+      "cue": {
+       "re": "\\b(?:the evidence|evidence|data|studies|study|research|statistics?|percent|every dollar|for example|for instance|in fact|shows?|proves?|demonstrates?)\\b",
+       "need": 2
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "rebuttal",
+      "name": "The Rebuttal",
+      "meaning": "The speaker names the opposing case and answers it.",
+      "try": "Name the strongest objection and answer it.",
+      "cue": {
+       "re": "\\b(?:the case against|critics?|opponents?|some say|some argue|objection|does not hold|doesn't hold|on the other hand|however|admittedly|granted|they claim)\\b",
+       "need": 1
+      },
+      "weight": 1.3
+     },
+     {
+      "id": "conclusion",
+      "name": "The Conclusion",
+      "meaning": "The speaker draws the conclusion out loud.",
+      "try": "Close by saying what therefore follows, and what we should do.",
+      "cue": {
+       "re": "\\b(?:in conclusion|to conclude|in short|in sum|the answer is|what it comes down to|therefore|so we should|that is why we)\\b",
+       "need": 1
+      },
+      "weight": 1.2
+     },
+     {
+      "id": "call_to_act",
+      "name": "The Call",
+      "meaning": "Should and must turn the claim into a course of action.",
+      "try": "Say plainly what should be done.",
+      "cue": {
+       "re": "\\b(?:we should|we must|should|must|ought to|let us|let's)\\b",
+       "need": 1
+      },
+      "weight": 0.9
+     }
+    ]
+   },
+   "absorption": {
+    "question": "Which elements of making an argument most draw a listener in?",
+    "answer": "Argument absorbs through momentum, and Ong notes that oral thought is agonistic, so a clear opponent and a clear stake hold attention. Short, declarative sentences and parallel structures give the rhythm of the classical orator, and Cicero's repetitions build toward a peroration. The feeling of a case closing, step by step, works like Erickson's pacing and leading: each agreed point carries the listener to the next.",
+    "elements": [
+     {
+      "id": "declarative_punch",
+      "name": "Declarative Punch",
+      "meaning": "Short, plain sentences land each point with force.",
+      "try": "Say the point again in a short, plain sentence.",
+      "cue": {
+       "re": "\\b(?:is simple|is clear|the point|plainly|simply|in short)\\b",
+       "need": 1,
+       "signal": "short",
+       "at": 0.4
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "agonistic_frame",
+      "name": "The Opponent",
+      "meaning": "A named opposing case gives the argument a contest to win.",
+      "try": "Name who disagrees and why they are wrong.",
+      "cue": {
+       "re": "\\b(?:the case against|critics?|opponents?|some say|some argue|objection|does not hold|doesn't hold|on the other hand|however|admittedly|granted|they claim)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     },
+     {
+      "id": "stepwise_case",
+      "name": "Stepwise Case",
+      "meaning": "Each step follows from the last until the conclusion feels inevitable.",
+      "try": "Build the case in steps, each one following from the last.",
+      "cue": {
+       "re": "\\b(?:first|second|third|then|and so|therefore|it follows|which means|finally)\\b",
+       "need": 2
+      },
+      "weight": 1.1
+     },
+     {
+      "id": "parallelism",
+      "name": "Parallelism",
+      "meaning": "Repeated structures build rhythm and weight.",
+      "try": "Repeat a sentence pattern three times, changing only the end.",
+      "cue": {
+       "signal": "anaphora",
+       "at": 0.4
+      },
+      "weight": 0.8
+     },
+     {
+      "id": "emphatic_certainty",
+      "name": "Certainty",
+      "meaning": "Words of certainty, clear and simple, carry conviction.",
+      "try": "Speak with certainty: say what is clear and what does not hold.",
+      "cue": {
+       "re": "\\b(?:clear|clearly|simple|certain|certainly|undeniable|does not hold|no doubt|obvious|plain)\\b",
+       "need": 1
+      },
+      "weight": 1.0
+     }
+    ]
+   },
+   "arc": [
+    {
+     "id": "claim",
+     "name": "Claim",
+     "cue": {
+      "re": "\\b(?:my claim|i (?:argue|believe|contend)|the point (?:of all of this )?is|we should|we must)\\b",
+      "need": 1
+     },
+     "move": "State the claim in one sentence.",
+     "need": "needs a claim"
+    },
+    {
+     "id": "grounds",
+     "name": "Grounds",
+     "cue": {
+      "re": "\\b(?:because|the evidence|for example|studies|every|since)\\b",
+      "need": 1
+     },
+     "move": "Give the grounds for it.",
+     "need": "needs grounds"
+    },
+    {
+     "id": "objection",
+     "name": "Objection",
+     "cue": {
+      "re": "\\b(?:critics|some (?:say|argue)|one might|of course|granted|the case against)\\b",
+      "need": 1
+     },
+     "move": "Meet the strongest objection.",
+     "need": "needs an objection"
+    },
+    {
+     "id": "conclusion",
+     "name": "Conclusion",
+     "cue": {
+      "re": "\\b(?:therefore|so we|in conclusion|it follows|does not hold|thus)\\b",
+      "need": 1
+     },
+     "move": "Draw the conclusion.",
+     "need": "needs a conclusion",
+     "landing": true
+    }
+   ]
+  }
+ }
+}

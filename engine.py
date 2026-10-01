@@ -5,6 +5,7 @@ import numpy as np
 from catalog import FORMS as CATALOG
 from forms import KINDS, SIGNALS
 from signals import signals
+import depth, steer
 STOP=set('a an the this that these those is are was were be been being to of and or in on at for with as i you he she it we they my your our their me us them but if then so from by have has had do does did will would can could should just very all some about into how what when where which who its let not'.split())
 def words(text): return re.findall(r"[\w]+(?:['’][\w]+)?",text.lower())
 def keywords(text): return [w for w in words(text) if w not in STOP and len(w)>2]
@@ -112,7 +113,7 @@ class Engine:
   return v,s,acc/wsum,vec,fired
  def reset(self):
   self.state={'session':str(uuid.uuid4()),'started':time.time(),'revision':0,'status':'Ready for speech.','form':'thinking aloud','world':'scrolls','scores':[], 'topics':[],'events':[],'words':{},'active_topic':None,'speaker_words':{'A':0,'B':0},'speaker':'A','conclusion_at':0,'radius':.85,'gate_at':0,'gate_from':'','error':'','model':'MiniLM, nearest examples over the last minute','source':'Ready','processing':False,'map':{'forms':self.form_xy,'ideas':[]}}
-  self.settled=None
+  self.settled=None;self.ledger=steer.Ledger(self.state['session'])
   self.vectors={};self.phrase_scores={};self.phrase_vecs={};self.phrase_heat={};self.last_match={};self.candidate=None;self.candidate_count=0;self.seen=set()
  def ingest(self,text,speaker='A',source='Typed',event_id=None,start=None,end=None,form_override=None):
   text=text.strip()
@@ -164,6 +165,12 @@ class Engine:
           'doubt':round(float(doubt),3),'held_share':round(held_share,3),
           'own':{k:round(float(v),3) for k,v in zip(self.labels,own)},'weights':self.last_weights,
           'parts':self.parts(ranked),'signals':{k:round(float(v),3) for k,v in self.last_parts['sg'].items()}}}
+  # the depth: the three lenses of the kind in front (and of any kind near it), over the same window, by algorithm alone
+  try:event['why']['depth']=depth.reading([(x['text'],x['w']) for x in self.last_weights],depth.near_kinds(new,settled))
+  except Exception as ex:event['why']['depth']=None;event['why']['depth_error']=str(ex)[:120]
+  # the threads: every idea a thread, judged within its form's arc, with who spoke and asked what, and the listener's hold
+  try:event['why']['steer']=self.ledger.add(event,event['why'].get('depth'),topic);self.state['steer']=event['why']['steer']
+  except Exception as ex:event['why']['steer']=None;event['why']['steer_error']=str(ex)[:120]
   topic['events'].append(event_id);topic['words']+=len(words(text));topic['updated']=now
   self.state['events'].append(event)
   self.state['words']=dict(Counter(self.state['words'])+Counter(words(text)))
@@ -229,7 +236,7 @@ class Engine:
  def read_passage(self,text):
   """any stretch of text, read on its own: split into phrases and heard one after another, as if spoken,
   without touching the live session"""
-  keep=(self.state,self.vectors,self.phrase_scores,self.phrase_vecs,self.phrase_heat,self.last_match,self.candidate,self.candidate_count,self.seen)
+  keep=(self.state,self.vectors,self.phrase_scores,self.phrase_vecs,self.phrase_heat,self.last_match,self.candidate,self.candidate_count,self.seen,self.ledger,self.settled)
   self.reset();events=[]
   try:
    parts=[x.strip() for x in re.split(r'(?<=[.!?;])\s+|\n+',text) if x.strip()]
@@ -241,9 +248,24 @@ class Engine:
    for x in phrases[:80]:
     e=self.ingest(x,'A','Section')
     if e:events.append(e)
-   return {'events':events,'topics':[{'id':t['id'],'title':t['title'],'words':t['words'],'returns':t['returns'],'n':len(t['events'])} for t in self.state['topics']]}
+   return {'events':events,'topics':[{'id':t['id'],'title':t['title'],'words':t['words'],'returns':t['returns'],'n':len(t['events'])} for t in self.state['topics']],
+           'depth':self.passage_depth(text,events)}
   finally:
-   (self.state,self.vectors,self.phrase_scores,self.phrase_vecs,self.phrase_heat,self.last_match,self.candidate,self.candidate_count,self.seen)=keep
+   (self.state,self.vectors,self.phrase_scores,self.phrase_vecs,self.phrase_heat,self.last_match,self.candidate,self.candidate_count,self.seen,self.ledger,self.settled)=keep
+ def passage_depth(self,text,events):
+  """the depth of a whole passage: its kinds weighed by words, as the cards weigh them, then the three lenses
+  of the kind in front, and of any kind within a tenth of it, over the passage read whole"""
+  prof=Counter();total=0
+  for e in events:
+   n=len(e['text'].split());total+=n
+   sc=sorted([x['similarity'] for x in e['why']['scores']])
+   floor=sc[-6] if len(sc)>=6 else sc[0];sh={x['form']:max(0,x['similarity']-floor) for x in e['why']['scores']};t=sum(sh.values()) or 1
+   for k,v in sh.items():prof[k]+=v/t*n
+  ranked=[(k,v/(total or 1)) for k,v in prof.most_common()]
+  if not ranked:return None
+  d=depth.passage(text,depth.near_kinds(ranked[0][0],ranked))
+  if d:d['profile']=[[k,round(v,3)] for k,v in ranked[:6]]
+  return d
  def reassign(self,event_id,topic_id):
   topic=next(t for t in self.state['topics'] if t['id']==topic_id)
   event=next(e for e in self.state['events'] if e['id']==event_id)

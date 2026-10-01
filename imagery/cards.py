@@ -18,6 +18,9 @@ from pathlib import Path
 import heavy
 
 ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))
+import depth, steer        # the three lenses on each kind of speech (depth.py, lenses.json, light/depth.js) and the threads (steer.py)
 CARDS = ROOT / 'runtime' / 'cards'
 SECTIONS = ROOT / 'runtime' / 'sections.jsonl'
 EASEL = 'http://127.0.0.1:9996'
@@ -104,9 +107,12 @@ def segments(phrases, most=12):
                        'from': seg[0].get('at'), 'to': seg[-1].get('at')})
     return result
 
-def jev_card(cfg, text, bank_hit=None, segs=None):
-    """four decisions about the whole recording, and the kind of every passage, all in one call"""
+def jev_card(cfg, text, bank_hit=None, segs=None, threads=None):
+    """four decisions about the whole recording, the kind and the three lenses of every passage, and for each
+    thread left open how it could have continued or closed, all in one call"""
     segs = segs or []
+    open_threads = [t for t in (threads or []) if t.get('state') != 'closed'][:6]
+    moves = steer.suggestions(open_threads)
     room = max(200, 7000 // max(1, len(segs))) if segs else 0
     state = ('\n\n'.join(f'Passage {i + 1}: ' + heavy.mask(s['text'])[:room] for i, s in enumerate(segs))) if segs else heavy.mask(text)
     qs = {
@@ -117,6 +123,10 @@ def jev_card(cfg, text, bank_hit=None, segs=None):
     }
     for i in range(len(segs)):
         qs[f'p{i + 1}'] = {'type': 'choice', 'instructions': f'What kind of speech is Passage {i + 1}?', 'criteria': heavy.KIND_CRITERIA}
+        qs.update(lens_questions(f'Passage {i + 1}', segs[i].get('classifier'), f'p{i + 1}_'))
+    for i, t in enumerate(open_threads):
+        qs[f't{i + 1}'] = {'type': 'choice', 'instructions': f'The thread "{t.get("title")}" ({t.get("kind")}) was left {t.get("state")}, beginning "{t.get("first", "")}". How could it best have continued or closed?',
+                           'criteria': moves.get(t['id']) or {'rest': 'Let it rest.'}}
     if bank_hit:
         qs['reuse'] = {'type': 'noul', 'instructions': 'A saved picture shows: ' + ', '.join(bank_hit['keywords']) +
                        '. Would that picture fit this recording well?'}
@@ -126,9 +136,87 @@ def jev_card(cfg, text, bank_hit=None, segs=None):
            'style_confidence': st.get('confidence'), 'unsafe': a.get('unsafe', {}).get('noul', 0)}
     if bank_hit:
         out['reuse'] = a.get('reuse', {}).get('noul', 0)
-    out['segments'] = [{**sg, 'jev': a.get(f'p{i + 1}', {}).get('choice'), 'confidence': a.get(f'p{i + 1}', {}).get('confidence')}
-                       for i, sg in enumerate(segs)]
+    out['segments'] = [{**sg, 'jev': a.get(f'p{i + 1}', {}).get('choice'), 'confidence': a.get(f'p{i + 1}', {}).get('confidence'),
+                        'depth': lens_answers(a, f'p{i + 1}_')} for i, sg in enumerate(segs)]
+    out['threads'] = {t['id']: {'move': (moves.get(t['id']) or {}).get((a.get(f't{i + 1}') or {}).get('choice')), 'choice': (a.get(f't{i + 1}') or {}).get('choice'),
+                                'confidence': (a.get(f't{i + 1}') or {}).get('confidence')} for i, t in enumerate(open_threads) if a.get(f't{i + 1}')}
     return out
+
+# ── depth: the three lenses, asked of Jev once the speaking is over ───────────────
+LENS_SCALE = {
+    'listener': ('How much must a listener already know or bring to appreciate it?', ['needs much context', 'some', 'self-contained']),
+    'speaker': ('How clearly does the speaker deliver its meaning?', ['meaning unclear', 'implied', 'clearly delivered']),
+    'absorption': ('How far does it draw a listener in?', ['alert', 'drawn in', 'entranced']),
+}
+
+def lens_questions(name, kind, prefix):
+    """three scores, one per lens, and a choice of the strongest absorption element, for one passage heard as one kind"""
+    spec = depth.LENSES['kinds'].get(kind)
+    if not spec:
+        return {}
+    qs = {}
+    for lens, (ask, scale) in LENS_SCALE.items():
+        qs[prefix + lens] = {'type': 'score', 'instructions': f'{name} is heard as {kind}. {spec[lens]["question"]} {ask}', 'criteria': scale}
+    qs[prefix + 'element'] = {'type': 'choice', 'instructions': f'{name} is heard as {kind}. Which of these most draws the listener in?',
+                              'criteria': {e['id']: e['name'] + ': ' + e['meaning'] for e in spec['absorption']['elements']}}
+    return qs
+
+def lens_answers(a, prefix):
+    """Jev's answers to lens_questions, each lens 0..1"""
+    out = {}
+    for lens, (_, scale) in LENS_SCALE.items():
+        got = a.get(prefix + lens) or {}
+        if 'score' in got:
+            out[lens] = round(float(got['score']) / (len(scale) - 1), 3)
+            out[lens + '_confidence'] = got.get('confidence')
+    el = a.get(prefix + 'element') or {}
+    if el.get('choice'):
+        out['element'] = el['choice']; out['element_confidence'] = el.get('confidence')
+    return out or None
+
+def jev_passage(cfg, text, kind):
+    """the same lens questions for one passage a person selected, after the speaking is over"""
+    if kind not in depth.LENSES['kinds']:
+        raise ValueError('no lenses for ' + str(kind))
+    a = heavy.typesafe(cfg, heavy.mask(text), lens_questions('This passage', kind, ''), timeout=40, limit=6000)
+    return lens_answers(a, '')
+
+def depth_record(phrases, text, card):
+    """depth.json: the whole recording read through the lenses of its kind, each phrase's meters over time, and
+    every passage Jev will be asked about, each with the algorithm's elements and the words that showed them"""
+    profile = [tuple(x) for x in (card.get('profile') or [])]
+    kinds = depth.near_kinds(profile[0][0], profile) if profile else [card.get('kind')]
+    whole = depth.passage(text, kinds)
+    segs = []
+    for sg in segments(phrases):
+        d = depth.passage(sg['text'], [sg['classifier']]) if sg.get('classifier') else None
+        segs.append({'from': sg['from'], 'to': sg['to'], 'kind': sg['classifier'], 'words': len(sg['text'].split()),
+                     'algorithm': depth.summary(d), 'elements': {l: [{'id': e['id'], 'score': e['score'], 'evidence': e['evidence']}
+                                                                    for e in d['lenses'][l]['elements'] if e['score'] > 0] for l in depth.ORDER} if d else None})
+    return {'kind': whole and whole['kind'], 'algorithm': whole, 'over_time': depth.over_time(phrases), 'segments': segs, 'jev': None,
+            'note': 'The algorithm read every element from the words. Jev is asked only after the recording stops.'}
+
+def _depth_merge(folder, j):
+    """Jev's lens answers joined to the algorithm's reading in depth.json"""
+    try:
+        rec = json.loads((folder / 'depth.json').read_text())
+    except (OSError, ValueError):
+        return None
+    if j and not j.get('error') and not j.get('skipped'):
+        for sg, js in zip(rec.get('segments', []), j.get('segments') or []):
+            sg['jev'] = js.get('depth')
+        got = [sg['jev'] for sg in rec['segments'] if sg.get('jev')]
+        if got:
+            mean = {l: round(sum(g.get(l, 0) for g in got) / len(got), 3) for l in depth.ORDER if any(l in g for g in got)}
+            elems = Counter(g['element'] for g in got if g.get('element'))
+            rec['jev'] = {**mean, 'element': elems.most_common(1)[0][0] if elems else None, 'passages': len(got)}
+            rec['note'] = 'The algorithm read every element from the words; Jev answered the three lens questions for each passage after the recording stopped.'
+    elif j and j.get('skipped'):
+        rec['note'] = 'The algorithm read every element from the words. Jev was not asked: ' + j['skipped'] + '.'
+    elif j and j.get('error'):
+        rec['note'] = 'The algorithm read every element from the words. Jev did not answer: ' + j['error']
+    (folder / 'depth.json').write_text(json.dumps(rec, indent=1))
+    return rec
 
 # ── the aim: a classifier good enough that Jev is no longer needed ───────────────
 AGREEMENT = ROOT / 'runtime' / 'agreement.json'
@@ -219,6 +307,8 @@ grown.jpg         the image your talk grew
 painted.png       the picture the easel painted from it, on this Mac
 phrases.json      every phrase with the classifier's full reasoning
 reading.json      the reading as data: the whole recording, each idea's section, each fifty-word window
+depth.json        the three lenses (listener, speaker, absorption): the elements the algorithm found, with their words, and Jev's answers
+threads.json      every idea as a thread: its state, its stage in its form's arc, and how each open one could have continued or closed
 card.json         the card as data
 
 Sections holds the passages you selected in a transcript and classified on their own.
@@ -281,6 +371,40 @@ def _summary(folder):
             L.append(f"  A saved picture was offered; Jev gave it {pct(j['reuse'])} to fit.")
     else:
         L.append('  No Jev key is saved, so the style came from the kind of speech.')
+    try:
+        dr = json.loads((folder / 'depth.json').read_text())
+    except (OSError, ValueError):
+        dr = {}
+    if dr.get('algorithm'):
+        a = dr['algorithm']; spec = depth.LENSES['kinds'].get(a['kind'], {})
+        L += ['', 'DEPTH', f"  Read through the three lenses of {a['kind']}."]
+        for lens in depth.ORDER:
+            got = a['lenses'][lens]
+            found = [e for e in got['elements'] if e['found']]
+            L.append(f"  {lens.capitalize():<11} {pct(got['meter'])}" + (f"   Jev {pct(dr['jev'][lens])}" if dr.get('jev') and lens in dr['jev'] else ''))
+            L.append(f"    {spec.get(lens, {}).get('question', '')}")
+            L.append('    Found: ' + ('; '.join(f"{e['name']} ({', '.join(e['evidence'][:3])})" for e in found) if found else 'none yet') + '.')
+        if a.get('next'):
+            L.append(f"  To try next: {a['next']['try'] or a['next']['meaning']}")
+        if dr.get('jev') and dr['jev'].get('element'):
+            el = next((e for e in spec.get('absorption', {}).get('elements', []) if e['id'] == dr['jev']['element']), None)
+            if el:
+                L.append(f"  Jev hears {el['name'].lower()} as what most draws a listener in.")
+        if dr.get('note'):
+            L.append('  ' + dr['note'])
+    try:
+        th = json.loads((folder / 'threads.json').read_text()).get('threads') or []
+    except (OSError, ValueError):
+        th = []
+    if th:
+        L += ['', 'THREADS']
+        for t in th:
+            sug = t.get('suggestion') or {}
+            L.append(f"  {t.get('title') or 'a thread'}: {t.get('state')}" + (f", at {t.get('stage')}" if t.get('stage') else '') + (f", {t.get('need')}" if t.get('need') else '') + '.')
+            if sug.get('move'):
+                L.append(f"    {'Jev' if sug.get('by') == 'Jev' else 'The algorithm'} suggests: {sug['move']}")
+            if t.get('link'):
+                L.append(f"    Picked up from {t['link'].get('date')}: \"{t['link'].get('title')}\".")
     L += ['', 'THE ART', f"  {card.get('art', '')}", f"  Style: {card.get('style', '')}", f"  Words: {', '.join(card.get('words') or [])}", f"  Prompt: {card.get('prompt', '')}"]
     (folder / 'reading.txt').write_text('\n'.join(L) + '\n')
 
@@ -320,7 +444,18 @@ def _name(card):
         ident = f'{base} ({n})'; n += 1
     return ident
 
-def make(cfg, card, text, abstract=None, phrases=None, audio=None, since=None):
+def threads_record(threads):
+    """threads.json: every thread of the recording, its state and stage, and for each one left open the move the
+    algorithm sees next (Jev's choice is added after the stop call)"""
+    out = []
+    for t in threads or []:
+        t = {k: v for k, v in t.items()}
+        if t.get('state') != 'closed' and t.get('next'):
+            t['suggestion'] = {'by': 'algorithm', 'move': t['next']}
+        out.append(t)
+    return {'threads': out, 'note': 'Each idea is a thread. The algorithm judged each within its form\'s arc; Jev, if asked at the stop, chose how each open thread could have continued or closed.'}
+
+def make(cfg, card, text, abstract=None, phrases=None, audio=None, since=None, threads=None, session=None):
     """keep a new recording and its card, and start its art; returns the card at once, with its abstract side"""
     CARDS.mkdir(parents=True, exist_ok=True)
     if not (CARDS / 'About this folder.txt').exists():
@@ -345,6 +480,21 @@ def make(cfg, card, text, abstract=None, phrases=None, audio=None, since=None):
     reading = card.pop('reading', None) or {}
     (folder / 'reading.json').write_text(json.dumps(reading, indent=1))
     (folder / 'phrases.json').write_text(json.dumps([{**p, 'text': heavy.mask(p.get('text', ''))} for p in phrases], indent=1))
+    try:
+        drec = depth_record(phrases, heavy.mask(text), card)
+        if heavy.service(cfg) != 'typesafe':
+            drec['note'] = 'The algorithm read every element from the words. No Jev key is saved, so the lens questions were not asked of Jev.'
+        (folder / 'depth.json').write_text(json.dumps(drec, indent=1))
+        card.setdefault('depth', depth.summary(drec['algorithm']))
+    except Exception as e:
+        (folder / 'depth.json').write_text(json.dumps({'error': str(e)[:200]}))
+    if threads is not None:
+        (folder / 'threads.json').write_text(json.dumps(threads_record(threads), indent=1))
+        try:
+            steer.index_add(threads, card=ident, session=session, when=t0)
+        except Exception:
+            pass
+        card['threads'] = {'open': len([t for t in threads if t.get('state') != 'closed']), 'closed': len([t for t in threads if t.get('state') == 'closed'])}
     card = {**card, 'id': ident, 'text': heavy.mask(text)[:6000], 'abstract': 'grown.jpg' if raw else None,
             'clear': None, 'art': 'waiting', 'made': time.time(), 'since': t0, 'reading': {'ideas': reading.get('ideas', [])}}
     _write(folder, card)
@@ -399,6 +549,7 @@ def _paint(cfg, folder, card, say, on_learn=None):
         items = agreement() + [{'card': card['id'], 'at': time.time(), 'skipped': True}]
         AGREEMENT.write_text(json.dumps(items[-200:], indent=1))
         say(jev={'skipped': 'the classifier agrees with Jev on nine passages in ten, so Jev was not needed for this recording'})
+        _depth_merge(folder, card['jev'])
     elif heavy.service(cfg) == 'typesafe':
         say(art='asking Jev')
         try:
@@ -406,12 +557,25 @@ def _paint(cfg, folder, card, say, on_learn=None):
                 segs = segments(json.loads((folder / 'phrases.json').read_text()))
             except (OSError, ValueError):
                 segs = []
-            j = jev_card(cfg, card.get('text', ''), hit, segs)
+            try:
+                ths = json.loads((folder / 'threads.json').read_text()).get('threads')
+            except (OSError, ValueError):
+                ths = None
+            j = jev_card(cfg, card.get('text', ''), hit, segs, ths)
+            if ths and j.get('threads'):
+                for t in ths:
+                    got = j['threads'].get(t['id'])
+                    if got and got.get('move'):
+                        t['suggestion'] = {'by': 'Jev', 'move': got['move'], 'choice': got['choice'], 'confidence': got.get('confidence'),
+                                           'algorithm': (t.get('suggestion') or {}).get('move')}
+                rec = json.loads((folder / 'threads.json').read_text()); rec['threads'] = ths
+                (folder / 'threads.json').write_text(json.dumps(rec, indent=1))
             taught = learn(j.get('segments', []), card['id'])
             j['agree'] = record_agreement(j.get('segments', []), card['id'])
             if taught and on_learn:
                 on_learn()
-            say(jev=j, taught=taught)
+            _depth_merge(folder, j)
+            say(jev=j, taught=taught, depth_jev=(json.loads((folder / 'depth.json').read_text()) or {}).get('jev'))
             if j.get('style') in heavy.STYLES:
                 style = j['style']
                 hit, likeness = heavy.from_bank(register, style, words)
@@ -421,6 +585,7 @@ def _paint(cfg, folder, card, say, on_learn=None):
                 hit = None                       # Jev says the saved picture does not fit
         except Exception as e:
             say(jev={'error': str(e)[:200]})
+            _depth_merge(folder, card['jev'])
     prompt, _ = heavy.prompt_for(register, ' '.join(words), style)
     say(style=style, prompt=prompt, words=words)
     if hit:
@@ -466,6 +631,13 @@ def keep_section(d):
     top = (d.get('top') or 'a section').strip()
     lines = [time.strftime('%A %-d %B %Y, %H:%M'), '', d['text'], '', 'Its kinds of speech:']
     lines += [f'  {k:<26} {round(v * 100)}%' for k, v in (d.get('profile') or [])[:8]]
+    dp = d.get('depth') or {}
+    if dp.get('lenses'):
+        lines += ['', f"Read through the three lenses of {dp.get('kind')}:"]
+        for lens in depth.ORDER:
+            got = dp['lenses'].get(lens) or {}
+            found = [e['name'] for e in got.get('elements', []) if e.get('found')]
+            lines.append(f"  {lens:<11} {round((got.get('meter') or 0) * 100)}%   found: {', '.join(found) or 'none yet'}")
     (folder / f"{time.strftime('%Y-%m-%d %H.%M.%S')} {top}.txt").write_text('\n'.join(lines) + '\n')
     return d
 

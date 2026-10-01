@@ -22,12 +22,15 @@
   const VI = (root.SpeechformViews || {}).ICON || {};
   /* the tabs beside an opened card: its transcript, its reading, and every graph */
   const DTABS = [['transcript', VI.transcript || ICON.sections], ['reading', ICON.reading], ...['bars', 'river', 'window', 'build', 'shape', 'ideas'].map(k => [k, VI[k] || ''])];
+  /* with steering (Studio): the depth and steering views over time, and the loose ends with what could have closed them */
+  const STABS = [...['lenses', 'arc', 'threads', 'pulse', 'airtime', 'questions', 'links'].map(k => [k, VI[k] || '']), ['loose', '<path d="M4 7c4 0 6 3 16 3M4 14h9"/><circle cx="16.5" cy="14" r="2.2"/><path d="M16.5 16.2v3"/>']];
   const LOCAL = 'speechform-light:cards', LOCAL_SECTIONS = 'speechform-light:sections';
   const local = { get(k) { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (e) { return []; } },
                   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* full or blocked */ } } };
   const done = c => !c || !/^(waiting|asking Jev|the easel is drawing)$/.test(c.art || '');
 
-  function mount({ page, server, onSection }) {
+  function mount({ page, server, onSection, steer = false }) {
+    const TABS = steer ? [...DTABS, ...STABS] : DTABS;
     let tab = 'cards', list = [], secs = [], open = null, side = 'front', timer = null;
     const url = (c, f) => server ? `/cards/${encodeURIComponent(c.id)}/${f}` : f;
     const images = {};
@@ -45,8 +48,8 @@
       <div class="cardtools"><button class="vchip" data-save title="save" aria-label="save">${svg('save')}</button><button class="vchip" data-folder title="open its folder" aria-label="open its folder">${svg('folder')}</button><button class="vchip" data-close title="close" aria-label="close">${svg('close')}</button></div></div>
       <div class="carddetail"><audio preload="auto"></audio>
         <div class="dplay"><button class="vchip" data-play title="play" aria-label="play">${svg('play')}</button><input type="range" class="dscrub" min="0" max="1000" value="1000"><span class="dtime"></span></div>
-        <div class="dtabs">${DTABS.map(([k, icon]) => `<button class="vchip" data-d="${k}" title="${k}" aria-label="${k}"><svg viewBox="0 0 24 24">${icon}</svg></button>`).join('')}</div>
-        <div class="dtrans"></div><pre class="dtext"></pre><div class="dview"><canvas></canvas><p class="dnote"></p></div></div></div>`;
+        <div class="dtabs">${TABS.map(([k, icon]) => `<button class="vchip" data-d="${k}" title="${k}" aria-label="${k}"><svg viewBox="0 0 24 24">${icon}</svg></button>`).join('')}</div>
+        <div class="dtrans"></div><pre class="dtext"></pre><div class="dloose"></div><div class="dview"><canvas></canvas><p class="dnote"></p></div></div></div>`;
     document.body.appendChild(sheet);
     let big = sheet.querySelector('canvas');
     /* a card is drawn once; if the browser takes its canvas back (the easel shares the GPU), it is drawn again */
@@ -74,7 +77,7 @@
       const cut = P.filter(p => (p.at || 0) - since <= t), ideas = {};
       cut.forEach((p, i) => { const it = ideas[p.idea] || (ideas[p.idea] = { id: p.idea, title: ideaTitles[p.idea] || 'an idea', words: 0, returns: 0, n: 0 });
         it.words += (p.text || '').split(/\s+/).length; it.n++; if (i && cut[i - 1].idea !== p.idea && cut.slice(0, i).some(q => q.idea === p.idea)) it.returns++; });
-      return { kinds: Object.keys(R.IMAGE), color: k => R.COLORS[R.IMAGE[k]] || '#39ff14', focus: null, windowWords: 120, recency: 30,
+      return { kinds: Object.keys(R.IMAGE), color: k => R.COLORS[R.IMAGE[k]] || '#39ff14', focus: null, windowWords: 120, recency: 30, now: since + t,
         ideas: Object.values(ideas), active: cut.length ? cut[cut.length - 1].idea : null, phrases: cut };
     };
     const clockText = t => { const s2 = Math.max(0, Math.floor(t)); return `${Math.floor(s2 / 60)}:${String(s2 % 60).padStart(2, '0')}`; };
@@ -107,8 +110,8 @@
     au.onended = () => { if (playing) pause(); };
     function showDoc() {
       box.querySelectorAll('[data-d]').forEach(b => b.classList.toggle('on', b.dataset.d === doc));
-      box.querySelector('.dtrans').hidden = doc !== 'transcript'; box.querySelector('.dtext').hidden = doc !== 'reading';
-      box.querySelector('.dview').hidden = doc === 'transcript' || doc === 'reading';
+      box.querySelector('.dtrans').hidden = doc !== 'transcript'; box.querySelector('.dtext').hidden = doc !== 'reading'; box.querySelector('.dloose').hidden = doc !== 'loose';
+      box.querySelector('.dview').hidden = doc === 'transcript' || doc === 'reading' || doc === 'loose';
       if (view && !box.querySelector('.dview').hidden) view.setView(doc);
       frame();
     }
@@ -127,6 +130,17 @@
         box.querySelectorAll('.dline').forEach((l, i) => l.onclick = () => seek((P[i].at || 0) - since + .01));
       }
       try { const r = await fetch(url(open, 'reading.txt')); box.querySelector('.dtext').textContent = r.ok ? await r.text() : ''; } catch (e) {}
+      if (steer) {
+        /* the loose ends: every thread, its state and stage, and how each open one could have continued or closed */
+        let th = [];
+        try { const r = await fetch(url(open, 'threads.json')); th = r.ok ? (await r.json()).threads || [] : []; } catch (e) {}
+        const SP = (root.SpeechformViews || {}).SPEAKER || {}, WORD = (root.SpeechformViews || {}).STATE_WORD || {};
+        box.querySelector('.dloose').innerHTML = th.length ? th.map(t => `<div class="dthr ${esc(t.state)}"><b>${esc(t.title || 'a thread')}</b>
+          <span>${esc(WORD[t.state] || t.state)}${t.stage ? ' · at ' + esc(t.stage) : ''}${t.need && t.state !== 'closed' ? ' · ' + esc(t.need) : ''} · opened by <i style="color:${SP[t.opened_by] || 'inherit'}">${esc(t.opened_by)}</i></span>
+          ${t.suggestion ? `<p><em>${t.suggestion.by === 'Jev' ? 'Jev' : 'The algorithm'}:</em> ${esc(t.suggestion.move)}</p>` : ''}${t.link ? `<p class="pk">Picked up from ${esc(t.link.date)}: “${esc(t.link.title)}”.</p>` : ''}
+          <p class="first">“${esc(t.first || '')}”</p></div>`).join('') : '<p class="quiet">No threads were kept with this recording.</p>';
+        box.querySelectorAll('.dthr').forEach((el, i) => el.onclick = () => { const p = P.find(q => q.at >= (th[i].opened_at || 0) - .01); if (p) seek(p.at - since + .01); });
+      }
       showDoc();
     };
     sheet.onclick = e => { if (e.target === sheet) { sheet.hidden = true; open = null; au.pause(); playing = false; } };
@@ -161,7 +175,8 @@
           R.drawCard(cv, c, a); cv.addEventListener('contextrestored', () => R.drawCard(cv, c, a)); b.onclick = () => show(c); });
       } else {
         box.innerHTML = secs.length ? secs.map((s, i) => `<div class="line" data-i="${i}"><div class="said">${esc(s.text)}</div><div class="meta">${(s.profile || []).slice(0, 3).map(([k, v]) =>
-          `<span class="chip" style="color:${R.COLORS[R.IMAGE[k]] || '#7d9a78'}">${esc(k)} ${Math.round(v * 100)}%</span>`).join('')}</div></div>`).join('')
+          `<span class="chip" style="color:${R.COLORS[R.IMAGE[k]] || '#7d9a78'}">${esc(k)} ${Math.round(v * 100)}%</span>`).join('')}${steer && s.depth && s.depth.lenses ? `<span class="dmeters" title="listener, speaker, absorption">${['listener', 'speaker', 'absorption'].map(l =>
+          `<i style="height:${Math.round(4 + 14 * s.depth.lenses[l].meter)}px;background:${R.COLORS[R.IMAGE[s.depth.kind]] || '#39ff14'}"></i>`).join('')}</span>` : ''}</div></div>`).join('')
           : '<p class="quiet" style="padding:8px">Select any words in the transcript and tap the hexagon to classify them.</p>';
         box.querySelectorAll('.line[data-i]').forEach(l => l.onclick = () => onSection && onSection(secs[+l.dataset.i]));
       }
@@ -183,12 +198,12 @@
       fetch(`/cards/${encodeURIComponent(c.id)}/faces`, { method: 'POST', body: JSON.stringify({ front: f.toDataURL('image/png'), back: b.toDataURL('image/png') }) });
     }
     /* a recording becomes a card: read it, write the card, keep it (with its phrases and audio), and open it */
-    async function make({ phrases, ideas, text, abstract, audio, since }) {
+    async function make({ phrases, ideas, text, abstract, audio, since, threads, session }) {
       const reading = R.read(phrases, ideas); if (!reading) return null;
       await load();
       const card = { ...R.card(reading, list), reading };
       let kept;
-      if (server) kept = await (await fetch('/card', { method: 'POST', body: JSON.stringify({ card, text, abstract, audio, since, phrases }) })).json();
+      if (server) kept = await (await fetch('/card', { method: 'POST', body: JSON.stringify({ card, text, abstract, audio, since, phrases, threads, session }) })).json();
       else { kept = { ...card, id: 'c' + Date.now().toString(36), abstract, art: 'kept abstract: the easel runs with the Speechform server' }; const all = local.get(LOCAL); all.unshift(kept); local.set(LOCAL, all.slice(0, 30)); }
       draw(); show(kept); return kept;
     }
@@ -231,6 +246,14 @@
 .dview canvas{flex:1;min-height:0;width:100%;display:block;cursor:pointer}
 .dnote{margin:6px 0 0;color:var(--muted,#7d9a78);font-size:10.5px;line-height:1.45}
 .dtabs{display:flex;gap:2px}
+.dloose{flex:1;min-height:0;overflow:auto;font:12px/1.5 ui-monospace,Menlo,monospace;display:flex;flex-direction:column;gap:8px}
+.dloose[hidden]{display:none}
+.dthr{border:1px solid var(--faint,#2a3a28);border-radius:10px;padding:8px 10px;cursor:pointer}
+.dthr:hover{border-color:var(--green-dim,rgba(57,255,20,.35))}
+.dthr b{font-weight:500;display:block}.dthr span{color:var(--muted,#7d9a78);font-size:10.5px}.dthr i{font-style:normal}
+.dthr p{margin:4px 0 0}.dthr em{font-style:normal;color:var(--amber,#ffc94a)}.dthr .first{color:var(--muted,#7d9a78)}.dthr .pk{color:var(--amber,#ffc94a)}
+.dthr.ready{border-color:rgba(255,201,74,.5)}.dthr.closed b{color:var(--green,#39ff14)}
+.dmeters{display:inline-flex;align-items:flex-end;gap:2px;height:18px;margin-left:4px}.dmeters i{width:5px;border-radius:1px;display:block}
 .dtext{flex:1;min-height:0;overflow:auto;margin:0;white-space:pre-wrap;font:12px/1.55 ui-monospace,Menlo,monospace;color:var(--ink,#e8f5e4)}
 .bigcard{height:min(78vh,720px);max-width:92vw;object-fit:contain;cursor:pointer;transition:transform .18s ease-in;animation:cardin .5s cubic-bezier(.2,.8,.2,1)}
 .bigcard.flip{transform:scaleX(0)}

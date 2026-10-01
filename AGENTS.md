@@ -81,7 +81,12 @@ For Speechform Heavy, the same endpoint also receives `{"task": "image", ...}` a
 | `POST /say` `{"text", "heard": true}` | a phrase a page heard on this device, kept as speech from the microphone |
 | `POST /cards/<id>/faces`, `POST /cards/<id>/reveal` | keep a card's two sides as PNGs; open its folder in Finder |
 
-Each phrase's `why` also carries `settled` (every kind's share over time), `run` (phrases the kind has held), `need_margin` and `need_streak` (what a change needs now), `doubt` (0 to 1) and, in `parts`, `learned` (what Jev's passages add). Jev is not asked while the microphone is on.
+Each phrase's `why` also carries `depth` (the lenses of the kind in front, over the classifier's window: a 0..1 meter per lens, every element with its score and the words that showed it, the near-tied kinds' meters, and `next`, the strongest missing element) and `steer` (the threads: each idea's state, opened, developing, returned, ready, dormant or closed, its stage in its form's arc and its natural next move; the lead arc; who spoke and asked what; the listener's hold and pace, with a cue). `/state` carries `steer` on the newest phrases only, and the session's latest as `steer`. `POST /classify` also returns `depth` for the passage. A card's folder keeps `depth.json` and `threads.json`; `runtime/threads-index.json` links threads across recordings. Each phrase's `why` also carries `settled` (every kind's share over time), `run` (phrases the kind has held), `need_margin` and `need_streak` (what a change needs now), `doubt` (0 to 1) and, in `parts`, `learned` (what Jev's passages add). Jev is not asked while the microphone is on.
+| `GET /lenses.json` | the three lenses on every kind (listener, speaker, absorption), each with an answer from the scholarship of oral forms and elements the algorithm finds in a transcript, and each kind's arc of stages (read by `depth.py`, `steer.py`, `light/depth.js`) |
+| `POST /pause` `{"quiet": s}` | Studio heard a natural pause; Jev reads the talk so far (lenses, arc stage, the one next move) only after `PAUSE_SECONDS` of quiet, at most every `JEV_SPACING` seconds and `JEV_WORDS` new words; an answer is used only while the state's `revision` is unchanged |
+| `POST /guide` | Guide mode at a pause: the single next move (Jev's if its pause answer is current, else the algorithm's) |
+| `POST /depth/jev` `{"text", "kind"}` | Jev answers the three lens questions for a selected passage (refused while the microphone is on) |
+| `POST /studio` `{"action": "toggle" \| "rec"}` | the two-screen Studio: the stage window asks the desk window (which hears) to start or stop |
 | `POST /start` | opens TouchDesigner if needed, then listens |
 | `POST /stop` | stops listening |
 | `POST /intake` `{"action": "reset"}` | starts a new session |
@@ -121,6 +126,8 @@ Rules learned the hard way:
 | `imagery/server.py`, `imagery/app/index.html` | the server and the app page |
 | `forms.py`, `signals.py`, `engine.py`, `worker.py` | the kinds of speech and their examples, the structural signals, classification over the last minute, and the worker process |
 | `tests/passages.py` | passages for measuring the classifier on form rather than topic |
+| `lenses.json`, `depth.py`, `light/depth.js`, `steer.py` | the depth layer (three lenses per kind, scored by algorithm alone) and the steering layer (threads, arcs, speakers, the hold); `tests/test_depth.py` and `node light/depth-eval.js` measure them, `tests/heldout.py` holds passages they were not tuned on |
+| `studio/steer.js`, `studio/mac/two-screens.sh` | Studio's depth screen and steering controls; Studio on two displays (`?screen=stage` the image, `?screen=desk` every view) |
 | `Transcribe.swift` | Apple on-device transcription (built to `bin/transcribe`) |
 | `td_runtime.py` | TouchDesigner's link to the worker, the direction file and the exec channel |
 | `mac/` | the Mac app |
@@ -130,4 +137,4 @@ To add a kind of image, write a grower in `growers.py`, then add its Script CHOP
 
 ## 6. Contributing
 
-Keep everything local by default and never commit anything from `runtime/`, `sessions/`, `models/` or `~/.config/speechform`. Run `.worker/bin/python -m unittest tests.test_engine tests.test_forms` before sending a change. To add or change a kind of speech, edit `forms.py`: give it examples on varied subjects, and check the test passages still pass.
+Keep everything local by default and never commit anything from `runtime/`, `sessions/`, `models/` or `~/.config/speechform`. Run `.worker/bin/python -m unittest tests.test_engine tests.test_forms tests.test_depth` and `node light/depth-eval.js` before sending a change. To add or change a kind of speech, edit `forms.py`: give it examples on varied subjects, and check the test passages still pass.

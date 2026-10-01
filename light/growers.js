@@ -20,16 +20,47 @@
   const mix = (r, w) => { const [a, b] = PALETTE[r]; return [0, 1, 2].map(j => a[j] + (b[j] - a[j]) * Math.min(1, Math.max(0, w))); };
   const born = (i, n) => Math.max(0, Math.min(1, n - i));
 
+  /* steering, never in words (Studio passes c.cues and c.threads: {ideaId: {state, active, curl}}):
+     an open thread's tip glows at the pulse of the talk, a dormant branch dims and slowly curls,
+     a thread ready to close swells into a bud, and a closed one opens into a frond */
+  const cueOf = (c, idea) => (c.cues && c.threads && idea && c.threads[idea.id]) || null;
+  const dimOf = (c, idea) => { const t = cueOf(c, idea); return t && t.state === 'dormant' ? .3 : 1; };
+  const curlOf = (c, idea) => { const t = cueOf(c, idea); return t && t.state === 'dormant' ? (t.curl || .3) : 0; };
+  function tip(out, c, idea, x, y, ang, scale = 1) {
+    const t = cueOf(c, idea); if (!t) return;
+    const beat = .5 + .5 * Math.sin(c.t * Math.PI * (c.pulse || .8)), deg = ang * 57.2958 - 90;
+    if (t.state === 'ready') {                                           // a bud, swelling
+      const b = (.03 + .01 * beat) * scale;
+      out.push([x, y, b, deg, [1, .8, .32], .95, 'petal'], [x, y, b * .85, deg + 22, [1, .9, .5], .8, 'petal'], [x, y, b * .85, deg - 22, [1, .9, .5], .8, 'petal']);
+    } else if (t.state === 'closed') {                                   // a frond, opened
+      for (let k = 0; k < 7; k++) { const a = ang + (k - 3) * .36, r = .04 * scale; out.push([x + r * Math.cos(a), y + r * Math.sin(a), .024 * scale, a * 57.2958 - 90, [.55, 1, .5], .85, 'blade']); }
+      out.push([x, y, .008 * scale, 0, [1, .95, .6], .9, 'dot']);
+    } else if (t.state !== 'dormant') {                                  // the tip glows, at the talk's pulse
+      out.push([x, y, (.012 + .016 * beat * (t.active ? 1 : .45)) * scale, 0, [1, 1, .85], (t.active ? .6 : .35) + .35 * beat, 'dot']);
+    }
+  }
+  /* for the images with no branch of their own per idea: a sprig per thread rising from the foot of the square */
+  function sprigs(out, c) {
+    if (!c.cues || !c.threads) return;
+    const I = c.ideas.slice(0, 9);
+    I.forEach((idea, i) => {
+      const dim = dimOf(c, idea), curl = curlOf(c, idea); let x = -.8 + 1.6 * (i + .5) / Math.max(I.length, 1), y = -1, ang = Math.PI / 2;
+      const len = Math.min(34, 8 + idea.words * .5);
+      for (let k = 0; k < len; k++) { ang += (i % 2 ? 1 : -1) * (.01 + curl * .05); x += .01 * Math.cos(ang); y += .01 * Math.sin(ang); out.push([x, y, .007, ang * 57.2958 - 90, [.6, 1, .7], .5 * dim, 'blade']); }
+      tip(out, c, idea, x, y, ang, .8);
+    });
+  }
+
   /* each grower returns shapes: [x, y, size, turn in degrees, [r, g, b], alpha] in a square from -1 to 1 */
   const G = {
     /* poetry: a flower in a golden spiral, an outer ring and stamens; each new idea opens a smaller flower around it */
     bloom(c, g) {
       const out = [], turn = c.t * .03 * c.speed;
-      const flower = (cx, cy, n, scale, warmBias, spin) => {
+      const flower = (cx, cy, n, scale, warmBias, spin, dim = 1) => {
         for (let i = 0; i < Math.ceil(n); i++) {
           const a = i * 2.399963 + turn * spin, r = .052 * Math.sqrt(i + 1) * scale; if (r > .62 * (scale < 1 ? 1 : 1.7) * scale) break;
           const k = i / Math.max(n, 1), outer = i % 7 === 3;
-          out.push([cx + r * Math.cos(a), cy + r * Math.sin(a), (.016 + .026 * (1 - k)) * scale * (outer ? 1.6 : 1) * born(i, n) * (1 + .35 * c.e), a * 57.2958 - 90, mix('bloom', c.warm + .5 * k + warmBias), outer ? .35 + .3 * k : .55 + .45 * k]);
+          out.push([cx + r * Math.cos(a), cy + r * Math.sin(a), (.016 + .026 * (1 - k)) * scale * (outer ? 1.6 : 1) * born(i, n) * (1 + .35 * c.e), a * 57.2958 - 90, mix('bloom', c.warm + .5 * k + warmBias), (outer ? .35 + .3 * k : .55 + .45 * k) * dim]);
         }
         for (let j = 0; j < Math.min(24, n / 6); j++) {                 // stamens at the heart
           const a = j * 2.4 + turn * 3, r = .02 * scale * Math.sqrt(j + 1);
@@ -40,8 +71,10 @@
       flower(0, 0, Math.min(MAX, 6 + g * 1.6 * c.density), main, 0, 1);
       c.ideas.slice(1, 7).forEach((idea, i) => {
         const a = i / Math.min(6, c.ideas.length - 1) * 6.2832 + .4, r = .8;
-        flower(r * Math.cos(a), r * Math.sin(a), Math.min(160, 4 + idea.words * 1.4), .28 + Math.min(.12, idea.returns * .04), .2, -1);
+        flower(r * Math.cos(a), r * Math.sin(a), Math.min(160, 4 + idea.words * 1.4), .28 + Math.min(.12, idea.returns * .04), .2, -1, dimOf(c, idea));
+        tip(out, c, idea, r * Math.cos(a), r * Math.sin(a), a, 1);
       });
+      if (c.ideas[0]) tip(out, c, c.ideas[0], 0, 0, Math.PI / 2, 1.4);
       return out;
     },
     /* story: a winding trail toward the horizon; each new idea forks a path off it, returns light lanterns, footprints run along */
@@ -61,12 +94,14 @@
         if (!at) return;
         const side = i % 2 ? 1 : -1, len = Math.min(120, 8 + idea.words * 1.6);
         let [x, y, far] = at, ang = side > 0 ? .25 + .2 * h(i, 5) : Math.PI - .25 - .2 * h(i, 5);   // a fork sets off sideways
+        const dim = dimOf(c, idea), curl = curlOf(c, idea);
         for (let k = 0; k < len; k++) {
-          ang += side * .012; x += .016 * Math.cos(ang) * (1 - .5 * far); y += .016 * Math.sin(ang) * (1 - .5 * far);   // and bends up toward the horizon
+          ang += side * (.012 + curl * .03 * k / len); x += .016 * Math.cos(ang) * (1 - .5 * far); y += .016 * Math.sin(ang) * (1 - .5 * far);   // and bends up toward the horizon
           const lamp = idea.returns && k % Math.max(8, Math.floor(len / (idea.returns + 1))) === 5;
           if (Math.abs(x) > 1.05 || y > .95) break;
-          out.push([x, y, (lamp ? .05 : .026) * (1 - .5 * far) * born(k, len), 0, mix('path', c.warm + (lamp ? .7 : .45) + (idea.id === c.activeIdea ? .2 : 0)), lamp ? .95 : .7]);
+          out.push([x, y, (lamp ? .05 : .026) * (1 - .5 * far) * born(k, len), 0, mix('path', c.warm + (lamp ? .7 : .45) + (idea.id === c.activeIdea ? .2 : 0)), (lamp ? .95 : .7) * dim]);
         }
+        tip(out, c, idea, x, y, ang, 1);
       });
       return out;
     },
@@ -89,6 +124,7 @@
       }
       for (let i = 0; i < Math.min(80, g * .5); i++)                    // stars
         out.push([h(i, 21) * 2 - 1, .62 + h(i, 22) * .38, .004 + .006 * h(i, 23), 0, [1, 1, .9], .3 + .5 * Math.abs(Math.sin(c.t * (.5 + h(i, 24)) + i)), 'dot']);
+      sprigs(out, c);
       return out;
     },
     /* lore and myth: a comb laid ring by ring; each idea buds a small comb of its own, and the one in play glows */
@@ -106,7 +142,10 @@
       };
       const buds = c.ideas.length > 1;
       comb(0, 0, Math.min(buds ? 127 : MAX, 7 + g * 1.2 * c.density), buds ? .72 : 1, !c.ideas[0] || c.ideas[0].id === c.activeIdea);
-      c.ideas.slice(1, 7).forEach((idea, i) => { const a = i / 6 * 6.2832 + .5; comb(.86 * Math.cos(a), .86 * Math.sin(a), Math.min(37, 1 + idea.words * .6), .45, idea.id === c.activeIdea); });
+      c.ideas.slice(1, 7).forEach((idea, i) => { const a = i / 6 * 6.2832 + .5, n0 = out.length; comb(.86 * Math.cos(a), .86 * Math.sin(a), Math.min(37, 1 + idea.words * .6), .45, idea.id === c.activeIdea);
+        const dim = dimOf(c, idea); if (dim < 1) for (let k = n0; k < out.length; k++) out[k][5] *= dim;
+        tip(out, c, idea, .86 * Math.cos(a), .86 * Math.sin(a), a, 1.2); });
+      if (c.ideas[0]) tip(out, c, c.ideas[0], 0, 0, Math.PI / 2, 1.4);
       return out;
     },
     /* cosmology: bodies join a sun; each idea is a planet with a moon for every return, tracing its orbit */
@@ -121,7 +160,8 @@
         const rad = .25 + .11 * i, spd = .5 / (1 + i) ** .8 * c.speed, a = i * 2.1 + c.t * spd, tilt = .6;
         for (let k = 0; k < 60; k++) { const q = k / 60 * 6.2832; out.push([rad * Math.cos(q), rad * Math.sin(q) * tilt, .003, 0, mix('orrery', .3), .25, 'dot']); }   // its orbit
         const px = rad * Math.cos(a), py = rad * Math.sin(a) * tilt, size = .025 + Math.min(.04, idea.words * .0008);
-        out.push([px, py, size, 0, mix('orrery', c.warm + .5 + (idea.id === c.activeIdea ? .3 : 0)), 1]);
+        out.push([px, py, size, 0, mix('orrery', c.warm + .5 + (idea.id === c.activeIdea ? .3 : 0)), dimOf(c, idea)]);
+        tip(out, c, idea, px, py + size, Math.PI / 2, 1);
         for (let m = 0; m < Math.min(6, idea.returns + (idea.n > 3 ? 1 : 0)); m++) { const mq = c.t * (2 + m) + m * 2; out.push([px + (size + .03 + m * .012) * Math.cos(mq), py + (size + .03 + m * .012) * Math.sin(mq), .008, 0, [.9, .95, 1], .9, 'dot']); }
       });
       return out;
@@ -136,9 +176,10 @@
           const phase = (c.t * .12 * c.speed + j / count + ci * .21) % 1, r = (1 - phase) * (.25 + .8 * c.radius) * (ci ? .6 : 1);
           for (let k = 0; k < per; k++) {
             const a = k / per * 6.2832 + j * .3;
-            out.push([cx + r * Math.cos(a), cy + r * Math.sin(a), .01 + .01 * (1 - phase), 0, mix('rings', c.warm + (1 - phase) * .3 + (idea.id === c.activeIdea ? .3 : 0)), phase * (ci ? .6 : .9)]);
+            out.push([cx + r * Math.cos(a), cy + r * Math.sin(a), .01 + .01 * (1 - phase), 0, mix('rings', c.warm + (1 - phase) * .3 + (idea.id === c.activeIdea ? .3 : 0)), phase * (ci ? .6 : .9) * dimOf(c, idea)]);
           }
         }
+        tip(out, c, idea, cx, cy, Math.PI / 2, ci ? 1 : 1.3);
       });
       const blink = c.point ? .5 + .5 * Math.sin(c.t * 9) : .25;
       out.push([0, 0, .05 + .05 * blink, 0, mix('rings', 1), blink]);
@@ -160,6 +201,7 @@
         for (let y = -.6 + (k % 2) * .18; y <= top - .04; y += .36)      // a bridge at every level both towers reach
           for (let j = 0; j <= 10; j++) { const u = j / 10; out.push([x0 + (x1 - x0) * u, y + .06 * Math.sin(u * Math.PI), w * .07, (u - .5) * 40, mix('stack', c.warm + .5), .75]); }
       }
+      sprigs(out, c);
       return out;
     },
     /* reflection: one still kelp; a branch per idea, a fork for every return, a bud for every phrase, bubbles rising */
@@ -174,11 +216,11 @@
       const pts = raw.map(([px, py, a]) => [px - mid, py, a]);
       const cs = mix('kelp', c.warm * .6);
       pts.forEach(([px, py, a], k) => out.push([px, py, .024 * (1 - .55 * k / steps), a * 57.2958 - 90, cs, .9]));
-      const branch = (sx, sy, ang, side, length, col, depth, seed) => {
+      const branch = (sx, sy, ang, side, length, col, depth, seed, dim = 1, curl = 0) => {
         let px = sx, py = sy; const end = [];
         for (let k = 0; k < Math.ceil(length); k++) {
-          ang += side * .018 * (k > length * .3 ? 1 : -.2); px += .011 * Math.cos(ang); py += .011 * Math.sin(ang);
-          out.push([px, py, (.015 - depth * .004) * (1 - .6 * k / length) * born(k, length), ang * 57.2958 - 90, col, .85 - depth * .15]);
+          ang += side * (.018 * (k > length * .3 ? 1 : -.2) + curl * .05 * k / length); px += .011 * Math.cos(ang); py += .011 * Math.sin(ang);   // a dormant branch slowly curls
+          out.push([px, py, (.015 - depth * .004) * (1 - .6 * k / length) * born(k, length), ang * 57.2958 - 90, col, (.85 - depth * .15) * dim]);
           end.push([px, py, ang]);
         }
         return end;
@@ -187,7 +229,8 @@
         const [bx, by, bang] = pts[Math.min(pts.length - 1, Math.floor(pts.length * (.12 + .8 * (i + .5) / Math.max(topics.length, 1))))];
         const side = i % 2 === 0 ? 1 : -1, length = Math.min(90, 6 + tp.words * .9 * c.density);
         const col = mix('kelp', c.warm + .25 + (tp.id === c.activeIdea ? .35 : 0));
-        const along = branch(bx, by, bang - side * (.95 + .25 * h(i, 3)), side, length, col, 0, i);
+        const along = branch(bx, by, bang - side * (.95 + .25 * h(i, 3)), side, length, col, 0, i, dimOf(c, tp), curlOf(c, tp));
+        if (along.length) { const e = along[along.length - 1]; tip(out, c, tp, e[0], e[1], e[2], 1); }
         for (let r = 0; r < Math.min(5, tp.returns); r++) {              // a fork for every return
           const at = along[Math.floor(along.length * (.35 + .5 * (r + .5) / Math.max(tp.returns, 1)))]; if (!at) continue;
           branch(at[0], at[1], at[2] + side * .8, -side, length * .45, mix('kelp', c.warm + .45), 1, i * 7 + r);
@@ -219,6 +262,7 @@
         const y = -.95 + 1.9 * h(i, 41), jitter = (h(i, 42) - .5) * .12 + .03 * Math.sin(c.t * 3 + i);
         out.push([front + jitter, y, .005 + .006 * h(i, 43), 0, [.95, .98, 1], .4 + .4 * Math.abs(Math.sin(c.t * 2 + i)), 'dot']);
       }
+      sprigs(out, c);
       return out;
     },
     /* song: ribbons swelling with the voice; each idea adds a ribbon with a rhythm of its own */
@@ -234,6 +278,7 @@
           out.push([x, y, own ? .011 : .016, 0, mix('waves', c.warm + j * .08 + (own ? .3 : 0)), own ? .6 : .8]);
         }
       }
+      sprigs(out, c);
       return out;
     },
   };
