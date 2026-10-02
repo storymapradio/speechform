@@ -127,6 +127,7 @@ Rules learned the hard way:
 | `forms.py`, `signals.py`, `engine.py`, `worker.py` | the kinds of speech and their examples, the structural signals, classification over the last minute, and the worker process |
 | `tests/passages.py` | passages for measuring the classifier on form rather than topic |
 | `lenses.json`, `depth.py`, `light/depth.js`, `steer.py` | the depth layer (three lenses per kind, scored by algorithm alone) and the steering layer (threads, arcs, speakers, the hold); `tests/test_depth.py` and `node light/depth-eval.js` measure them, `tests/heldout.py` holds passages they were not tuned on |
+| `studio/local.js`, `studio/ledger.js`, `tools/publish-web.sh` | Studio anywhere: on the public site it uses this Mac's server when allowed (`?mac=1`, localhost, or chosen under the globe icon; the server lets in only asynchronousinstruments.com and localhost, with the private-network preflight), and otherwise runs entirely in the browser (classifier, lenses and threads in JS, cards in IndexedDB, on-device hearing only, no Jev). `tools/publish-web.sh` copies Studio into the site's `speechform/` folder |
 | `studio/steer.js`, `studio/mac/two-screens.sh` | Studio's depth screen and steering controls; Studio on two displays (`?screen=stage` the image, `?screen=desk` every view) |
 | `Transcribe.swift` | Apple on-device transcription (built to `bin/transcribe`) |
 | `td_runtime.py` | TouchDesigner's link to the worker, the direction file and the exec channel |

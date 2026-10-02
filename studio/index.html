@@ -49,6 +49,15 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .top .gridwrap.vgrid { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: auto; gap: 8px; }
 .top .gridwrap .vcell { min-height: 0; height: calc((52vh - 70px) / 2); }
 [hidden] { display: none !important; }
+#where.full { color: var(--green); opacity: 1; }
+.wheresheet { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.8); display: grid; place-items: center; padding: 16px; }
+.wheresheet .box { width: min(520px, 94vw); border: 2px solid var(--green-dim); border-radius: 16px; background: var(--panel); padding: 18px; }
+.wheresheet h3 { margin: 0 0 8px; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--green); font-weight: 500; }
+.wheresheet p { margin: 0 0 10px; line-height: 1.55; font-size: 12.5px; }
+.wheresheet .row { display: flex; gap: 10px; justify-content: flex-end; margin-top: 6px; }
+.wheresheet button { padding: 8px 14px; border-radius: 12px; font: inherit; font-size: 12px; cursor: pointer; border: 1px solid var(--green-dim); background: var(--green-faint); color: var(--green); }
+.wheresheet button#whereClose { border-color: var(--faint); background: none; color: var(--muted); }
+@media (max-width: 560px) { .app { padding-left: 8px; padding-right: 8px; } .seg button { width: 28px; } .bar { gap: 6px; } .top { height: 46vh; } .top .head { padding: 4px; } #steerlooks button, #looks button { width: 26px; height: 26px; } .lenses { grid-template-columns: 1fr; } }
 .top .head { gap: 8px; flex-wrap: wrap; }
 .top .gridwrap.vgrid#sgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .line .test { color: var(--muted); border-color: var(--faint); }
@@ -127,6 +136,7 @@ body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
     <span id="ring"></span>
     <span class="clock" id="clock"></span>
     <button class="rec" id="rec" title="record" aria-label="record"><i></i></button>
+    <button class="plain" id="where" title="where Studio runs" aria-label="where Studio runs"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5z"/></svg></button>
     <button class="plain" id="fresh" title="new session" aria-label="new session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
   </nav>
   <section class="top">
@@ -150,6 +160,8 @@ body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
     </div>
     <div class="page" data-p="cards" id="deckPage" hidden></div>
   </section>
+  <div class="wheresheet" id="wheresheet" hidden><div class="box"><h3 id="whereTitle"></h3><p id="whereText"></p><p class="quiet" id="whereHear"></p>
+    <div class="row"><button id="whereSwitch"></button><button id="whereClose">close</button></div></div></div>
   <section class="desk" id="desk" hidden><div class="deskviews" id="deskviews"></div><div class="nextcard" id="nextcard"><b>next move</b><p></p><small></small></div><div class="deskside" id="deskside"></div></section>
 </div>
 <script src="/light/classify.js"></script>
@@ -160,6 +172,8 @@ body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
 <script src="/light/hearing.js"></script>
 <script src="/light/depth.js"></script>
 <script src="/studio/steer.js"></script>
+<script src="/studio/ledger.js"></script>
+<script src="/studio/local.js"></script>
 <script>
 'use strict';
 /* Speechform Studio: the full classifier (MiniLM, in the Speechform server's speech worker), heard in the
@@ -233,8 +247,8 @@ function trace() {
     return [k, [{ label: 'examples', add: q.match, type: 'example' }].concat(Math.abs(q.learned || 0) > .001 ? [{ label: 'Jev', add: q.learned, type: 'learned' }] : [],
       [{ label: 'pull', add: q.bias, type: 'bias' }], q.signals > .001 ? [{ label: cue ? cue.cue : 'shape', add: q.signals, type: 'shape' }] : [])];
   }));
-  const conv = e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea ?? e.topic, engine: true, speaker: e.speaker,
-    ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: parts(e.why), signals: e.why.signals,
+  const conv = e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea ?? e.topic, engine: !e.why.partsList, speaker: e.speaker,
+    ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: e.why.partsList || parts(e.why), signals: e.why.signals,
     settled: e.why.settled ? Object.fromEntries(e.why.settled.map(x => [x.form, x.share])) : null, doubt: e.why.doubt, run: e.why.run, reason: e.why.reason,
     depth: e.why.depth || null, steer: e.why.steer || steerOf[e.id] || null });
   return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea, windowWords: 120, recency: 30,
@@ -486,6 +500,32 @@ if (SCREEN === 'stage') {
   const b = document.createElement('button'); b.className = 'rec stagerec'; b.id = 'stagerec'; b.innerHTML = '<i></i>'; b.title = 'record'; b.onclick = toggleRec; document.body.appendChild(b);
   document.addEventListener('dblclick', () => document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}));
 }
+
+/* ── where Studio runs: with Speechform on this Mac, or in this browser alone ── */
+const LOC = window.SpeechformLocal;
+async function where() {
+  const mode = await LOC.ready, full = mode === 'full' || mode === 'mac';
+  $('#where').classList.toggle('full', full);
+  $('#whereTitle').textContent = full ? 'with Speechform on this Mac' : 'in this browser';
+  $('#whereText').textContent = full
+    ? 'Studio is connected to Speechform on this Mac. The full classifier, Jev, the Mac\'s own transcription, the cards folder and the easel all work here.'
+    : 'Studio is running in this browser. The classifier, the lenses and the threads run here, and memory and cards stay in this browser. Jev and the easel need Speechform on a Mac, so here the algorithm steers.';
+  $('#whereSwitch').hidden = mode === 'mac';
+  $('#whereSwitch').textContent = full ? 'use this browser only' : 'connect to Speechform on this Mac';
+  $('#whereSwitch').onclick = () => LOC.connect(!full);
+  if (!full) {
+    /* hearing here is only ever the browser's own, on this device; without it the microphone stays off and typing works */
+    const st = await window.SpeechformHearing.onDevice();
+    const can = st === 'available' || st === 'downloadable' || st === 'downloading';
+    $('#whereHear').textContent = can ? (st === 'available' ? 'This browser hears on this device.' : 'This browser will fetch its on-device speech model the first time you record, then hear on this device.')
+      : 'This browser cannot hear on the device itself, so the microphone is off. Typing works. Chrome on a computer hears on the device.';
+    if (!can) { $('#rec').classList.add('off'); $('#rec').title = 'on-device hearing is not available in this browser'; $('#words').placeholder = 'type here; the microphone needs on-device hearing'; }
+  } else $('#whereHear').textContent = '';
+}
+$('#where').onclick = () => { $('#wheresheet').hidden = false; };
+$('#whereClose').onclick = () => { $('#wheresheet').hidden = true; };
+$('#wheresheet').onclick = e => { if (e.target.id === 'wheresheet') $('#wheresheet').hidden = true; };
+where();
 
 /* ── the state, from the Speechform server ── */
 let lastRev = null;

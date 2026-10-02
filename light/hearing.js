@@ -105,5 +105,10 @@
     };
   }
   root.SpeechformHearing = SpeechformHearing;
+  /* whether this browser can hear on the device itself: 'available', 'downloadable' (installed on first use), or 'none' */
+  root.SpeechformHearing.onDevice = async (lang = navigator.language || 'en-US') => {
+    if (!Rec || !Rec.available) return 'none';
+    try { const a = await Rec.available({ langs: [lang], processLocally: true }); return a === 'unavailable' ? 'none' : a; } catch (e) { return 'none'; }
+  };
   root.SpeechformHearing.toWav = toWav;
 })(this);

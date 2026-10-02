@@ -499,12 +499,22 @@ def app_state(test=False):
         'now': time.time(),
     }
 
+# Studio on the public site may use this Mac's server: only that site and pages on this Mac are let in
+ALLOWED_ORIGIN = re.compile(r'^(https://(www\.)?asynchronousinstruments\.com|https?://(localhost|127\.0\.0\.1)(:\d+)?)$')
+
 class Handler(BaseHTTPRequestHandler):
+    def _cors(self):
+        origin = self.headers.get('Origin', '')
+        if origin and ALLOWED_ORIGIN.match(origin):
+            self.send_header('Access-Control-Allow-Origin', origin)
+            self.send_header('Vary', 'Origin')
+            self.send_header('Access-Control-Allow-Private-Network', 'true')
+
     def _send(self, code, obj, ctype='application/json'):
         body = obj if isinstance(obj, (bytes, bytearray)) else json.dumps(obj, indent=1).encode()
         self.send_response(code)
         self.send_header('Content-Type', ctype)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._cors()
         self.send_header('Cache-Control', 'no-store')
         self.send_header('Content-Length', str(len(body)))
         self.end_headers()
@@ -517,10 +527,12 @@ class Handler(BaseHTTPRequestHandler):
             return None
 
     def do_OPTIONS(self):
+        # the preflight, including Chrome's for a public page reaching this Mac (Access-Control-Request-Private-Network)
         self.send_response(204)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._cors()
         self.send_header('Access-Control-Allow-Methods', 'GET, POST')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Max-Age', '600')
         self.end_headers()
 
     def do_GET(self):
@@ -554,7 +566,7 @@ class Handler(BaseHTTPRequestHandler):
                     fh.seek(start); body = fh.read(end - start + 1)
                 self.send_response(206)
                 self.send_header('Content-Type', 'audio/wav'); self.send_header('Accept-Ranges', 'bytes')
-                self.send_header('Content-Range', f'bytes {start}-{end}/{size}'); self.send_header('Content-Length', str(len(body)))
+                self.send_header('Content-Range', f'bytes {start}-{end}/{size}'); self.send_header('Content-Length', str(len(body))); self._cors()
                 self.end_headers(); self.wfile.write(body)
                 return
             if f:

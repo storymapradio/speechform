@@ -32,9 +32,11 @@
   function mount({ page, server, onSection, steer = false }) {
     const TABS = steer ? [...DTABS, ...STABS] : DTABS;
     let tab = 'cards', list = [], secs = [], open = null, side = 'front', timer = null;
-    const url = (c, f) => server ? `/cards/${encodeURIComponent(c.id)}/${f}` : f;
+    /* the server may be this page's own, or the one on this Mac (Studio on the public site), or answered in the browser */
+    const base = () => (root.SpeechformLocal && root.SpeechformLocal.base()) || '';
+    const url = (c, f) => /^(data|blob|https?):/.test(String(f)) ? f : server ? `${base()}/cards/${encodeURIComponent(c.id)}/${f}` : f;
     const images = {};
-    const img = src => new Promise(res => { if (!src) return res(null); if (images[src]) return res(images[src]); const i = new Image(); i.onload = () => { images[src] = i; res(i); }; i.onerror = () => res(null); i.src = src; });
+    const img = src => new Promise(res => { if (!src) return res(null); if (images[src]) return res(images[src]); const i = new Image(); if (base() && !src.startsWith('data:')) i.crossOrigin = 'anonymous'; i.onload = () => { images[src] = i; res(i); }; i.onerror = () => res(null); i.src = src; });
     const art = async c => ({ abstract: await img(c.abstract && (c.abstract.startsWith('data:') ? c.abstract : url(c, c.abstract))),
                               clear: await img(c.clear && (c.clear.startsWith('data:') ? c.clear : url(c, c.clear) + '?' + (c.bank || ''))) });
 
