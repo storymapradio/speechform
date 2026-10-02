@@ -574,7 +574,20 @@
     /* ── links: this session among every recording before it, joined by the threads they share ── */
     function linksView() {
       const L = T.links; if (!L || !L.recordings || !L.recordings.length) return empty();
-      const cx = W / 2, cy = H / 2 + U(16), R0 = Math.min(W, H - U(40)) * .4, recs = L.recordings.slice(0, 40);
+      const head = U(34), plotH = H - head - U(8), cx = W / 2, cy = head + plotH / 2, R0 = Math.min(W - U(40), plotH) * .4, recs = L.recordings.slice(0, 40);
+      /* labels never collide, never leave the box, and never enter the header */
+      const placed = [], label = (t, px, py, side, size = 8.5, col = muted) => {
+        font(size); x.textBaseline = 'middle'; const w = x.measureText(t).width, h = U(size + 3), pad = U(4);
+        let left = side === 'right' ? px : side === 'left' ? px - w : px - w / 2;
+        if (left + w > W - pad) left = Math.max(pad, px - w - U(10)); if (left < pad) left = pad;
+        for (const dy of [0, h, -h, 2 * h, -2 * h]) {
+          const top = py + dy - h / 2; if (top < head || top + h > H - pad) continue;
+          const r = [left, top, left + w, top + h];
+          if (placed.some(q => r[0] < q[2] && r[2] > q[0] && r[1] < q[3] && r[3] > q[1])) continue;
+          placed.push(r); x.fillStyle = col; x.textAlign = 'left'; x.fillText(t, left, py + dy); return true;
+        }
+        return false;
+      };
       /* clusters sit together around the circle; within one, oldest first */
       const order = [...recs].sort((a, b) => String(a.cluster || 'z' + a.id).localeCompare(String(b.cluster || 'z' + b.id)) || (a.at || 0) - (b.at || 0));
       const toHere = {}; (L.edges || []).filter(e => e.from === 'here').forEach(e => toHere[e.to] = Math.max(toHere[e.to] || 0, e.strength));
@@ -589,8 +602,7 @@
         const rr = Math.max(U(26), ...ps.map(p => Math.hypot(p[0] - mx, p[1] - my))) + U(16);
         const g = x.createRadialGradient(mx, my, 0, mx, my, rr); g.addColorStop(0, 'rgba(57,255,20,.07)'); g.addColorStop(1, 'rgba(57,255,20,0)');
         x.fillStyle = g; x.beginPath(); x.arc(mx, my, rr, 0, 7); x.fill();
-        if (k.theme) { font(9); x.fillStyle = muted; x.textAlign = 'center'; x.textBaseline = 'middle'; const ox = mx + (mx - cx) * .25, oy = my + (my - cy) * .25;
-          x.fillText(fit(k.theme, U(140)), clamp(ox, U(60), W - U(60)), clamp(oy, U(10), H - U(10))); }
+        if (k.theme) { font(9); label(fit(k.theme, U(140)), mx + (mx - cx) * .25, my + (my - cy) * .25, 'center', 9); }
       });
       /* recordings joined to each other, then to this session, as thick as the thread they share */
       (L.edges || []).forEach(e => {
@@ -603,8 +615,8 @@
       order.forEach(r => {
         const [px, py] = pos[r.id], s = toHere[r.id] || 0, size = U(5 + Math.min(7, (r.threads || 0) * 1.2)), c = T.color(r.kind || 'story');
         hex(px, py, size); x.fillStyle = c; x.globalAlpha = .25 + .6 * Math.max(s, .2); x.fill(); x.globalAlpha = 1; x.strokeStyle = s ? amber : c; x.lineWidth = U(s ? 1.6 : .8); x.stroke();
-        if (s > .3 || order.length < 14) { font(8.5); x.fillStyle = s ? ink : muted; x.textAlign = Math.cos(pos[r.id][2]) > .2 ? 'left' : Math.cos(pos[r.id][2]) < -.2 ? 'right' : 'center'; x.textBaseline = 'middle';
-          const dx = Math.cos(pos[r.id][2]) * (size + U(5)), dy = Math.sin(pos[r.id][2]) * (size + U(9)); x.fillText(fit(r.title || '', U(110)), px + dx, py + dy); }
+        if (s > .3 || order.length < 14) { const c2 = Math.cos(pos[r.id][2]); font(8.5);
+          label(fit(r.title || '', U(110)), px + (c2 > .2 ? size + U(5) : c2 < -.2 ? -size - U(5) : 0), py + Math.sin(pos[r.id][2]) * (size + U(9)), c2 > .2 ? 'right' : c2 < -.2 ? 'left' : 'center', 8.5, s ? ink : muted); }
         hits.push({ x: px, y: py, r: Math.max(U(12), size + U(4)), id: 'rec:' + r.id });
       });
       /* this session at the centre, its threads a ring of beads */
@@ -612,7 +624,7 @@
       glowOn(amber, U(10 + 8 * beat)); hex(cx, cy, U(14)); x.fillStyle = 'rgba(255,201,74,.22)'; x.fill(); x.strokeStyle = amber; x.lineWidth = U(2); x.stroke(); glowOff();
       cur.forEach((c, i) => { const a = -Math.PI / 2 + i / Math.max(1, cur.length) * Math.PI * 2; x.fillStyle = c.matches.length ? amber : muted;
         x.beginPath(); x.arc(cx + U(22) * Math.cos(a), cy + U(22) * Math.sin(a), U(2.4), 0, 7); x.fill(); });
-      font(9.5, '600'); x.fillStyle = ink; x.textAlign = 'center'; x.textBaseline = 'top'; x.fillText('this session', cx, cy + U(26));
+      placed.push([cx - U(16), cy - U(16), cx + U(16), cy + U(16)]); label('this session', cx, cy + U(30), 'center', 9.5, ink);
       font(9); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'top';
       const linked = cur.filter(c => c.matches.length).length;
       x.fillText(`${recs.length} recordings · ${linked} of ${cur.length} threads here meet one`, U(8), U(6));

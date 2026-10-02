@@ -80,6 +80,11 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .lline b { font-weight: 500; } .lline span, .lline small { display: block; color: var(--muted); font-size: 11px; } .lline small { color: var(--ink); margin-top: 3px; } .lline small.pk { color: var(--amber); }
 .lline p { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); display: none; } .lline.open p { display: block; }
 body.stage .lower { display: none !important; }
+.ppill .pdot { width: 18px; height: 18px; border-radius: 50%; background: #3a4a38; } .ppill .pdot.on { background: var(--red); box-shadow: 0 0 10px var(--red); animation: rec 1.4s ease-in-out infinite; } .ppill .pdot.paused { background: var(--amber); }
+.ppill .pclock { font-size: 10px; color: var(--red); }
+/* the next move sits in the flow of the bottom box, under the panel, never over it */
+.lower .guide { position: relative; left: auto; right: auto; bottom: auto; margin: 0 10px 10px; flex: 0 0 auto; }
+@media (max-width: 560px) { .lower .scroll { padding-bottom: 72px; } }
 
 .syncnote { color: var(--muted); font-size: 10.5px; white-space: nowrap; } .syncnote:empty { display: none; }
 #weather { display: block; width: 100%; height: 34px; margin-top: 10px; }
@@ -267,7 +272,10 @@ const POP_PAGES = [
   ...(macRelevant() ? [{ id: 'mac', label: 'this Mac', build: el => el.innerHTML = `<p class="pnote" id="macText"></p><div class="pgrid">${pbtn('id="macBtn"', svg(PI.mac), 'use Speechform on this Mac')}</div>` }] : []),
   { id: 'settings', label: 'settings', build: el => el.innerHTML = `<p class="pnote" id="setHear"></p><div class="pgrid">${pbtn('id="listenBtn"', svg(PI.listen), 'download the listener')}${pbtn('id="where"', svg(PI.where), 'where Studio runs')}${pbtn('id="popReset"', svg(PI.reset), 'reset this card')}</div>` },
 ];
-const POP = window.SpeechformPopit.mount({ key: SCREEN || 'main', pages: POP_PAGES });
+/* the pill: the recorder's state at a glance (a red dot while recording, with the clock) */
+const pillOf = el => { const on = typeof listening === 'function' && listening(), paused = on && H.paused;
+  el.innerHTML = `<span class="pdot ${on ? (paused ? 'paused' : 'on') : ''}"></span><span class="pclock">${on ? clock(Date.now() / 1000 - recStart) : ''}</span>`; };
+const POP = window.SpeechformPopit.mount({ key: SCREEN || 'main', pages: POP_PAGES, pill: pillOf, avoid: () => { const f = $('#say'); return f && f.offsetParent ? f.getBoundingClientRect() : null; } });
 let page = 'transcript', look = 'image';
 function showPage(p) {
   page = p;
@@ -376,6 +384,7 @@ let lastDraw = 0;
   level = H.level();
   if (look === 'image' && SCREEN !== 'desk') paintImage(t);
   if (H.listening) $('#clock').textContent = clock(Date.now() / 1000 - recStart) + (H.paused ? ' · paused' : '');
+  if (POP.pilled && (t | 0) % 500 < 40) POP.refreshPill();
   $('#lvl').style.width = Math.min(100, (H.listening && !H.paused ? level : 0) * 900) + '%';
 })(0);
 const clock = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
@@ -427,7 +436,7 @@ async function toggleRec() {
   activity();
   arming = true; paintRec();
   const ok = await H.start(); arming = false;
-  if (ok) POP.expand(true);
+  if (ok) { POP.expand(true); POP.wake(); }
   if (!ok) {
     if (H.error === 'denied' || H.error === 'unavailable') listenSheet(H.error);
     else if (H.error === 'no-listener' && window.SpeechformWhisper) listenSheet('download');

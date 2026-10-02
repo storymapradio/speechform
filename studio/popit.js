@@ -4,7 +4,10 @@
  * swipes through, with dots beneath. Drag it anywhere by its top strip; make it larger or smaller with the corner
  * grip or a pinch. Where it sits and how large it is are kept on this device.
  *
- *   const P = SpeechformPopit.mount({ key, pages: [{ id, label, build(el) }], onPage })
+ * On a phone it rests as a small round pill after a few seconds untouched (the recorder's state and clock, from
+ * pill(el)), snapped to the nearest edge; one tap opens it again. It never sits over avoid() (the input row).
+ *
+ *   const P = SpeechformPopit.mount({ key, pages: [{ id, label, build(el) }], onPage, pill(el), avoid() })
  *   P.expand(true|false)  P.show(id)  P.page  P.expanded  P.el
  */
 (function (root) {
@@ -42,14 +45,18 @@
 .popit .pbtn.wide small{display:block;color:var(--muted,#7d9a78);font-size:.86em;margin-top:.15em}
 .popit .pbtn[disabled]{opacity:.35;pointer-events:none}
 .popit .plabel{grid-column:1/-1;font-size:.75em;color:var(--muted,#7d9a78);letter-spacing:.08em;margin:.5em 0 0}
-.popit .pnote{font-size:.8em;line-height:1.45;color:var(--muted,#7d9a78);margin:.4em 0}`;
+.popit .pnote{font-size:.8em;line-height:1.45;color:var(--muted,#7d9a78);margin:.4em 0}
+.popit .ppill{display:none}
+.popit.pill{border-radius:50%;cursor:pointer;transition:left .25s,top .25s,width .2s,height .2s}
+.popit.pill>*:not(.ppill){display:none!important}
+.popit.pill .ppill{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;gap:2px}`;
   if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  function mount({ key = 'main', pages = [], onPage } = {}) {
+  function mount({ key = 'main', pages = [], onPage, pill, avoid, idle = 4000 } = {}) {
     const STORE = 'speechform-popit:' + key;
     const el = document.createElement('div'); el.className = 'popit closed';
-    el.innerHTML = `<div class="pgrip" title="drag to move"><div class="pdots"></div></div><div class="ppages"></div><button class="pmore">more</button><div class="psize" title="drag to resize"></div>`;
+    el.innerHTML = `<div class="pgrip" title="drag to move"><div class="pdots"></div></div><div class="ppages"></div><button class="pmore">more</button><div class="psize" title="drag to resize"></div><div class="ppill"></div>`;
     document.body.appendChild(el);
     const box = el.querySelector('.ppages'), dots = el.querySelector('.pdots');
     pages.forEach(p => {
@@ -61,9 +68,20 @@
     const phone = () => Math.min(innerWidth, innerHeight) < 600;
     const base = () => (phone() ? 150 : 180);
     let g = (() => { try { return JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { return null; } })();
+    const PILL = 58;
+    let pilled = false;
+    /* the lowest the card may sit: above the input row, if one is given */
+    const floor = () => { const r = avoid && avoid(); return r && r.height ? r.top - 8 : innerHeight - 4; };
     const place = () => {
+      if (pilled) {
+        /* the pill: the nearest side edge, above the input row */
+        const r = el.getBoundingClientRect(), mid = (g && g.x != null ? g.x : innerWidth) + (g ? g.w : 150) / 2;
+        const x = mid < innerWidth / 2 ? 8 : innerWidth - PILL - 8, y = clamp(g && g.y != null ? g.y + (g.w * 1.4 - PILL) : innerHeight, 8, floor() - PILL);
+        el.style.width = el.style.height = PILL + 'px'; el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.fontSize = '10.5px';
+        return { x: g && g.x, y: g && g.y, w: g && g.w };
+      }
       const w = clamp(g ? g.w : base(), 120, Math.min(innerWidth - 16, 440)), h = Math.round(w * 1.4);
-      const x = clamp(g && g.x != null ? g.x : innerWidth - w - 14, 4, innerWidth - w - 4), y = clamp(g && g.y != null ? g.y : innerHeight - h - 14, 4, innerHeight - h - 4);
+      const x = clamp(g && g.x != null ? g.x : innerWidth - w - 14, 4, innerWidth - w - 4), y = clamp(g && g.y != null ? g.y : floor() - h - 6, 4, Math.max(4, floor() - h));
       el.style.width = w + 'px'; el.style.height = h + 'px'; el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.fontSize = (w / 150 * 10.5).toFixed(2) + 'px';
       return { x, y, w };
     };
@@ -88,6 +106,14 @@
     const lift = e => { touches.delete(e.pointerId); if (pinch && touches.size < 2) { pinch = null; keep(); } };
     el.addEventListener('pointerup', lift, true); el.addEventListener('pointercancel', lift, true);
 
+    /* resting: after a few seconds untouched, on a phone, the card becomes a pill; a tap opens it again */
+    let timer = null;
+    const ppill = el.querySelector('.ppill');
+    const rest = () => { if (!phone() || pilled) return; pilled = true; el.classList.add('pill'); pill && pill(ppill); place(); };
+    const wake = () => { clearTimeout(timer); if (pilled) { pilled = false; el.classList.remove('pill'); place(); } timer = setTimeout(rest, idle); };
+    el.addEventListener('pointerdown', e => { if (pilled) { e.preventDefault(); e.stopPropagation(); wake(); return; } wake(); }, true);
+    el.addEventListener('scroll', wake, true);
+    timer = setTimeout(rest, idle);
     let cur = pages[0] && pages[0].id, expanded = false;
     const sync = () => { const i = pages.findIndex(p => p.id === cur); dots.querySelectorAll('i').forEach((d, j) => d.classList.toggle('on', j === i)); };
     box.addEventListener('scroll', () => { const i = Math.round(box.scrollLeft / Math.max(1, box.clientWidth)); const p = pages[i]; if (p && p.id !== cur) { cur = p.id; sync(); onPage && onPage(cur); } }, { passive: true });
@@ -95,7 +121,8 @@
     function expand(on) { expanded = !!on; el.classList.toggle('closed', !expanded); if (!expanded) { cur = pages[0].id; box.scrollLeft = 0; sync(); } }
     el.querySelector('.pmore').onclick = () => { expand(true); show(pages[1] ? pages[1].id : cur); };
     sync();
-    return { el, show, expand, get expanded() { return expanded; }, get page() { return cur; }, place, reset() { g = null; keep(); place(); } };
+    return { el, show, expand, get expanded() { return expanded; }, get page() { return cur; }, get pilled() { return pilled; }, place, wake, rest,
+      refreshPill() { if (pilled && pill) pill(ppill); }, reset() { g = null; keep(); place(); } };
   }
   root.SpeechformPopit = { mount };
 })(this);
