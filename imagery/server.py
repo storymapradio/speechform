@@ -509,6 +509,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', origin)
             self.send_header('Vary', 'Origin')
             self.send_header('Access-Control-Allow-Private-Network', 'true')
+            self.send_header('Access-Control-Expose-Headers', 'Content-Range, Content-Length')
 
     def _send(self, code, obj, ctype='application/json'):
         body = obj if isinstance(obj, (bytes, bytearray)) else json.dumps(obj, indent=1).encode()
@@ -531,7 +532,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(204)
         self._cors()
         self.send_header('Access-Control-Allow-Methods', 'GET, POST')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Range')
         self.send_header('Access-Control-Max-Age', '600')
         self.end_headers()
 

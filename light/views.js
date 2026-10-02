@@ -34,6 +34,8 @@
     airtime: '<path d="M12 5v14M4 9.5l16-3M8 20h8"/><circle cx="5" cy="13" r="2.6"/><circle cx="19" cy="10" r="2"/>',
     questions: '<path d="M8.5 9a3.5 3.5 0 1 1 5 3.2c-1 .5-1.5 1.2-1.5 2.3"/><circle cx="12" cy="18.5" r=".9"/>',
     links: '<path d="M2.5 6c7 0 8 6 13 6M2.5 18c7 0 8-6 13-6"/><circle cx="18" cy="12" r="2.6"/>',
+    library: '<path d="M4 19.5V6.5M8.5 19.5V4.5M13 19.5v-11l4.5-1.5 3 12.5-4.4 1z"/><path d="M3 20.5h18"/>',
+    room: '<circle cx="12" cy="8" r="3"/><circle cx="5" cy="10.5" r="2.2"/><circle cx="19" cy="10.5" r="2.2"/><path d="M6.5 19.5c.6-3.5 2.8-5.5 5.5-5.5s4.9 2 5.5 5.5M1.8 17.5c.4-2 1.6-3.3 3.2-3.5M22.2 17.5c-.4-2-1.6-3.3-3.2-3.5"/>',
     steerall: '<rect x="3.5" y="3.5" width="7" height="7" rx="3.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="3.5"/>',
   };
   /* the speakers, by letter, the same colours everywhere they appear */
@@ -403,7 +405,7 @@
         x.fillText(fit(s.name, (W - 2 * pad) / n), px, py + r + U(8));
         if (T.jev && T.jev.stage === s.id) { x.fillStyle = amber; x.beginPath(); x.moveTo(px, py - r - U(4)); x.lineTo(px - U(5), py - r - U(13)); x.lineTo(px + U(5), py - r - U(13)); x.fill(); }
       });
-      if (cur >= 0) { const [mx, my] = B(U_(curE)); glowOn(amber, U(12)); x.strokeStyle = amber; x.lineWidth = U(2.5); x.beginPath(); x.arc(mx, my, Math.min(U(19), (W - 2 * pad) / n * .33), 0, 7); x.stroke(); glowOff(); }
+      if (cur >= 0) { const [mx, my] = B(U_(curE)); glowOn(amber, U(12)); x.strokeStyle = amber; x.lineWidth = U(2.5); x.beginPath(); x.arc(mx, my, Math.max(U(3), Math.min(U(19), (W - 2 * pad) / n * .33)), 0, 7); x.stroke(); glowOff(); }
       /* the other threads of this form, as beads under the stage each has reached */
       const others = (st.threads || []).filter(t => t.id !== a.thread && t.kind === a.kind && t.stage);
       others.forEach((t, j) => { const i = a.stages.findIndex(s => s.id === t.stage); if (i < 0) return; const [px, py] = B(U_(i)); x.fillStyle = STATE[live(t, nowOf())] || kc; x.beginPath(); x.arc(px - U(12) + (j % 5) * U(6), py + U(44), U(2.6), 0, 7); x.fill(); });
@@ -445,6 +447,12 @@
           const cx2 = X(now), curl = Math.min(1, (now - t.last_at) / 300); x.beginPath();
           for (let k = 0; k <= 30; k++) { const a = k / 30 * Math.PI * (1 + 2 * curl), r = U(7) * (1 - k / 40); x.lineTo(cx2 + r * Math.sin(a), y - U(7) + r * Math.cos(a)); } x.stroke();
         } else if (state !== 'closed') { x.strokeStyle = kc; x.globalAlpha = .25; x.lineWidth = dpr; x.beginPath(); x.moveTo(end, y); x.lineTo(X(now), y); x.stroke(); x.globalAlpha = 1; }
+        const want = T.room && T.room.threads && T.room.threads[t.id] ? Math.min(1, (T.room.threads[t.id].interest || 0) / 3) : 0;
+        if (want > .05 && state !== 'closed') {                          // the room wants more of it: a brighter glow where it stands
+          const gx = state === 'dormant' ? X(now) : end, beat = .5 + .5 * Math.sin(pulseT() * 3 + i);
+          glowOn('#5ab4ff', U(8 + 14 * want)); x.strokeStyle = 'rgba(90,180,255,' + (.35 + .5 * want) + ')'; x.lineWidth = U(1.5);
+          x.beginPath(); x.arc(gx, y, U(7 + 5 * want * beat), 0, 7); x.stroke(); glowOff();
+        }
         if (state === 'ready') {                                         // swells into a bud
           const b = 1 + .12 * Math.sin(pulseT() * 2.4 + i); glowOn(amber, U(10)); x.fillStyle = 'rgba(255,201,74,.85)';
           x.beginPath(); x.ellipse(end + U(6), y, U(6) * b, U(4.2) * b, 0, 0, 7); x.fill(); glowOff();
@@ -597,6 +605,7 @@
       const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       W = w; H = h; x.clearRect(0, 0, W, H); hits = [];
+      if (W < 40 * dpr || H < 40 * dpr) return;                            // too small to draw anything legible
       ({ river, window: windowView, build, shape, ideas, bars, lenses: lensesView, arc: arcView, threads: threadsView, pulse: pulseView, airtime: airtimeView, questions: questionsView, links: linksView })[view]();
     }
     requestAnimationFrame(loop);

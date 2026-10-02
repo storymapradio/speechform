@@ -36,8 +36,10 @@
       for (let k = 0; k < 7; k++) { const a = ang + (k - 3) * .36, r = .04 * scale; out.push([x + r * Math.cos(a), y + r * Math.sin(a), .024 * scale, a * 57.2958 - 90, [.55, 1, .5], .85, 'blade']); }
       out.push([x, y, .008 * scale, 0, [1, .95, .6], .9, 'dot']);
     } else if (t.state !== 'dormant') {                                  // the tip glows, at the talk's pulse
-      out.push([x, y, (.012 + .016 * beat * (t.active ? 1 : .45)) * scale, 0, [1, 1, .85], (t.active ? .6 : .35) + .35 * beat, 'dot']);
+      out.push([x, y, (.012 + .016 * beat * (t.active ? 1 : .45)) * scale * (1 + (t.want || 0)), 0, [1, 1, .85], Math.min(1, (t.active ? .6 : .35) + .35 * beat + .3 * (t.want || 0)), 'dot']);
     }
+    if (t.want > .05 && t.state !== 'closed')                           // the room wants more of it: a cool halo, brighter as it asks
+      out.push([x, y, (.03 + .02 * beat) * scale * (1 + t.want), 0, [.45, .75, 1], .25 + .45 * t.want, 'dot']);
   }
   /* for the images with no branch of their own per idea: a sprig per thread rising from the foot of the square */
   function sprigs(out, c) {

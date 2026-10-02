@@ -34,9 +34,11 @@
     let tab = 'cards', list = [], secs = [], open = null, side = 'front', timer = null;
     /* the server may be this page's own, or the one on this Mac (Studio on the public site), or answered in the browser */
     const base = () => (root.SpeechformLocal && root.SpeechformLocal.base()) || '';
-    const url = (c, f) => /^(data|blob|https?):/.test(String(f)) ? f : server ? `${base()}/cards/${encodeURIComponent(c.id)}/${f}` : f;
+    const url = (c, f) => c && c.urls && c.urls[f] ? c.urls[f] : /^(data|blob|https?):/.test(String(f)) ? f : server ? `${base()}/cards/${encodeURIComponent(c.id)}/${f}` : f;
+    /* a card from the account's library carries its JSON with it and its files as signed addresses */
+    const getFile = (c, f) => c && c.inline && f in c.inline ? Promise.resolve(new Response(JSON.stringify(c.inline[f]), { headers: { 'content-type': 'application/json' } })) : fetch(url(c, f));
     const images = {};
-    const img = src => new Promise(res => { if (!src) return res(null); if (images[src]) return res(images[src]); const i = new Image(); if (base() && !src.startsWith('data:')) i.crossOrigin = 'anonymous'; i.onload = () => { images[src] = i; res(i); }; i.onerror = () => res(null); i.src = src; });
+    const img = src => new Promise(res => { if (!src) return res(null); if (images[src]) return res(images[src]); const i = new Image(); if ((base() || /^https?:/.test(src)) && !src.startsWith('data:')) i.crossOrigin = 'anonymous'; i.onload = () => { images[src] = i; res(i); }; i.onerror = () => res(null); i.src = src; });
     const art = async c => ({ abstract: await img(c.abstract && (c.abstract.startsWith('data:') ? c.abstract : url(c, c.abstract))),
                               clear: await img(c.clear && (c.clear.startsWith('data:') ? c.clear : url(c, c.clear) + '?' + (c.bank || ''))) });
 
@@ -60,7 +62,7 @@
     big.addEventListener('contextrestored', () => open && art(open).then(a => R.drawCard(big, open, a, side)));
     page.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { tab = b.dataset.t; page.querySelectorAll('[data-t]').forEach(q => q.classList.toggle('on', q === b)); draw(); });
     sheet.querySelector('[data-close]').onclick = () => { sheet.hidden = true; open = null; sheet.querySelector('audio').pause(); };
-    sheet.querySelector('[data-folder]').onclick = () => open && server && fetch(`/cards/${encodeURIComponent(open.id)}/reveal`, { method: 'POST', body: '{}' });
+    sheet.querySelector('[data-folder]').onclick = () => open && server && !open.library && fetch(`/cards/${encodeURIComponent(open.id)}/reveal`, { method: 'POST', body: '{}' });
     /* everything kept with the recording, and its replay: press play and the audio, the transcript and every
        graph move through the recording as it happened; drag the line to go anywhere in it */
     let doc = 'transcript', P = [], ideaTitles = {}, since = 0, clock = null, playing = false;
@@ -126,16 +128,16 @@
       if (loadedFor !== open.id) {
         loadedFor = open.id; pause(); clock = null; P = []; since = open.since || 0;
         ideaTitles = Object.fromEntries(((open.reading || {}).ideas || []).map(i => [i.id, i.title]));
-        try { const r = await fetch(url(open, 'phrases.json')); P = r.ok ? (await r.json()).filter(p => p.ranked) : []; } catch (e) {}
+        try { const r = await getFile(open, 'phrases.json'); P = r.ok ? (await r.json()).filter(p => p.ranked) : []; } catch (e) {}
         if (!since && P.length) since = P[0].at - 2;
         box.querySelector('.dtrans').innerHTML = P.map(p => `<div class="dline"><span class="dt">${clockText((p.at || 0) - since)}</span> <span class="dk" style="color:${R.COLORS[R.IMAGE[p.kind]] || '#7d9a78'}">${esc(p.kind)}</span><div>${esc(p.text)}</div></div>`).join('');
         box.querySelectorAll('.dline').forEach((l, i) => l.onclick = () => seek((P[i].at || 0) - since + .01));
       }
-      try { const r = await fetch(url(open, 'reading.txt')); box.querySelector('.dtext').textContent = r.ok ? await r.text() : ''; } catch (e) {}
+      try { const r = await getFile(open, 'reading.txt'); box.querySelector('.dtext').textContent = r.ok ? await r.text() : ''; } catch (e) {}
       if (steer) {
         /* the loose ends: every thread, its state and stage, and how each open one could have continued or closed */
         let th = [];
-        try { const r = await fetch(url(open, 'threads.json')); th = r.ok ? (await r.json()).threads || [] : []; } catch (e) {}
+        try { const r = await getFile(open, 'threads.json'); th = r.ok ? (await r.json()).threads || [] : []; } catch (e) {}
         const SP = (root.SpeechformViews || {}).SPEAKER || {}, WORD = (root.SpeechformViews || {}).STATE_WORD || {};
         box.querySelector('.dloose').innerHTML = th.length ? th.map(t => `<div class="dthr ${esc(t.state)}"><b>${esc(t.title || 'a thread')}</b>
           <span>${esc(WORD[t.state] || t.state)}${t.stage ? ' · at ' + esc(t.stage) : ''}${t.need && t.state !== 'closed' ? ' · ' + esc(t.need) : ''} · opened by <i style="color:${SP[t.opened_by] || 'inherit'}">${esc(t.opened_by)}</i></span>
@@ -215,7 +217,7 @@
       if (tab === 'sections') draw();
     }
     draw();
-    return { make, keepSection, draw, show: t => { tab = t; page.querySelectorAll('[data-t]').forEach(q => q.classList.toggle('on', q.dataset.t === t)); draw(); }, onMake: f => page.querySelector('[data-make]').onclick = f };
+    return { make, keepSection, draw, open: c => show(c), show: t => { tab = t; page.querySelectorAll('[data-t]').forEach(q => q.classList.toggle('on', q.dataset.t === t)); draw(); }, onMake: f => page.querySelector('[data-make]').onclick = f };
   }
 
   /* the style every page shares for the deck */

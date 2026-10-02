@@ -9,6 +9,8 @@
  * 127.0.0.1, which cannot reach the site's sign-in session, so the key stands in for it: it is kept in this
  * browser's localStorage, sent only to the sf_host_* functions, and can be revoked in the Engine at any time.
  * Opening http://127.0.0.1:9990/studio/#sfhost=<key> stores it and clears it from the address bar.
+ * On the website a host signed in with the site's own account hosts with that session instead (Room.useSession):
+ * the sf_host_* functions take an empty key to mean the person signed in.
  *
  *   Room.open({ cohortId, title, allowGuests, shareTranscript })   opens a room; resolves to { code, url, ... }
  *   Room.publish(stateObj)    the shared state; throttled to one write in 3 s, sooner when threads change.
@@ -35,7 +37,7 @@
   var COLOR = { curious: '#5ab4ff', confused: '#ffc94a', delighted: '#39ff14', moved: '#ff9ae0', disagree: '#ff6a5a', question: '#b4a6ff', note: '#8aa284' };
   var K_KEY = 'sf-host-key', K_ROOM = 'sf-host-room';
 
-  var sb = null, chan = null, room = null, who = null;
+  var sb = null, chan = null, room = null, who = null, session = false;
   var feed = [], votes = {}, voteTimes = [], threadNames = {};
   var fbFns = [], chFns = [], panels = [];
   var pending = null, lastSent = '', lastShape = '', lastAt = 0, timer = null, busy = false, lastError = '';
@@ -53,7 +55,8 @@
     });
   }
   function rpc(name, args) { return client().then(function (c) { return c.rpc(name, args); }).then(function (r) { if (r.error) throw new Error(r.error.message); return r.data; }); }
-  function key() { try { return localStorage.getItem(K_KEY) || ''; } catch (e) { return ''; } }
+  function stored() { try { return localStorage.getItem(K_KEY) || ''; } catch (e) { return ''; } }
+  function key() { return session ? '' : stored(); }                 // signed in on the site: the session is the key
   function setKey(k) { try { if (k) localStorage.setItem(K_KEY, k); else localStorage.removeItem(K_KEY); } catch (e) {} }
   function emit() { var s = summary(); chFns.forEach(function (f) { try { f(s); } catch (e) { console.error(e); } }); panels.forEach(drawPanel); }
 
@@ -66,7 +69,7 @@
   /* ── the room ──────────────────────────────────────────────────────── */
   function signIn(k) {
     if (k) setKey(k.trim());
-    if (!key()) return Promise.reject(new Error('A host key is needed. Make one in the Engine under Speechform rooms.'));
+    if (!session && !key()) return Promise.reject(new Error('A host key is needed. Make one in the Engine under Speechform rooms.'));
     return rpc('sf_host_whoami', { p_key: key() }).then(function (w) { who = w; drawAll(); return w; })
       .catch(function (e) { who = null; drawAll(); throw e; });
   }
@@ -275,16 +278,20 @@
     if (a === 'close') { close().catch(function (x) { p.err = x.message; drawPanel(p); }); return; }
     if (a === 'copy') { try { navigator.clipboard.writeText(joinUrl()); p.err = ''; p.note = 'The link is copied.'; drawPanel(p); } catch (e) {} return; }
     if (a === 'new') { leave(); return; }
+    if (a === 'signin') { CFG.signIn && CFG.signIn(); return; }
   }
   function drawAll() { panels.forEach(drawPanel); }
   function drawPanel(p) {
     var el = p.el, h = '';
-    if (!who) {
+    if (!who && CFG.signIn && !session) {
+      h = '<h4>The room</h4><div class="muted">Sign in to open a room for a cohort you facilitate.</div>' +
+        '<div class="row"><button class="go" data-sfr="signin">Sign in</button></div>';
+    } else if (!who) {
       h = '<h4>The room</h4><div class="muted">Hosting a room takes a host key from the Engine. It lets this Mac open rooms for your cohorts.</div>' +
         '<div class="row"><input type="password" data-sfr-key placeholder="sfh_..." autocomplete="off"><button class="go" data-sfr="key">Use the key</button></div>' +
         '<div class="row"><a class="url" href="' + esc(CFG.engine) + '" target="_blank" rel="noopener">Make a key in the Engine</a></div>';
     } else if (!room || (room.status !== 'open' && !p.keepClosed)) {
-      h = '<h4>Open a room</h4><div class="muted">Signed in as ' + esc(who.name || 'the host') + '. <a href="#" data-sfr="out" class="url">Use another key</a></div>' +
+      h = '<h4>Open a room</h4><div class="muted">Signed in as ' + esc(who.name || 'the host') + '.' + (session ? '' : ' <a href="#" data-sfr="out" class="url">Use another key</a>') + '</div>' +
         '<div class="row"><select data-sfr-cohort>' + (who.cohorts || []).map(function (c) { return '<option value="' + esc(c.id) + '"' + (p.opts.cohortId === c.id ? ' selected' : '') + '>' + esc(c.name) + '</option>'; }).join('') + '</select></div>' +
         '<div class="row"><input type="text" data-sfr-title placeholder="A title for the session" value="' + esc(p.opts.title || '') + '"></div>' +
         '<div class="row"><label class="tg"><input type="checkbox" data-sfr-guests0' + (p.opts.allowGuests ? ' checked' : '') + '> guests may join by code</label>' +
@@ -315,7 +322,9 @@
 
   root.Room = {
     config: function (o) { for (var k in o) CFG[k] = o[k]; return CFG; },
-    signIn: signIn, signOut: signOut, hasKey: function () { return !!key(); }, host: function () { return who; },
+    signIn: signIn, signOut: signOut, hasKey: function () { return !!key() || session; }, host: function () { return who; },
+    /* the website: host with the site's signed-in session (a supabase client holding it); null goes back to the key */
+    useSession: function (c) { var was = session; session = !!c; if (c) sb = c; else if (was) sb = null; who = null; if (session) return signIn().then(function () { return resume(); }).catch(function () { drawAll(); }); drawAll(); return Promise.resolve(); },
     open: open, resume: resume, close: close, set: set, status: status,
     publish: publish, flush: function () { clearTimeout(timer); timer = null; flush(); },
     onFeedback: function (fn) { fbFns.push(fn); return function () { fbFns.splice(fbFns.indexOf(fn), 1); }; },

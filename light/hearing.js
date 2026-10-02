@@ -2,6 +2,7 @@
  *
  *   1. the browser's own recognition, asked to run on the device (Chrome downloads its model once, then keeps it local)
  *   2. otherwise this Mac's Apple transcription, through the Speechform server beside the page
+ *   3. otherwise Whisper running in the page (studio/whisper.js), when the page has it and its model is downloaded
  * Speech is never sent to a cloud service: if neither is available, hearing does not start.
  * While it listens it also keeps its own copy of the voice, so the recording can be saved with its card.
  *
@@ -23,11 +24,11 @@
   }
 
   function SpeechformHearing({ onPhrase, onInterim, onChange } = {}) {
-    let listening = false, rec = null, mac = null, audio = null, take = null, level = 0, how = null;
+    let listening = false, rec = null, mac = null, audio = null, take = null, level = 0, how = null, lastError = null;
     const say = () => onChange && onChange({ listening, how });
 
     async function onDevice(lang) {
-      if (!Rec || !Rec.available) return false;
+      if (!Rec || !Rec.available || root.SpeechformHearing.forceWhisper) return false;
       try {
         let a = await Rec.available({ langs: [lang], processLocally: true });
         if (a === 'downloadable' || a === 'downloading') { await Rec.install({ langs: [lang], processLocally: true }); a = await Rec.available({ langs: [lang], processLocally: true }); }
@@ -72,12 +73,23 @@
         .then(j => { onInterim && onInterim(''); if (j.ok && j.text) onPhrase && onPhrase(j.text.trim()); }).catch(() => onInterim && onInterim(''));
     }
 
+    /* Whisper in the page: the same phrases, cut at pauses, transcribed on this device */
+    function viaWhisper(stream, ac) {
+      const W = root.SpeechformWhisper, L = W.listener(ac.sampleRate, { onPhrase: t => onPhrase && onPhrase(t), onInterim: t => onInterim && onInterim(t) });
+      const src = ac.createMediaStreamSource(stream), node = ac.createScriptProcessor(4096, 1, 1); src.connect(node); node.connect(ac.destination);
+      node.onaudioprocess = e => { if (listening) L.push(e.inputBuffer.getChannelData(0)); };
+      mac = node; whisperL = L;
+    }
+    let whisperL = null;
+
     async function start() {
       if (listening) return true;
       const lang = navigator.language || 'en-US';
-      let stream;
-      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { return false; }
+      /* phones let a page record only from a tap: the audio is opened here, before anything is awaited */
       const ac = new (root.AudioContext || root.webkitAudioContext)();
+      try { ac.resume(); } catch (e) {}
+      let stream;
+      try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch (e) { lastError = e && e.name === 'NotAllowedError' ? 'denied' : 'unavailable'; try { ac.close(); } catch (x) {} return false; }
       const an = ac.createAnalyser(); an.fftSize = 512; ac.createMediaStreamSource(stream).connect(an); const buf = new Float32Array(an.fftSize);
       /* the recording itself, kept while listening */
       const keep = ac.createScriptProcessor(4096, 1, 1); ac.createMediaStreamSource(stream).connect(keep); keep.connect(ac.destination);
@@ -87,10 +99,12 @@
       listening = true;
       if (await onDevice(lang)) { how = 'this device (the browser, on-device)'; browser(lang); }
       else if (await macThere()) { how = "this Mac (Apple's on-device transcription)"; viaMac(stream, ac); }
-      else { stop(); return false; }
+      else if (root.SpeechformWhisper && root.SpeechformWhisper.usable) { root.SpeechformWhisper.load(); how = 'this device (Whisper, in the page)'; viaWhisper(stream, ac); }
+      else { lastError = 'no-listener'; stop(); return false; }
       say(); return true;
     }
     function stop() {
+      if (whisperL) { const L = whisperL; whisperL = null; L.flush(); }
       listening = false; onInterim && onInterim('');
       if (rec) { const r = rec; rec = null; try { r.stop(); } catch (e) {} }
       mac = null;
@@ -99,7 +113,7 @@
     }
     return {
       start, stop,
-      get listening() { return listening; }, get how() { return how; },
+      get listening() { return listening; }, get how() { return how; }, get error() { return lastError; },
       level() { if (audio) level = level * .8 + audio.read() * .2; else level *= .95; return level; },
       wav() { return take && take.chunks.length ? toWav(take.chunks, take.rate, 16000) : null; },
     };
@@ -107,7 +121,7 @@
   root.SpeechformHearing = SpeechformHearing;
   /* whether this browser can hear on the device itself: 'available', 'downloadable' (installed on first use), or 'none' */
   root.SpeechformHearing.onDevice = async (lang = navigator.language || 'en-US') => {
-    if (!Rec || !Rec.available) return 'none';
+    if (!Rec || !Rec.available || root.SpeechformHearing.forceWhisper) return 'none';
     try { const a = await Rec.available({ langs: [lang], processLocally: true }); return a === 'unavailable' ? 'none' : a; } catch (e) { return 'none'; }
   };
   root.SpeechformHearing.toWav = toWav;

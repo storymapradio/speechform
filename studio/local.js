@@ -5,8 +5,9 @@
  *          every call Studio makes goes to http://127.0.0.1:9990, exactly as on the Mac
  *   web    no server: this file answers those same calls inside the browser. The classifier (light/classify.js),
  *          the lenses (light/depth.js) and the threads (studio/ledger.js) run here; memory and sections stay in
- *          localStorage, cards in IndexedDB. Hearing is the browser's own on-device recognition or nothing. Jev and
- *          the easel run only with the Mac, so here the algorithm steers.
+ *          localStorage, cards in IndexedDB. Hearing is the browser's own on-device recognition, or Whisper running
+ *          in the page (studio/whisper.js). Jev answers through the site's proxy (studio/jev.js), spaced out exactly as
+ *          on the Mac; the easel runs only with the Mac.
  *
  * The page asks the Mac only when it may: on localhost, after ?mac=1, or once the person has chosen to connect
  * (a public page reaching into the local network asks the browser's permission, so it is never done unasked).
@@ -15,7 +16,7 @@
  */
 (function (root) {
   'use strict';
-  const C = root.SpeechformClassify, D = root.SpeechformDepth, Lg = root.SpeechformLedger, R = root.SpeechformReading;
+  const C = root.SpeechformClassify, D = root.SpeechformDepth, Lg = root.SpeechformLedger, R = root.SpeechformReading, J = root.SpeechformJev;
   const Q = new URLSearchParams(location.search), SCREEN = Q.get('screen') || '';
   const MAC = 'http://127.0.0.1:9990';
   const API = new Set(['state', 'status', 'say', 'intake', 'classify', 'card', 'cards', 'sections', 'memory', 'learned', 'pause', 'guide', 'depth', 'studio', 'transcribe', 'mask', 'settings', 'jev', 'listen', 'easel']);
@@ -124,7 +125,7 @@
         form: E.kind, ideas: E.ideas.map(i => ({ id: i.id, title: i.title, words: i.words, returns: i.returns, n: i.n })),
         active_idea: (E.events[E.events.length - 1] || {}).topic || null, lead: E.lead, growth: E.growth, form_to_register: C.IMAGE,
         direction: { ...E.dir }, gate_at: E.gateAt, radius: E.radius, conclusion_at: E.conclusionAt, steer: E.steer ? E.ledger.snapshot(nowS(), E.kind, (E.events[E.events.length - 1] || {}).topic) : null,
-        has_jev: false, jev_pause: null, jev_asking: false, studio: { ...link, desk: SCREEN === 'desk' || Date.now() - deskSeen < 5000 }, microphone: false };
+        has_jev: !!J, jev_pause: E.jevPause && E.jevPause.revision === E.revision ? E.jevPause : null, jev_asking: !!(J && J.asking), jev_rested: !!(J && J.resting), studio: { ...link, desk: SCREEN === 'desk' || Date.now() - deskSeen < 5000 }, microphone: false };
     }
     return { ingest, state, get E() { return E; } };
   }
@@ -222,7 +223,32 @@
     const files = { 'phrases.json': phrases, 'reading.json': reading, 'depth.json': dr, 'threads.json': { threads, note: 'Each idea is a thread, judged within its form\'s arc in this browser.' },
       'reading.txt': summary(card, reading, dr, threads), 'transcript.txt': phrases.map(p => `[${Math.max(0, Math.round(p.at - t0))} s] ${p.speaker || 'A'} | ${p.kind}\n${p.text}\n`).join('\n') };
     for (const [k, v] of Object.entries(files)) await cardsDb.file(id, k, v);
+    if (J) jevAtStop(card, phrases, text, dr, threads, reading);       // once, after the stop; it lands in a moment
     return card;
+  }
+  async function jevAtStop(card, phrases, text, dr, threads, reading) {
+    const segs = segments(phrases);
+    const j = await J.card({ segments: segs, threads, text });
+    if (j.rested) { card.jev = { skipped: 'Jev is resting; the algorithm read this recording' }; }
+    else if (j.error) { card.jev = { error: j.error }; }
+    else {
+      card.jev = { kind: j.kind, confidence: j.confidence };
+      j.segments.forEach((sg, i) => { if (dr.segments[i]) dr.segments[i].jev = sg.depth; });
+      const got = dr.segments.map(x => x.jev).filter(Boolean);
+      if (got.length) {
+        const mean = l => Math.round(got.reduce((a, g) => a + (g[l] || 0), 0) / got.length * 1000) / 1000, el = {};
+        got.forEach(g => { if (g.element) el[g.element] = (el[g.element] || 0) + 1; });
+        dr.jev = { listener: mean('listener'), speaker: mean('speaker'), absorption: mean('absorption'), element: Object.entries(el).sort((a, b) => b[1] - a[1])[0]?.[0] || null, passages: got.length };
+        dr.note = 'The algorithm read every element from the words; Jev answered the three lens questions for each passage after the recording stopped.';
+        card.depth_jev = dr.jev;
+      }
+      for (const t of threads) { const g = j.threads[t.id]; if (g && g.move) t.suggestion = { by: 'Jev', move: g.move, choice: g.choice, confidence: g.confidence, algorithm: (t.suggestion || {}).move }; }
+    }
+    await cardsDb.put(card);
+    await cardsDb.file(card.id, 'depth.json', dr);
+    await cardsDb.file(card.id, 'threads.json', { threads, note: 'Each idea is a thread, judged within its form\'s arc in this browser; Jev chose how each open one could have continued.' });
+    await cardsDb.file(card.id, 'reading.txt', summary(card, reading, dr, threads) + (card.jev && card.jev.kind ? `\nJEV\n  Jev hears it as ${card.jev.kind} (${pct(card.jev.confidence)} sure).\n` : card.jev && (card.jev.skipped || card.jev.error) ? `\nJEV\n  ${card.jev.skipped || card.jev.error}\n` : ''));
+    if (root.SpeechformLibrary) root.SpeechformLibrary.changed();
   }
 
   /* ── the session here, and the two windows ── */
@@ -276,9 +302,27 @@
       return json({ ok: !!c });
     }
     if (path.endsWith('/reveal')) return json({ ok: false, error: 'the folder lives on a Mac' });
-    if (path === '/pause') return json({ ok: false, why: 'Jev reads at a pause only with Speechform on a Mac; here the algorithm steers' });
-    if (path === '/guide') { const S = follower && remote ? remote : engine.state(true); const move = S.steer ? Lg.nextMove(S.steer) : null; return json({ ok: !!move, move, by: 'the algorithm', revision: S.revision }); }
-    if (path === '/depth/jev') return json({ ok: false, error: 'Jev is available with Speechform on a Mac' });
+    if (path === '/pause') {
+      /* Jev at a natural pause, spaced out (studio/jev.js); its answer counts only while the talk has not moved on */
+      if (!J || follower) return json({ ok: false, why: 'Jev is not here' });
+      const E = engine.E, ev = E.events.filter(e => e.source !== 'Section'); if (!ev.length) return json({ ok: false, why: 'nothing said yet' });
+      const rev = E.revision, quiet = Math.max(+d.quiet || 0, nowS() - ev[ev.length - 1].at);
+      const a = await J.pause({ events: ev, quiet, words: ev.reduce((n, e) => n + e.text.split(/\s+/).length, 0), kind: E.kind, steer: E.steer });
+      if (!a.ok) return json(a);
+      if (engine.E !== E || E.revision !== rev) return json({ ok: false, stale: true, why: 'the speaking resumed before Jev answered, so its answer was set aside' });
+      E.jevPause = { ...a, revision: rev, session: E.session }; share();
+      return json({ ok: true, ...E.jevPause });
+    }
+    if (path === '/guide') {
+      const S = follower && remote ? remote : engine.state(true); let move = S.steer ? Lg.nextMove(S.steer) : null, by = 'the algorithm';
+      if (S.jev_pause && S.jev_pause.move) { move = S.jev_pause.move; by = 'Jev'; }
+      return json({ ok: !!move, move, by, revision: S.revision });
+    }
+    if (path === '/depth/jev') {
+      if (!J) return json({ ok: false, error: 'Jev is not here' });
+      if (d.listening) return json({ ok: false, error: 'Jev waits until the speaking is over' });
+      return json(await J.passage(String(d.text || ''), d.kind));
+    }
     if (path === '/studio') {
       if (d.action === 'toggle') { if (follower) { if (BC) BC.postMessage({ t: 'toggle' }); } else link.toggle++; }
       if (d.action === 'rec') { link.listening = !!d.on; link.rec_at = +d.at || 0; share(); }

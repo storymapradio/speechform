@@ -101,7 +101,8 @@
 .jevring{width:26px;height:26px;opacity:0;transition:opacity .6s}
 .jevring.on{opacity:1}
 .jevring circle{fill:none;stroke:var(--amber);stroke-width:2;stroke-dasharray:6 8;transform-origin:50% 50%;animation:jevspin 6s linear infinite}
-@keyframes jevspin{to{transform:rotate(360deg)}}`;
+@keyframes jevspin{to{transform:rotate(360deg)}}
+.jevring.rest circle{stroke:var(--muted);animation:none;stroke-dasharray:2 6;opacity:.7}`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   /* a bud, drawn: the closing check shows each open thread as one */
@@ -237,7 +238,9 @@
   /* ── the slow ring while Jev reads at a pause ── */
   function ring(host) {
     host.innerHTML = '<svg class="jevring" viewBox="0 0 26 26" aria-label="Jev is reading"><circle cx="13" cy="13" r="10"/></svg>';
-    const el = host.firstChild; return { set(on) { el.classList.toggle('on', !!on); } };
+    const el = host.firstChild;
+    return { set(on, rested) { el.classList.toggle('on', !!on || !!rested); el.classList.toggle('rest', !!rested && !on); el.setAttribute('aria-label', rested && !on ? 'Jev is resting' : 'Jev is reading');
+      el.querySelector('title') || el.insertAdjacentHTML('afterbegin', '<title></title>'); el.querySelector('title').textContent = rested && !on ? 'Jev is resting; the algorithm steers' : 'Jev is reading'; } };
   }
 
   root.SpeechformSteer = { depthPage, guideCard, closing, speaker, modes, ring, live, RANK };
