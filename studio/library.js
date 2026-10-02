@@ -149,5 +149,5 @@
 .libl .line{display:block;padding:9px 10px}.libl .said{font-size:14px}.libl .meta{margin-top:6px}
 .libp{padding:4px 14px;line-height:1.55;margin:8px 0}.libcta{font:inherit;padding:9px 16px;border-radius:12px;border:1px solid rgba(255,201,74,.6);background:rgba(255,201,74,.08);color:var(--amber);cursor:pointer;box-shadow:0 0 14px rgba(255,201,74,.18)}`;
   if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
-  root.SpeechformLibrary = { mount, changed, sync, signIn, signOut, client: async () => (await client(), user ? sb : null), onChange: f => listeners.push(f), get user() { return user; }, get syncing() { return syncing; }, onSite };
+  root.SpeechformLibrary = { mount, changed, sync, signIn, signOut, openRow, client: async () => (await client(), user ? sb : null), onChange: f => listeners.push(f), get user() { return user; }, get syncing() { return syncing; }, onSite };
 })(this);

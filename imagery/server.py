@@ -482,7 +482,7 @@ def app_state(test=False):
         'transcript': [{'id': e.get('id'), 'text': e.get('text'), 'form': e.get('form'), 'speaker': e.get('speaker'),
                         'idea': e.get('topic'), 'at': e.get('at'), 'source': e.get('source'), 'why': why(e, i),
                         'register': growers.FORM_TO_REGISTER.get(e.get('form'), 'kelp')} for i, e in enumerate(events)],
-        'revision': s.get('revision'), 'session': s.get('session'), 'steer': s.get('steer'),
+        'revision': s.get('revision'), 'session': s.get('session'), 'steer': s.get('steer'), 'thread_vecs': s.get('thread_vecs') or {},
         'jev_pause': pause_jev['answer'] if pause_jev['answer'] and pause_jev['answer'].get('session') == s.get('session') else None,
         'studio': {'toggle': studio_link['toggle'], 'listening': studio_link['listening'], 'rec_at': studio_link['rec_at'], 'desk': time.time() - studio_link['desk_seen'] < 5},
         'jev_asking': pause_jev['asking'], 'has_jev': heavy.service(settings()) == 'typesafe',

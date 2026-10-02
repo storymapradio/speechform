@@ -50,6 +50,37 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .top .gridwrap .vcell { min-height: 0; height: calc((52vh - 70px) / 2); }
 [hidden] { display: none !important; }
 #where.full { color: var(--green); opacity: 1; }
+/* the recorder and the controls on the pop-it */
+.prec { display: flex; flex-direction: column; align-items: center; gap: .55em; padding-top: .4em; }
+.rec.big { width: 5.6em; height: 5.6em; border-width: .22em; }
+.rec.big i { width: 2.5em; height: 2.5em; }
+.rec.big svg { width: 2.4em; height: 2.4em; fill: none; stroke: var(--red); stroke-width: 2.2; stroke-linecap: round; }
+.rec.paused { border-color: var(--amber); } .rec.paused i { background: var(--amber); }
+.rec.waking { border-color: var(--amber); animation: rec 1s ease-in-out infinite; }
+.rec.installing { border-color: var(--faint); }
+.rec.installing::before { content: ''; position: absolute; inset: -.45em; border-radius: 50%; background: conic-gradient(var(--amber) var(--p), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - .28em), #000 calc(100% - .26em)); mask: radial-gradient(farthest-side, transparent calc(100% - .28em), #000 calc(100% - .26em)); }
+.rec.installing i { opacity: .4; }
+.plbl { font-size: .95em; color: var(--ink); letter-spacing: .06em; }
+.prow { display: flex; gap: .5em; } .pbtn.sm { min-width: 4.4em; }
+.popit .clock { font-size: 1em; color: var(--red); min-height: 1.2em; }
+.lvl { width: 70%; height: .35em; border-radius: 1em; background: #0d130c; overflow: hidden; } .lvl i { display: block; height: 100%; width: 0; background: var(--green); transition: width .1s; }
+.popit .spk3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.popit .spkb b { font-size: 1.9em; color: var(--c); line-height: 1; } .popit .spkb.on { border-color: var(--c); box-shadow: 0 0 12px color-mix(in srgb, var(--c) 40%, transparent); background: color-mix(in srgb, var(--c) 10%, #030503); color: var(--ink); }
+.pjev { display: flex; align-items: center; gap: .6em; }
+.popit [hidden] { display: none !important; }
+/* previews: made-up speech, faint and marked */
+.pvmark { display: inline-block; margin: 2px 0 8px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); border: 1px solid rgba(255,201,74,.5); border-radius: 99px; padding: 2px 8px; }
+#lines.pv .line, .pv .lenses, .pv .rail, .pv .cues, .pv .dhead .kind, .pv .lline { opacity: .5; }
+.pv .dhead .src { color: var(--amber); }
+/* loose ends */
+#loosePage { display: flex; flex-direction: column; gap: 6px; }
+.lline { display: grid; grid-template-columns: 4px 1fr; gap: 10px; border: 1px solid var(--faint); border-radius: 12px; padding: 8px 10px; background: #030503; cursor: pointer; }
+.lline i { border-radius: 2px; background: var(--muted); } .lline.ready i { background: var(--amber); box-shadow: 0 0 8px var(--amber); } .lline.closed i { background: var(--green); } .lline.dormant { opacity: .6; }
+.lline b { font-weight: 500; } .lline span, .lline small { display: block; color: var(--muted); font-size: 11px; } .lline small { color: var(--ink); margin-top: 3px; } .lline small.pk { color: var(--amber); }
+.lline p { margin: 4px 0 0; font-size: 11.5px; color: var(--muted); display: none; } .lline.open p { display: block; }
+body.stage .lower { display: none !important; }
+
 .syncnote { color: var(--muted); font-size: 10.5px; white-space: nowrap; } .syncnote:empty { display: none; }
 #weather { display: block; width: 100%; height: 34px; margin-top: 10px; }
 #deskroom { border: 2px solid var(--green-dim); border-radius: 18px; background: var(--panel); padding: 8px 12px; max-height: 38vh; overflow: auto; }
@@ -64,7 +95,7 @@ body { display: flex; justify-content: center; overflow: hidden; }
 .wheresheet button#listenClose, .wheresheet button#whereClose { border-color: var(--faint); background: none; color: var(--muted); }
 @media (max-width: 560px) { .app { padding-left: 8px; padding-right: 8px; } .seg button { width: 28px; } .bar { gap: 6px; } .top { height: 46vh; } .top .head { padding: 4px; } #steerlooks button, #looks button { width: 26px; height: 26px; } .lenses { grid-template-columns: 1fr; } .top .gridwrap.vgrid#sgrid, .top .gridwrap.vgrid#grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } .top .gridwrap .vcell { height: calc((46vh - 90px) / 1.6); } }
 .top .head { gap: 8px; flex-wrap: wrap; }
-.top .gridwrap.vgrid#sgrid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.top .gridwrap.vgrid#grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .line .test { color: var(--muted); border-color: var(--faint); }
 .who.B { border-color: #ff9ae066; color: #ff9ae0; } .who.C { border-color: #ffc25a66; color: #ffc25a; } .who.A { color: #5af0f0; border-color: #5af0f055; }
 .bar { flex-wrap: wrap; row-gap: 6px; }
@@ -133,25 +164,11 @@ body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
 </head>
 <body>
 <div class="app">
-  <nav class="bar">
-    <span class="seg" id="pages"></span>
-    <span class="grow"></span>
-    <span class="seg" id="modes"></span>
-    <button id="spk"></button>
-    <span id="ring"></span>
-    <span class="syncnote" id="syncnote"></span>
-    <span class="clock" id="clock"></span>
-    <button class="rec" id="rec" title="record" aria-label="record"><i></i></button>
-    <button class="plain" id="where" title="where Studio runs" aria-label="where Studio runs"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5z"/></svg></button>
-    <button class="plain" id="fresh" title="new session" aria-label="new session"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-  </nav>
   <section class="top">
-    <div class="head"><span class="seg" id="looks"></span><span class="seg" id="steerlooks"></span></div>
     <div class="stage">
       <canvas class="image" id="image"></canvas>
       <canvas class="one" id="one"></canvas><p class="note" id="note"></p>
       <div class="gridwrap" id="grid"></div>
-      <div class="gridwrap" id="sgrid"></div>
     </div>
   </section>
   <section class="lower">
@@ -160,6 +177,8 @@ body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
       <form class="say" id="say"><input id="words" autocomplete="off"><button type="submit" title="send" aria-label="send"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button></form>
     </div>
     <div class="page" data-p="depth" id="depthPage" hidden></div>
+    <div class="page" data-p="loose" hidden><div class="scroll" id="loosePage"></div></div>
+    <div class="page" data-p="links" id="linksPage" hidden></div>
     <div class="page" data-p="library" id="libraryPage" hidden></div>
     <div class="page" data-p="room" hidden><div class="scroll" id="roomPage"></div></div>
     <div class="page" data-p="memory" hidden>
@@ -184,11 +203,15 @@ body.desk .nextcard { display: block; grid-column: 2; grid-row: 1; }
 <script src="/light/depth.js"></script>
 <script src="/studio/steer.js"></script>
 <script src="/studio/room.js"></script>
+<script src="/studio/match.js"></script>
 <script src="/studio/ledger.js"></script>
 <script src="/studio/jev.js"></script>
 <script src="/studio/whisper.js"></script>
 <script src="/studio/local.js"></script>
 <script src="/studio/library.js"></script>
+<script src="/studio/index-api.js"></script>
+<script src="/studio/links.js"></script>
+<script src="/studio/popit.js"></script>
 <script>
 'use strict';
 /* Speechform Studio: the full classifier (MiniLM, in the Speechform server's speech worker), heard in the
@@ -206,36 +229,73 @@ const PAUSE = 8, DORMANT = 90;                 // a natural pause, in seconds; a
 let S = null, selected = null, interim = '', recStart = 0, pinned = null, pinnedAt = 0;
 const steerOf = {};                            // each phrase's steering snapshot, kept as it arrives (the server sends only the newest)
 
-/* ── the groups of icons ── */
-const icon = k => `<svg viewBox="0 0 24 24">${VW.ICON[k]}</svg>`;
-const PAGES = ['transcript', 'depth', 'memory', 'cards', 'library', 'room'];
-const LOOKS = [['image', '<circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/>'],
-  ['bars'], ['river'], ['window'], ['build'], ['shape'], ['ideas'], ['all']].map(([k, svg]) => [k, svg || VW.ICON[k]]);
-const STEERS = [...VW.STEER, 'steerall'];
-const TITLE = { library: 'your library, on every device', room: 'the room: people listening, live', all: 'every classifier view', steerall: 'every depth and steering view', lenses: 'the three lenses', arc: 'the arc of the form', threads: 'the threads', pulse: 'the absorption pulse', airtime: 'who speaks', questions: 'questions asked', links: 'threads from earlier recordings' };
+/* ── the two boxes, and the pop-it that holds every control ──
+   The top box shows the image or one view; the bottom box shows one panel. Every control lives on the pop-it, a
+   card-sized float: before recording it shows the recorder alone; recording opens its pages, swiped with a thumb. */
+const icon = k => `<svg viewBox="0 0 24 24">${VW.ICON[k] || ''}</svg>`;
+VW.ICON.image = '<circle cx="12" cy="12" r="3"/><path d="M12 4v3M12 17v3M4 12h3M17 12h3M6.3 6.3l2.1 2.1M15.6 15.6l2.1 2.1M6.3 17.7l2.1-2.1M15.6 8.4l2.1-2.1"/>';
+VW.ICON.loose = '<path d="M4 7c4 0 6 3 16 3M4 14h9"/><circle cx="16.5" cy="14" r="2.2"/><path d="M16.5 16.2v3"/>';
+const PI = {
+  pause: '<path d="M8.5 5.5v13M15.5 5.5v13"/>', stop: '<rect x="6.5" y="6.5" width="11" height="11" rx="1.5"/>', fresh: '<path d="M12 5v14M5 12h14"/>',
+  mirror: '<path d="M12 3v18"/><path d="M9 7H5v10h4M15 7h4v10h-4"/>', nudge: '<path d="M4 12h12"/><path d="M12 7l5 5-5 5"/><circle cx="19.5" cy="12" r="1.3"/>',
+  guide: '<circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/>', ask: '<path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z"/><path d="M9.6 9.6a2.4 2.4 0 1 1 3.4 2.2c-.7.4-1 .8-1 1.6"/><circle cx="12" cy="16.4" r=".7"/>',
+  card: '<rect x="6" y="3.5" width="12" height="17" rx="2"/><path d="M12 9v6M9 12h6"/>', person: '<circle cx="12" cy="8.5" r="3.5"/><path d="M5 20c1-4 3.8-6 7-6s6 2 7 6"/>',
+  mac: '<rect x="3.5" y="5" width="17" height="11" rx="1.5"/><path d="M8 20h8M12 16v4"/>', gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3M5.5 5.5l2.1 2.1M16.4 16.4l2.1 2.1M5.5 18.5l2.1-2.1M16.4 7.6l2.1-2.1"/>',
+  where: '<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.2 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.2-3.8-8.5s1.2-6.1 3.8-8.5z"/>',
+  reset: '<path d="M4 4h6M4 4v6M20 20h-6M20 20v-6M4 4l6 6M20 20l-6-6"/>', listen: '<path d="M12 3a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>',
+};
+const pbtn = (data, ic, label, extra = '') => `<button class="pbtn" ${data} aria-label="${label}">${ic}<span>${label}</span>${extra}</button>`;
+const svg = d => `<svg viewBox="0 0 24 24">${d}</svg>`;
+const PANELS = [['transcript', 'transcript'], ['depth', 'depth'], ['loose', 'loose ends'], ['links', 'links'], ['memory', 'memory'], ['cards', 'cards'], ['library', 'library'], ['room', 'room']];
+const VIEW_GROUPS = [['', ['image']], ['how it hears', ['bars', 'river', 'window', 'build', 'shape', 'ideas']], ['what it means', ['lenses', 'arc', 'threads', 'pulse', 'airtime', 'questions']], ['across recordings', ['links']], ['', ['all']]];
+const LOOK_NAME = Object.fromEntries(VW.LOOKS);
+const ALL_LOOKS = VIEW_GROUPS.flatMap(g => g[1]);
+const macRelevant = () => !LIB_ON_SITE() || Q.get('mac') === '1' || (() => { try { return localStorage.getItem('speechform-web:mac') === 'true'; } catch (e) { return false; } })();
+const LIB_ON_SITE = () => !!(window.SpeechformLibrary && window.SpeechformLibrary.onSite);
+const POP_PAGES = [
+  { id: 'recorder', build: el => el.innerHTML = `<div class="prec"><button class="rec big" id="rec" aria-label="record"><i></i></button><span class="plbl" id="recLabel">record</span>
+      <div class="prow" id="recMore" hidden><button class="pbtn sm" id="recStop" aria-label="stop">${svg(PI.stop)}<span>stop</span></button></div>
+      <span class="clock" id="clock"></span><span class="lvl"><i id="lvl"></i></span><span class="pnote" id="recNote"></span><span id="ring"></span></div>` },
+  { id: 'top', label: 'top box', build: el => el.innerHTML = '<div class="pgrid">' + VIEW_GROUPS.map(([g, ks]) => (g ? `<p class="plabel">${g}</p>` : '') + ks.map(k => pbtn(`data-l="${k}"`, icon(k === 'all' ? 'all' : k), LOOK_NAME[k] || k)).join('')).join('') + '</div>' },
+  { id: 'bottom', label: 'bottom box', build: el => el.innerHTML = '<div class="pgrid">' + PANELS.map(([k, n]) => pbtn(`data-p="${k}"`, icon(k === 'loose' ? 'loose' : k === 'links' ? 'links' : k), n)).join('') + '</div>' },
+  { id: 'speaker', label: 'who is speaking', build: el => el.innerHTML = '<div class="pgrid spk3">' + ['A', 'B', 'C'].map(k => `<button class="pbtn spkb" data-s="${k}" style="--c:${VW.SPEAKER[k]}"><b>${k}</b><span>speaker ${k}</span></button>`).join('') + '</div><p class="pnote">Tap who is talking now. Threads, questions and the balance follow each voice.</p>' },
+  { id: 'steering', label: 'steering', build: el => el.innerHTML = '<div class="pgrid">' + [['mirror', 'Mirror', 'Shows the threads; nothing more.'], ['nudge', 'Nudge', 'Cues in the image and the loose ends.'], ['guide', 'Guide', 'At a pause, one card names a next move.']]
+      .map(([k, n, m]) => `<button class="pbtn wide" data-m="${k}">${svg(PI[k])}<span>${n}<small>${m}</small></span></button>`).join('') + '</div>' },
+  { id: 'jev', label: 'Jev', build: el => el.innerHTML = `<div class="pjev"><span id="ring2"></span><p class="pnote" id="jevStatus"></p></div><div class="pgrid">${pbtn('id="askJev"', svg(PI.ask), 'ask Jev about the selected passage')}</div><p class="pnote" id="jevLast"></p>` },
+  { id: 'session', label: 'session', build: el => el.innerHTML = `<div class="pgrid">${pbtn('id="fresh"', svg(PI.fresh), 'new session')}${pbtn('id="makeCard"', svg(PI.card), 'make a card now')}</div><p class="pnote">A new session starts the transcript and the threads afresh; memory and cards keep everything said.</p>` },
+  { id: 'account', label: 'account', build: el => el.innerHTML = `<p class="pnote" id="acctText"></p><div class="pgrid">${pbtn('id="acctBtn"', svg(PI.person), 'sign in')}</div><p class="pnote" id="syncnote"></p>` },
+  ...(macRelevant() ? [{ id: 'mac', label: 'this Mac', build: el => el.innerHTML = `<p class="pnote" id="macText"></p><div class="pgrid">${pbtn('id="macBtn"', svg(PI.mac), 'use Speechform on this Mac')}</div>` }] : []),
+  { id: 'settings', label: 'settings', build: el => el.innerHTML = `<p class="pnote" id="setHear"></p><div class="pgrid">${pbtn('id="listenBtn"', svg(PI.listen), 'download the listener')}${pbtn('id="where"', svg(PI.where), 'where Studio runs')}${pbtn('id="popReset"', svg(PI.reset), 'reset this card')}</div>` },
+];
+const POP = window.SpeechformPopit.mount({ key: SCREEN || 'main', pages: POP_PAGES });
 let page = 'transcript', look = 'image';
-$('#pages').innerHTML = PAGES.map(k => `<button data-p="${k}" title="${TITLE[k] || k}" aria-label="${k}">${icon(k)}</button>`).join('');
-$('#looks').innerHTML = LOOKS.map(([k, svg]) => `<button data-l="${k}" title="${TITLE[k] || k}" aria-label="${k}"><svg viewBox="0 0 24 24">${svg}</svg></button>`).join('');
-$('#steerlooks').innerHTML = STEERS.map(k => `<button data-l="${k}" title="${TITLE[k] || k}" aria-label="${k}">${icon(k)}</button>`).join('');
 function showPage(p) {
   page = p;
-  document.querySelectorAll('#pages button').forEach(b => b.classList.toggle('on', b.dataset.p === p));
-  document.querySelectorAll('.lower .page').forEach(el => el.hidden = el.dataset.p !== p);
+  POP.el.querySelectorAll('[data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === p));
+  if (SCREEN === 'desk') {
+    /* on the desk the chosen panel takes the side column's first place; the transcript keeps the second */
+    const side = $('#deskside'), el = document.querySelector(`.page[data-p="${p}"]`), first = side.firstElementChild;
+    if (el && first !== el) { if (first && first.dataset.p !== 'transcript') { first.hidden = true; $('.lower').appendChild(first); } side.insertBefore(el, side.firstElementChild); }
+    if (el) el.hidden = false;
+  } else document.querySelectorAll('.lower .page').forEach(el => el.hidden = el.dataset.p !== p);
   if (p === 'memory') drawMemory(true);
   if (p === 'cards') D.draw();
   if (p === 'depth') drawDepth();
+  if (p === 'loose') drawLoose();
+  if (p === 'links') drawLinks(true);
+  if (p === 'transcript') drawLines();
 }
 function showLook(l) {
   look = l;
-  document.querySelectorAll('#looks button, #steerlooks button').forEach(b => b.classList.toggle('on', b.dataset.l === l));
-  $('#image').hidden = l !== 'image'; $('#grid').hidden = l !== 'all'; $('#sgrid').hidden = l !== 'steerall';
-  $('#one').hidden = $('#note').hidden = l === 'image' || l === 'all' || l === 'steerall';
-  if (!['image', 'all', 'steerall'].includes(l)) one.setView(l);
+  POP.el.querySelectorAll('[data-l]').forEach(b => b.classList.toggle('on', b.dataset.l === l));
+  $('#image').hidden = l !== 'image'; $('#grid').hidden = l !== 'all';
+  $('#one').hidden = $('#note').hidden = l === 'image' || l === 'all';
+  if (!['image', 'all'].includes(l)) one.setView(l);
+  if (l === 'links') drawLinks(true);
   views();
 }
-document.querySelectorAll('#pages button').forEach(b => b.onclick = () => showPage(b.dataset.p));
-document.querySelectorAll('#looks button, #steerlooks button').forEach(b => b.onclick = () => showLook(b.dataset.l));
-const ALL_LOOKS = [...LOOKS.map(x => x[0]), ...STEERS];
+POP.el.querySelectorAll('[data-p]').forEach(b => b.onclick = () => showPage(b.dataset.p));
+POP.el.querySelectorAll('[data-l]').forEach(b => b.onclick = () => showLook(b.dataset.l));
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return;
   const i = ALL_LOOKS.indexOf(look);
@@ -246,37 +306,44 @@ document.addEventListener('keydown', e => {
 /* on the website the room is hosted with the site's sign-in; on the Mac's own page, with a host key */
 if (window.Room && window.SpeechformLibrary && window.SpeechformLibrary.onSite) Room.config({ signIn: () => window.SpeechformLibrary.signIn() });
 
-/* ── the speaker, the steering mode, and the ring while Jev reads ── */
-const SPK = ST.speaker($('#spk'));
-const MODE = ST.modes($('#modes'), m => { if (m !== 'guide') GUIDE.hide(); views(); });
-const RING = ST.ring($('#ring'));
+/* ── the speaker (A, B, C), the steering mode, and the ring while Jev reads ── */
+const SPK = (() => { let who = 'A'; try { const v = localStorage.getItem('speechform-studio:speaker'); if (['A', 'B', 'C'].includes(v)) who = v; } catch (e) {}
+  const paint = () => POP.el.querySelectorAll('[data-s]').forEach(b => b.classList.toggle('on', b.dataset.s === who));
+  POP.el.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { who = b.dataset.s; try { localStorage.setItem('speechform-studio:speaker', who); } catch (e) {} paint(); });
+  paint(); return { get who() { return who; } }; })();
+const MODE = (() => { let mode = 'nudge'; try { const v = localStorage.getItem('speechform-studio:mode'); if (['mirror', 'nudge', 'guide'].includes(v)) mode = v; } catch (e) {}
+  const paint = () => POP.el.querySelectorAll('[data-m]').forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+  POP.el.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { mode = b.dataset.m; try { localStorage.setItem('speechform-studio:mode', mode); } catch (e) {} paint(); if (mode !== 'guide') GUIDE.hide(); views(); drawDepth(); });
+  paint(); return { get mode() { return mode; } }; })();
+const RING = (() => { const a = ST.ring($('#ring')), b = ST.ring($('#ring2')); return { set(on, rested) { a.set(on, rested); b.set(on, rested); } }; })();
+$('#popReset').onclick = () => POP.reset();
 
 /* ── the visualizations ── */
 const hue = {}, colorOf = k => hue[k] || (hue[k] = getComputedStyle(document.documentElement).getPropertyValue('--r-' + ((S && S.form_to_register[k]) || R.IMAGE[k] || 'kelp')).trim() || '#39ff14');
 const pick = id => { selected = id; pinned = null; drawLines(); views(); if (page === 'depth') drawDepth(); };
 const one = VW.renderer($('#one'), { note: $('#note'), start: 'bars', onPick: pick });
-const grid = VW.grid($('#grid'), { onPick: pick });
-const sgrid = VW.grid($('#sgrid'), { onPick: pick, views: VW.STEER });
+const grid = VW.grid($('#grid'), { onPick: pick, views: [...VW.GRID, ...VW.STEER] });
 /* Jev's answer at the last pause, while it is still about the talk as it stands */
 const jevNow = () => S && S.jev_pause && S.jev_pause.revision === S.revision ? { ...S.jev_pause.lenses, lenses: S.jev_pause.lenses, stage: S.jev_pause.stage, move: S.jev_pause.move, element: (S.jev_pause.lenses || {}).element } : null;
-function trace() {
-  const parts = w => Object.fromEntries(Object.entries(w.parts || {}).map(([k, q]) => {
+const partsOf = w => Object.fromEntries(Object.entries(w.parts || {}).map(([k, q]) => {
     const cue = (w.cues || []).find(c => c.form === k);
     return [k, [{ label: 'examples', add: q.match, type: 'example' }].concat(Math.abs(q.learned || 0) > .001 ? [{ label: 'Jev', add: q.learned, type: 'learned' }] : [],
       [{ label: 'pull', add: q.bias, type: 'bias' }], q.signals > .001 ? [{ label: cue ? cue.cue : 'shape', add: q.signals, type: 'shape' }] : [])];
   }));
-  const conv = e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea ?? e.topic, engine: !e.why.partsList, speaker: e.speaker,
-    ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: e.why.partsList || parts(e.why), signals: e.why.signals,
+const convert = e => ({ id: e.id, text: e.text, at: e.at, kind: e.form, idea: e.idea ?? e.topic, engine: !e.why.partsList, speaker: e.speaker,
+    ranked: e.why.scores.map(s => [s.form, s.similarity]), own: e.why.own, weights: e.why.weights, parts: e.why.partsList || partsOf(e.why), signals: e.why.signals,
     settled: e.why.settled ? Object.fromEntries(e.why.settled.map(x => [x.form, x.share])) : null, doubt: e.why.doubt, run: e.why.run, reason: e.why.reason,
     depth: e.why.depth || null, steer: e.why.steer || steerOf[e.id] || null });
+function trace() {
+  const conv = convert;
   return { kinds: Object.keys(S.form_to_register), color: colorOf, focus: selected, ideas: S.ideas, active: S.active_idea, windowWords: 120, recency: 30,
-    now: S.now, jev: jevNow(), dormantSeconds: DORMANT, room: roomNow(), phrases: S.transcript.filter(e => e.why && e.why.scores).map(conv), conv };
+    now: S.now, jev: jevNow(), dormantSeconds: DORMANT, room: roomNow(), links: LA, phrases: S.transcript.filter(e => e.why && e.why.scores).map(conv), conv };
 }
 let deskGrid = null;
 function views() {
   if (!S) return;
   const t = pinned && S.transcript.length === pinnedAt ? pinned : (pinned = null, trace());
-  if (look === 'all') grid.set(t); else if (look === 'steerall') sgrid.set(t); else if (look !== 'image') one.set(t);
+  if (look === 'all') grid.set(t); else if (look !== 'image') one.set(t);
   if (deskGrid) deskGrid.set(t);
 }
 
@@ -308,7 +375,8 @@ let lastDraw = 0;
   if (document.hidden || t - lastDraw < 1000 / 30) return; lastDraw = t;
   level = H.level();
   if (look === 'image' && SCREEN !== 'desk') paintImage(t);
-  if (H.listening) $('#clock').textContent = clock(Date.now() / 1000 - recStart);
+  if (H.listening) $('#clock').textContent = clock(Date.now() / 1000 - recStart) + (H.paused ? ' · paused' : '');
+  $('#lvl').style.width = Math.min(100, (H.listening && !H.paused ? level : 0) * 900) + '%';
 })(0);
 const clock = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 /* handles for tests over CDP (a hidden or headless tab has no microphone): recordFrom marks where a recording began */
@@ -333,10 +401,18 @@ if (BC) {
   if (SCREEN === 'desk') setInterval(() => BC.postMessage({ t: 'desk' }), 2000);
 }
 const listening = () => H.listening || (deskAlive() && (remote.listening || !!(S && S.studio && S.studio.listening)));
+/* the recorder: arm (the microphone and the listener waking), record, pause, resume, stop */
+let arming = false;
 function paintRec() {
-  const on = listening();
-  $('#rec').classList.toggle('on', on); $('#stagerec') && $('#stagerec').classList.toggle('on', on);
-  $('#rec').title = $('#rec').ariaLabel = on ? 'stop recording' : 'record';
+  const on = listening(), paused = on && H.paused, remoteOnly = deskAlive(), b = $('#rec');
+  b.classList.toggle('on', on && !paused); b.classList.toggle('paused', paused); b.classList.toggle('waking', arming);
+  b.innerHTML = on && !paused && !remoteOnly ? svg(PI.pause) : '<i></i>';
+  const inst = H.installing;
+  b.classList.toggle('installing', !!inst); b.style.setProperty('--p', inst ? Math.round(inst.progress * 100) + '%' : '0%');
+  const label = inst ? 'getting the listener ready' : arming ? 'arming' : !on ? 'record' : remoteOnly ? 'stop' : paused ? 'resume' : 'pause';
+  $('#recLabel').textContent = label; b.title = b.ariaLabel = label;
+  $('#recNote').textContent = inst ? `${Math.round(inst.progress * 100)}%${inst.message ? ' · ' + inst.message : ''}` : '';
+  $('#recMore').hidden = !on || remoteOnly;
   if (!on) $('#clock').textContent = '';
   if (SCREEN !== 'stage') { if (BC) BC.postMessage({ t: 'rec', on: H.listening, at: recStart }); if (SCREEN === 'desk' && sentRec !== H.listening) { sentRec = H.listening; post('/studio', { action: 'rec', on: H.listening, at: recStart }); } }
 }
@@ -349,15 +425,18 @@ async function toggleRec() {
   if (hearVia === 'whisper' && !window.SpeechformWhisper.usable) { listenSheet('download'); return; }
   if (!codaWav) { recStart = Date.now() / 1000; codaTaken = false; }
   activity();
-  if (!await H.start()) {
+  arming = true; paintRec();
+  const ok = await H.start(); arming = false;
+  if (ok) POP.expand(true);
+  if (!ok) {
     if (H.error === 'denied' || H.error === 'unavailable') listenSheet(H.error);
     else if (H.error === 'no-listener' && window.SpeechformWhisper) listenSheet('download');
     else { $('#rec').title = 'no on-device hearing in this browser'; }
   }
   paintRec();
 }
-$('#rec').onclick = toggleRec;
-$('#fresh').onclick = () => { selected = null; pinned = null; sectionDepth = null; post('/intake', { action: 'reset' }).then(poll); };
+$('#rec').onclick = () => { if (deskAlive() || !listening()) return toggleRec(); H.paused ? H.resume() : H.pause(); paintRec(); };
+$('#recStop').onclick = () => { if (listening()) toggleRec(); };
 $('#say').onsubmit = e => { e.preventDefault(); const t = $('#words').value.trim(); if (t) { post('/say', { text: t, speaker: SPK.who, test: TEST || undefined }); $('#words').value = ''; activity(); } };
 
 /* ── the pause: Jev may read (spaced out by the server), and Guide names one next move ── */
@@ -379,8 +458,8 @@ async function onPause(force) {
   }
   if (MODE.mode === 'guide') {
     const g = await post('/guide', {});
-    const rm = roomMove();
-    if (rm && S && !interim && Date.now() / 1000 - lastActivity >= PAUSE - .5) GUIDE.show(rm, 'the room');
+    const rm = roomMove() || linkMove();
+    if (rm && S && !interim && Date.now() / 1000 - lastActivity >= PAUSE - .5) GUIDE.show(rm, rm.id === 'pickup' ? 'your earlier recordings' : 'the room');
     else if (g && g.ok && S && g.revision === S.revision && !interim && Date.now() / 1000 - lastActivity >= PAUSE - .5) GUIDE.show(g.move, g.by);
   }
 }
@@ -410,6 +489,20 @@ async function joinWav(a, b) {
   const [x, y] = await Promise.all([a.arrayBuffer(), b.arrayBuffer()]);
   return window.SpeechformHearing.toWav([new Float32Array(new Int16Array(x, 44)).map(v => v / 32767), new Float32Array(new Int16Array(y, 44)).map(v => v / 32767)], 16000, 16000);
 }
+/* a card's threads carry their meaning vectors (the Mac's), their best earlier link, and what the room asked of them */
+let lastKept = null;
+function withVectors(threads) {
+  const room = roomNow(), vecs = (S && S.thread_vecs) || {};
+  return threads.map(t => { const m = LA && LA.current.find(c => c.thread.id === t.id), best = m && m.matches[0];
+    return { ...t, vec: vecs[t.id] || t.vec || null,
+      link: t.link || (best ? { title: best.thread.title, date: LINKS.day(best.rec.at), card: best.rec.id, first: best.thread.first, strength: best.strength, shared: best.shared } : null),
+      room: room && room.threads[t.id] ? { votes: room.threads[t.id].votes, posts: room.threads[t.id].posts, interest: room.threads[t.id].interest } : t.room }; });
+}
+/* the global index: the recording and its threads, once it is kept (signed in only) */
+function toIndex(kept, phrases, threads) {
+  if (!kept || !window.SpeechformIndex) return;
+  SpeechformIndex.upsert({ item: { id: kept.id, title: kept.name, kind: kept.kind, at: kept.since || kept.made, text: phrases.map(p => p.text).join(' ').slice(0, 20000) }, threads }).catch(() => {});
+}
 async function makeCard() {
   await poll();
   if (!S) return;
@@ -418,15 +511,18 @@ async function makeCard() {
   if (!phrases.length) return;                                               // nothing new was said
   const audio = wav ? await new Promise(res => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(wav); }) : null;
   showPage('cards');
-  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), audio, since: Math.min(recStart, phrases[0].at - 2),
-    threads: thisRecording().map(t => ({ ...t, state: ST.live(t, S.now, DORMANT) })), session: S.session });
+  lastKept = await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), audio, since: Math.min(recStart, phrases[0].at - 2),
+    threads: withVectors(thisRecording().map(t => ({ ...t, state: ST.live(t, S.now, DORMANT) }))), session: S.session });
   LIB.changed(8000);                                                         // into the library once its faces are drawn
+  toIndex(lastKept, phrases, thisRecording());
 }
 const D = window.SpeechformDeck.mount({ page: $('#deckPage'), server: true, steer: true,
   onSection: s => { pinned = { ...s.trace, color: colorOf }; pinnedAt = S.transcript.length; sectionDepth = s.depth ? { d: s.depth, text: s.text, jev: s.jev || null } : null;
     if (look === 'image') showLook('river'); else views(); if (sectionDepth) showPage('depth'); } });
-D.onMake(async () => { await poll(); const phrases = trace().phrases; if (!phrases.length) return;
-  await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), since: phrases[0].at - 8, threads: (S.steer && S.steer.threads) || [], session: S.session }); });
+const makeNow = async () => { await poll(); const phrases = trace().phrases; if (!phrases.length) return;
+  showPage('cards'); const kept = await D.make({ phrases, ideas: S.ideas, text: phrases.map(p => p.text).join(' '), abstract: grownImage(), since: phrases[0].at - 8, threads: withVectors((S.steer && S.steer.threads) || []), session: S.session });
+  toIndex(kept, phrases, (S.steer && S.steer.threads) || []); };
+D.onMake(makeNow); $('#makeCard').onclick = makeNow;
 
 /* ── the depth screen ── */
 let sectionDepth = null;                        // a selection read on its own: { d, text, jev }
@@ -441,14 +537,17 @@ const DEPTH = ST.depthPage($('#depthPage'), {
     player.src = liveWav; player.onloadedmetadata = () => { try { player.currentTime = Math.max(0, off - .3); } catch (e) {} player.play().catch(() => {}); };
     return true;
   },
-  onAsk: async d => {
-    if (!sectionDepth) return;
+  onAsk: d => askJev(d),
+});
+async function askJev(d) {
+    d = d || (sectionDepth && sectionDepth.d);
+    if (!sectionDepth || !d) return;
     RING.set(true);
     const r = await post('/depth/jev', { text: sectionDepth.text, kind: d.kind, listening: H.listening });
     RING.set(false);
     if (r && r.ok) { sectionDepth.jev = r.jev; drawDepth(); }
-  },
-});
+    else if (r && r.error) $('#jevLast').textContent = r.error;
+}
 function drawDepth() {
   if (!S || !DP.lenses) return;
   DEPTH.threads((S.steer && S.steer.threads) || [], S.now || Date.now() / 1000, { dormant: DORMANT, color: colorOf });
@@ -457,15 +556,98 @@ function drawDepth() {
     return;
   }
   const P = S.transcript.filter(e => e.why && e.why.depth), e = P.find(x => x.id === selected) || P[P.length - 1];
+  $('#depthPage').classList.toggle('pv', !e && !!PREVIEW);
+  if (!e && PREVIEW) { DEPTH.show(PREVIEW.depth, { color: colorOf, source: 'preview, made-up speech' }); DEPTH.threads(PREVIEW.threads, PREVIEW.now, { dormant: DORMANT, color: colorOf }); return; }
   DEPTH.show(e ? e.why.depth : null, { color: colorOf, source: e && selected === e.id ? 'the phrase you chose' : 'live', jev: MODE.mode === 'mirror' ? null : jevNow(),
     hold: MODE.mode === 'mirror' ? null : S.steer && S.steer.hold, arc: MODE.mode === 'mirror' ? null : S.steer && S.steer.arc });
 }
 const GUIDE = ST.guideCard($('.lower'));
 DP.ready.then(() => drawDepth());
 
+/* ── links: this session against every recording before it ── */
+const LINKS = window.SpeechformLinks;
+let LA = null, linksAt = 0, indexLive = null, liveAt = 0, liveCount = 0;
+const LPANEL = LINKS.panel($('#linksPage'), { open: (r, at) => openRecording(r, at) });
+async function drawLinks(force) {
+  if (!S) return;
+  if (force || Date.now() - linksAt > 8000) { linksAt = Date.now(); await LINKS.refresh(force); }
+  const th = ((S.steer || {}).threads || []).map(t => ({ ...t, vec: (S.thread_vecs || {})[t.id] || null }));
+  LA = LINKS.analyze(th, S.now);
+  if (indexLive && indexLive.length) LA.live = indexLive;
+  const real = LA.recordings.length > 0;
+  LPANEL.draw(real ? LA : PREVIEW && PREVIEW.links, !real);
+}
+/* a recording of the past, opened in the replay at the moment its thread began */
+async function openRecording(r, at) {
+  let c = r.card;
+  if (!c && r.row && LIB.onSite) { await LIB.openRow({ id: r.row }); return; }
+  if (!c) return;
+  showPage('cards'); D.open(c, at);
+}
+/* the global index, every few phrases while speaking: retrieval, not Jev (signed in only) */
+function liveIndex() {
+  if (!window.SpeechformIndex || !LIB.user || !H.listening || !S) return;
+  const n = S.transcript.length; if (n - liveCount < 3 || Date.now() - liveAt < 10000) return;
+  liveCount = n; liveAt = Date.now();
+  SpeechformIndex.live({ threads: (S.steer || {}).threads || [], text: S.transcript.slice(-12).map(e => e.text).join(' ') }).then(rows => { if (rows) indexLive = rows; }).catch(() => {});
+}
+/* the steering's offer from the past: a waiting thread to pick up */
+const linkMove = () => LA && LINKS.offer(((S && S.steer) || {}).threads || []);
+
+/* ── loose ends: the threads, sorted by what they need ── */
+function drawLoose() {
+  const box = $('#loosePage'); if (!S) return;
+  let th = ((S.steer || {}).threads || []), prev = false, now = S.now || Date.now() / 1000;
+  if (!th.length && PREVIEW) { th = PREVIEW.threads; prev = true; now = PREVIEW.now; }
+  const rank = { ready: 0, dormant: 1, developing: 2, returned: 2, opened: 3, closed: 4 };
+  const items = th.map(t => ({ ...t, st: ST.live(t, now, DORMANT) })).sort((a, b) => (rank[a.st] ?? 5) - (rank[b.st] ?? 5) || b.last_at - a.last_at);
+  box.parentElement.classList.toggle('pv', prev);
+  box.innerHTML = (prev ? '<span class="pvmark">preview, made-up speech</span>' : '') + items.map(t => `<div class="lline ${t.st}" data-id="${esc(t.id)}"><i></i><div><b>${esc(t.title || 'a thread')}</b>
+    <span>${t.st === 'dormant' ? `dormant for ${Math.max(1, Math.round((now - t.last_at) / 60))} min` : esc(VW.STATE_WORD[t.st] || t.st)}${t.need && t.st !== 'closed' ? ' · ' + esc(t.need) : ''}${t.opened_by ? ' · ' + esc(t.opened_by) : ''}</span>
+    ${t.next && t.st !== 'closed' ? `<small>${esc(t.next)}</small>` : ''}${t.link ? `<small class="pk">picked up from ${esc(t.link.date)}: ${esc(t.link.title)}</small>` : ''}<p>“${esc(t.first || '')}”</p></div></div>`).join('');
+  if (!prev) box.querySelectorAll('.lline').forEach(l => l.onclick = () => { const t = items.find(x => x.id === l.dataset.id); if (t && !DEPTH_THREAD(t)) l.classList.toggle('open'); });
+}
+const DEPTH_THREAD = t => {   /* the moment a thread began, played from this recording's audio when it is here */
+  const off = t.opened_at - recStart; if (!recStart || off < 0) return false;
+  const w = H.wav(); if (!w) return false;
+  player.src = URL.createObjectURL(w); player.onloadedmetadata = () => { try { player.currentTime = Math.max(0, off - .3); } catch (e) {} player.play().catch(() => {}); }; return true;
+};
+
+/* ── previews: what each view and panel will show, drawn from made-up speech and marked so ── */
+let PREVIEW = null;
+async function buildPreview() {
+  await DP.ready; if (!window.SpeechformLocal || !DP.lenses) return;
+  const E = window.SpeechformLocal.Engine({ isolated: true }), t0 = Date.now() / 1000 - 300;
+  const lines = [['A', 'Once there was a clockmaker who lived above the harbour.'], ['A', 'Every night she climbed the stairs to wind the great clock in the tower.'],
+    ['B', 'Did she ever stop the clock?'], ['A', 'Only once, the night the lighthouse lamp went dark and the ships were lost in the fog.'],
+    ['A', 'She rang the bell instead, over and over, past midnight, past the turning of the tide.'], ['B', 'And did the ships come home?'],
+    ['A', 'At last they did, and from then on the town kept a bell in the tower beside the clock.']];
+  lines.forEach(([sp, t], i) => E.ingest(t, sp, 'Preview', t0 + i * 14));
+  const ev = E.E.events, phrases = ev.map(e => convert({ ...e, idea: e.topic })), last = ev[ev.length - 1];
+  const threads = (last.why.steer || {}).threads || [];
+  const mk = (id, title, days, kind, items) => ({ id, title, at: t0 - days * 86400, kind, source: 'preview', depth: null, card: null,
+    threads: items.map(([tt, text, state], i) => { const pr = window.SpeechformMatch.pairs(text); return { id: id + i, title: tt, first: text, state, kind, keywords: pr.map(x => x[0]), say: Object.fromEntries(pr), opened_at: t0 - days * 86400 + i * 30, opened_by: 'A' }; }) });
+  const recs = [mk('p1', 'The keeper of the light', 12, 'story', [['Lamp the stairs', 'He climbed the stairs every night and lit the lamp for the ships.', 'ready']]),
+    mk('p2', 'Bells over the harbour', 30, 'reflective monologue', [['Bell harbour night', 'I remember the bell over the harbour, the night the fog came in.', 'developing']]),
+    mk('p3', 'How clocks keep time', 45, 'lecture', [['Clock tower winding', 'The tower clock was wound by hand, and the town set its day by it.', 'closed']]),
+    mk('p4', 'Fog and the lost ships', 60, 'story', [['Ships lost fog', 'The ships were lost in the fog until someone rang the bell.', 'opened']])];
+  PREVIEW = { kinds: C_KINDS(), color: colorOf, windowWords: 120, recency: 30, focus: null, ideas: E.E.ideas.map(i => ({ id: i.id, title: i.title, words: i.words, returns: i.returns, n: i.n })),
+    active: last.topic, phrases, now: last.at, depth: last.why.depth, threads, dormantSeconds: DORMANT, preview: true,
+    links: LINKS.analyze(threads, last.at, recs) };
+  one.setPreview(PREVIEW); grid.setPreview(PREVIEW); if (deskGrid) deskGrid.setPreview(PREVIEW);
+  drawDepth(); drawLoose(); if (!LA || !LA.recordings.length) LPANEL.draw(PREVIEW.links, true); drawLines();
+}
+const C_KINDS = () => Object.keys(R.IMAGE);
+
 /* ── the transcript ── */
 function drawLines() {
   const box = $('#lines'); if (!S) return;
+  if (!S.transcript.length && !interim && PREVIEW) {
+    if (box._html === 'preview') return; box._html = 'preview'; box.classList.add('pv');
+    box.innerHTML = '<span class="pvmark">preview, made-up speech</span>' + PREVIEW.phrases.map(p => `<div class="line"><span class="who ${p.speaker}">${p.speaker}</span><div><div class="said">${esc(p.text)}</div>
+      <div class="meta"><span class="chip" style="color:${col(R.IMAGE[p.kind])}">${esc(p.kind)}</span></div></div></div>`).join(''); return;
+  }
+  box.classList.remove('pv');
   const titles = Object.fromEntries(S.ideas.map(i => [i.id, i])), seen = new Set();
   const html = S.transcript.map(e => {
     const idea = titles[e.idea] || {}, back = seen.has(e.idea); seen.add(e.idea);
@@ -525,12 +707,12 @@ function roomMove() {
 }
 function drawNext() {
   const box = $('#nextcard'); if (!box || !S || SCREEN !== 'desk') return;
-  const st = S.steer || {}, j = jevNow(), hold = st.hold || {}, mv = (hold.cue ? null : roomMove()) || (j && j.move) || st.next;
+  const st = S.steer || {}, j = jevNow(), hold = st.hold || {}, mv = (hold.cue ? null : roomMove() || linkMove()) || (j && j.move) || st.next;
   const wcv = $('#weather'); wcv.hidden = !roomOpen(); if (!wcv.hidden) Room.weather(wcv);
   box.classList.toggle('hold', !!(hold.cue && mv && mv.id === 'hold'));
   box.querySelector('b').textContent = MODE.mode === 'mirror' ? 'threads' : mv && mv.id === 'hold' ? (hold.cue.type === 'pause' ? 'pause' : 'hold') : 'next move';
   box.querySelector('p').textContent = MODE.mode === 'mirror' ? `${(st.threads || []).length} threads, ${(st.threads || []).filter(t => t.state === 'closed').length} closed.` : mv ? mv.text : 'The next move appears as you speak.';
-  box.querySelector('small').textContent = MODE.mode === 'mirror' || !mv ? '' : (mv.why ? mv.why + '. ' : '') + (mv.id && mv.id.startsWith('room') ? 'From the room.' : j && j.move === mv ? 'Chosen by Jev at the last pause.' : 'From the algorithm.');
+  box.querySelector('small').textContent = MODE.mode === 'mirror' || !mv ? '' : (mv.why ? mv.why + '. ' : '') + (mv.id && mv.id.startsWith('room') ? 'From the room.' : mv.id === 'pickup' ? 'From your earlier recordings.' : j && j.move === mv ? 'Chosen by Jev at the last pause.' : 'From the algorithm.');
 }
 if (SCREEN === 'desk') {
   document.body.classList.add('desk'); $('#desk').hidden = false;
@@ -545,14 +727,13 @@ if (window.Room) Room.onFeedback(() => { const b = $('#deskroom') || $('#roomPag
 /* the library, and the room hosted with the site's sign-in */
 const LIB = window.SpeechformLibrary;
 LIB.mount($('#libraryPage'), { open: c => { showPage('cards'); D.open(c); } });
-LIB.onChange(({ syncing }) => { $('#syncnote').textContent = syncing ? `syncing ${syncing}` : ''; });
+LIB.onChange(({ syncing }) => { $('#syncnote').textContent = syncing ? `syncing ${syncing} to your library` : ''; drawAccount(); });
 if (window.Room && LIB.onSite) {
   let hosted = null;
   LIB.onChange(async ({ user }) => { const id = user && user.id; if (id === hosted) return; hosted = id; Room.useSession(id ? await LIB.client() : null); });
 }
 if (SCREEN === 'stage') {
   document.body.classList.add('stage');
-  const b = document.createElement('button'); b.className = 'rec stagerec'; b.id = 'stagerec'; b.innerHTML = '<i></i>'; b.title = 'record'; b.onclick = toggleRec; document.body.appendChild(b);
   document.addEventListener('dblclick', () => document.documentElement.requestFullscreen && document.documentElement.requestFullscreen().catch(() => {}));
 }
 
@@ -572,6 +753,7 @@ async function where() {
   if (!full) {
     /* hearing here is only ever on this device: the browser's own recognition, or Whisper running in the page */
     const st = await window.SpeechformHearing.onDevice();
+    if (st === 'native') { hearVia = 'native'; $('#whereHear').textContent = 'This iPhone hears on the device (Apple).'; drawSettings(); return; }
     const mic = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext;
     hearVia = st === 'available' || st === 'downloadable' || st === 'downloading' ? 'speech' : mic && window.SpeechformWhisper ? 'whisper' : 'none';
     $('#whereHear').textContent = hearVia === 'speech' ? (st === 'available' ? 'This browser hears on this device.' : 'This browser fetches its own speech model the first time you record, then hears on this device.')
@@ -580,7 +762,36 @@ async function where() {
     if (hearVia === 'none') { $('#rec').classList.add('off'); $('#rec').title = 'this browser cannot record here'; $('#words').placeholder = 'type here'; }
   } else $('#whereHear').textContent = '';
   if (S && S.jev_rested) $('#whereHear').textContent += ' Jev is resting for now; the algorithm steers.';
+  drawSettings(); drawMac(mode);
 }
+function drawSettings() {
+  $('#setHear').textContent = $('#whereHear').textContent || (hearVia === null ? '' : 'This Mac hears on the device.');
+  $('#listenBtn').hidden = !(hearVia === 'whisper' && window.SpeechformWhisper && !window.SpeechformWhisper.cached);
+  $('#listenBtn').onclick = () => listenSheet('download');
+}
+function drawMac(mode) {
+  if (!$('#macText')) return;
+  $('#macText').textContent = mode === 'mac' ? 'Studio is running on this Mac, with its full classifier, Jev and the easel.' : mode === 'full' ? 'Connected to Speechform on this Mac.' : 'Studio is running in this browser.';
+  $('#macBtn').hidden = mode === 'mac';
+  $('#macBtn span').textContent = mode === 'full' ? 'use this browser only' : 'use Speechform on this Mac';
+  $('#macBtn').onclick = () => LOC.connect(mode !== 'full');
+}
+function drawAccount() {
+  const u = LIB.user, btn = $('#acctBtn');
+  if (!LIB.onSite) { $('#acctText').textContent = 'Your library lives with your account on asynchronousinstruments.com/speechform.'; btn.hidden = true; return; }
+  $('#acctText').textContent = u ? `Signed in as ${u.email}. Every recording goes to your library, on every device.` : 'Sign in to keep every recording in your library, on every device.';
+  btn.querySelector('span').textContent = u ? 'sign out' : 'sign in'; btn.onclick = () => u ? LIB.signOut() : LIB.signIn();
+}
+function drawJev() {
+  if (!S) return;
+  const can = !!S.has_jev, rested = !!S.jev_rested, busy = !!asking || !!S.jev_asking;
+  $('#jevStatus').textContent = !can ? 'Jev is not set up here, so the algorithm steers.' : rested ? 'Jev is resting for now; the algorithm steers.' : busy ? 'Jev is reading.'
+    : 'Jev reads once at the stop, and at a pause of 8 seconds when 90 seconds and 60 words have passed since it last read.';
+  $('#askJev').disabled = !(can && sectionDepth && !H.listening);
+  const j = jevNow();
+  $('#jevLast').textContent = j && j.move ? `At the last pause, Jev chose: ${j.move.text}` : sectionDepth && sectionDepth.jev ? 'Jev has read the selected passage; its marks are on the depth panel.' : 'Select words in the transcript to ask about a passage.';
+}
+$('#askJev').onclick = () => askJev();
 /* the listener: Whisper is downloaded once, from a tap, then every recording here hears with it */
 let hearVia = null;
 function listenSheet(mode) {
@@ -606,6 +817,7 @@ function listenSheet(mode) {
 }
 $('#listenClose').onclick = () => { $('#listensheet').hidden = true; };
 $('#where').onclick = () => { $('#wheresheet').hidden = false; };
+$('#fresh').onclick = () => { selected = null; pinned = null; sectionDepth = null; post('/intake', { action: 'reset' }).then(poll); };
 $('#whereClose').onclick = () => { $('#wheresheet').hidden = true; };
 $('#wheresheet').onclick = e => { if (e.target.id === 'wheresheet') $('#wheresheet').hidden = true; };
 where();
@@ -623,6 +835,10 @@ async function poll() {
     RING.set(!!asking || !!S.jev_asking, !!S.jev_rested);
     drawLines(); views(); drawNext();
     if (window.Room && SCREEN !== 'stage') Room.publish(S);
+    drawJev();
+    if (page === 'links' || look === 'links' || look === 'all' || SCREEN === 'desk') drawLinks(); else if (Date.now() - linksAt > 15000) drawLinks();
+    if (page === 'loose') drawLoose();
+    liveIndex();
     if (page === 'depth' || SCREEN === 'desk') drawDepth();
     if (deskAlive()) paintRec();
   } catch (e) { /* the server is starting */ }
@@ -630,7 +846,8 @@ async function poll() {
 /* a new session each time Studio opens, unless another window of it is already recording or showing (the two screens share one) */
 (SCREEN ? Promise.resolve() : post('/intake', { action: 'reset' })).then(() => setTimeout(poll, 400));
 setInterval(poll, 800);
-showPage(SCREEN === 'desk' ? 'depth' : 'transcript'); showLook('image'); paintRec();
+showPage(SCREEN === 'desk' ? 'depth' : 'transcript'); showLook('image'); paintRec(); drawAccount();
+buildPreview();
 </script>
 </body>
 </html>

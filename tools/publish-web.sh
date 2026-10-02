@@ -12,7 +12,7 @@ OUT="$SITE/speechform"
 [[ -d "$SITE" ]] || { print "no site folder at $SITE"; exit 1; }
 mkdir -p "$OUT/light" "$OUT/studio"
 LIGHT=(classify.js growers.js views.js reading.js deck.js hearing.js depth.js)
-STUDIO=(steer.js ledger.js local.js jev.js whisper.js whisper-worker.js room.js library.js)
+STUDIO=(steer.js match.js ledger.js local.js jev.js whisper.js whisper-worker.js room.js library.js index-api.js links.js popit.js)
 for f in $LIGHT; do cp "$HERE/light/$f" "$OUT/light/$f"; done
 for f in $STUDIO; do cp "$HERE/studio/$f" "$OUT/studio/$f"; done
 cp "$HERE/lenses.json" "$OUT/lenses.json"          # depth.js reads ../lenses.json beside its own folder

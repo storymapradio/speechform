@@ -59,7 +59,8 @@
   const index = { load: () => store.get('threads-index', []),
     add(threads, card, session, when) { const items = store.get('threads-index', []), have = new Set(items.map(x => x.session + '|' + x.id));
       for (const t of threads || []) if (!have.has(session + '|' + t.id) && (t.keywords || []).length)
-        items.push({ id: t.id, title: t.title, keywords: t.keywords.slice(0, 24), kind: t.kind, state: t.state, session, card, at: when || nowS() });
+        items.push({ id: t.id, title: t.title, keywords: t.keywords.slice(0, 24), vec: t.vec || null, say: t.say || {}, kind: t.kind, stage: t.stage, state: t.state,
+          first: String(t.first || '').slice(0, 120), opened_by: t.opened_by, opened_at: t.opened_at, session, card, at: when || nowS() });
       store.set('threads-index', items.slice(-600)); } };
 
   function Engine({ isolated = false } = {}) {
@@ -125,7 +126,7 @@
         form: E.kind, ideas: E.ideas.map(i => ({ id: i.id, title: i.title, words: i.words, returns: i.returns, n: i.n })),
         active_idea: (E.events[E.events.length - 1] || {}).topic || null, lead: E.lead, growth: E.growth, form_to_register: C.IMAGE,
         direction: { ...E.dir }, gate_at: E.gateAt, radius: E.radius, conclusion_at: E.conclusionAt, steer: E.steer ? E.ledger.snapshot(nowS(), E.kind, (E.events[E.events.length - 1] || {}).topic) : null,
-        has_jev: !!J, jev_pause: E.jevPause && E.jevPause.revision === E.revision ? E.jevPause : null, jev_asking: !!(J && J.asking), jev_rested: !!(J && J.resting), studio: { ...link, desk: SCREEN === 'desk' || Date.now() - deskSeen < 5000 }, microphone: false };
+        thread_vecs: {}, has_jev: !!J, jev_pause: E.jevPause && E.jevPause.revision === E.revision ? E.jevPause : null, jev_asking: !!(J && J.asking), jev_rested: !!(J && J.resting), studio: { ...link, desk: SCREEN === 'desk' || Date.now() - deskSeen < 5000 }, microphone: false };
     }
     return { ingest, state, get E() { return E; } };
   }
@@ -201,7 +202,8 @@
     if (threads.length) {
       L.push('', 'THREADS');
       for (const t of threads) { L.push(`  ${t.title || 'a thread'}: ${t.state}${t.stage ? ', at ' + t.stage : ''}${t.need ? ', ' + t.need : ''}.`);
-        if (t.suggestion) L.push(`    The algorithm suggests: ${t.suggestion.move}`); if (t.link) L.push(`    Picked up from ${t.link.date}: "${t.link.title}".`); }
+        if (t.suggestion) L.push(`    ${t.suggestion.by === 'Jev' ? 'Jev' : 'The algorithm'} suggests: ${t.suggestion.move}`); if (t.link) L.push(`    Picked up from ${t.link.date}: "${t.link.title}".`);
+        if (t.connection) L.push(`    Jev: this recording ${t.connection.relation} "${t.connection.past}" from ${t.connection.date}.`); }
     }
     L.push('', 'THE ART', '  ' + card.art);
     return L.join('\n') + '\n';
@@ -242,6 +244,7 @@
         dr.note = 'The algorithm read every element from the words; Jev answered the three lens questions for each passage after the recording stopped.';
         card.depth_jev = dr.jev;
       }
+      for (const t of threads) if ((j.connections || {})[t.id]) t.connection = j.connections[t.id];
       for (const t of threads) { const g = j.threads[t.id]; if (g && g.move) t.suggestion = { by: 'Jev', move: g.move, choice: g.choice, confidence: g.confidence, algorithm: (t.suggestion || {}).move }; }
     }
     await cardsDb.put(card);

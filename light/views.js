@@ -57,7 +57,7 @@
 
   /* one canvas drawing one view at a time; several can run side by side (the dashboard, a card's replay) */
   function renderer(canvas, { note, onPick, start = 'now', scale = 1 } = {}) {
-    let view = start, T = null, dpr = 1, W = 0, H = 0, hits = [], born = {}, eased = {};
+    let view = start, T = null, dpr = 1, W = 0, H = 0, hits = [], born = {}, eased = {}, P = null, wasEmpty = false, previewing = false;
     let x = canvas.getContext('2d');
     canvas.addEventListener('click', ev => {
       const r = canvas.getBoundingClientRect(), px = (ev.clientX - r.left) * dpr, py = (ev.clientY - r.top) * dpr;
@@ -321,7 +321,7 @@
 
     /* ── lenses: the three questions as a triangle, the elements lighting as they are found ── */
     function lensesView() {
-      const d = lastWith('depth'); if (!d) return empty('The lenses fill as you speak.');
+      const d = lastWith('depth'); if (!d) return empty();
       const rowsN = LN.reduce((a, q) => a + d.lenses[q].elements.length, 0), most0 = Math.max(...LN.map(q => d.lenses[q].elements.length));
       const wide = W > H * 1.25 && (H - U(102)) / rowsN >= U(15), kc = T.color(d.kind);
       const small = H < 250 * dpr || W < 280 * dpr || (!wide && (H - (H * .3 + Math.min(W * .3, H * .22) * 1.05 + U(54))) / most0 < U(11));
@@ -386,7 +386,7 @@
 
     /* ── arc: the lead form's stages as a path, the marker where the talk stands, the next move glowing ── */
     function arcView() {
-      const st = lastWith('steer'), a = st && st.arc; if (!a || !a.stages || !a.stages.length) return empty('The arc fills as you speak.');
+      const st = lastWith('steer'), a = st && st.arc; if (!a || !a.stages || !a.stages.length) return empty();
       const n = a.stages.length, kc = T.color(a.kind), pad = U(34), small = H < U(300), y0 = small ? H * .5 : H * .56, top = small ? H * .26 : H * .2;
       const B = u => { const q = 1 - u; return [q * q * pad + 2 * q * u * (W / 2) + u * u * (W - pad), q * q * y0 + 2 * q * u * top + u * u * y0]; };
       const U_ = i => n > 1 ? i / (n - 1) : .5;
@@ -423,7 +423,7 @@
 
     /* ── threads: a loom of lines that begin, thicken, dim, bud and flower ── */
     function threadsView() {
-      const st = lastWith('steer'), TH = st && st.threads; if (!TH || !TH.length) return empty('Threads appear as ideas open.');
+      const st = lastWith('steer'), TH = st && st.threads; if (!TH || !TH.length) return empty();
       const now = nowOf(), many = ((st.talk || {}).speakers || []).length > 1;
       const t0 = Math.min(...TH.map(t => t.opened_at)), t1 = Math.max(now, ...TH.map(t => t.last_at)) + 2;
       const labelW = Math.min(U(150), W * .28), left = U(10) + labelW, right = W - U(84), top = U(14), bottom = H - U(22);
@@ -478,7 +478,7 @@
 
     /* ── pulse: the absorption over time as a wave, beating at the pace of the talk ── */
     function pulseView() {
-      const P = T.phrases.filter(p => p.depth).slice(-40), st = lastWith('steer'), hold = (st && st.hold) || {}; if (!P.length) return empty('The pulse begins as you speak.');
+      const P = T.phrases.filter(p => p.depth).slice(-40), st = lastWith('steer'), hold = (st && st.hold) || {}; if (!P.length) return empty();
       const left = U(10), right = W - Math.min(U(150), W * .3), top = U(16), bottom = H - U(26), n = P.length;
       const X = i => left + (n > 1 ? i / (n - 1) : .5) * (right - left), Y = v => bottom - v * (bottom - top);
       x.strokeStyle = faint; x.lineWidth = dpr; [0, .5, 1].forEach(v => { x.beginPath(); x.moveTo(left, Y(v)); x.lineTo(right, Y(v)); x.stroke(); });
@@ -508,7 +508,7 @@
 
     /* ── airtime: the speakers on a balance ── */
     function airtimeView() {
-      const st = lastWith('steer'), talk = st && st.talk; if (!talk || !Object.keys(talk.airtime || {}).length) return empty('The balance fills as people speak.');
+      const st = lastWith('steer'), talk = st && st.talk; if (!talk || !Object.keys(talk.airtime || {}).length) return empty();
       const sp = Object.keys(talk.airtime).sort(), total = sp.reduce((a, k) => a + talk.airtime[k], 0) || 1;
       const pos = sp.length === 1 ? [-.75] : sp.map((_, i) => -.85 + 1.7 * i / (sp.length - 1));
       const torque = sp.reduce((a, k, i) => a + pos[i] * talk.airtime[k] / total, 0), tilt = ease('tilt', Math.max(-.38, Math.min(.38, torque * .7)), .05);
@@ -546,7 +546,7 @@
 
     /* ── questions: every question as a mark, open until someone else answers ── */
     function questionsView() {
-      const st = lastWith('steer'), Q = (st && st.talk && st.talk.questions) || []; if (!Q.length) return empty('No questions yet.');
+      const st = lastWith('steer'), Q = (st && st.talk && st.talk.questions) || []; if (!Q.length) return empty();
       const now = nowOf(), t0 = Math.min(...Q.map(q => q.at)) - 2, t1 = Math.max(now, ...Q.map(q => q.answered_at || q.at)) + 2;
       const left = U(16), right = W - U(16), y = H * .32, X = t => left + (t - t0) / Math.max(1, t1 - t0) * (right - left);
       x.strokeStyle = faint; x.lineWidth = dpr; x.beginPath(); x.moveTo(left, y); x.lineTo(right, y); x.stroke();
@@ -571,45 +571,84 @@
         : 'Each mark is a question, coloured by who asked it. It stays open, a broken ring, until someone else answers; then a line joins it to the answer, in the answerer\'s colour.');
     }
 
-    /* ── links: threads arriving from earlier recordings ── */
+    /* ── links: this session among every recording before it, joined by the threads they share ── */
     function linksView() {
-      const st = lastWith('steer'), TH = (st && st.threads) || []; if (!TH.length) return empty('Threads appear as ideas open.');
-      const linked = TH.filter(t => t.link), right = W * .64, top = U(20), rowH = Math.min(U(30), (H - top - U(30)) / TH.length);
-      x.strokeStyle = faint; x.lineWidth = dpr; x.setLineDash([U(2), U(5)]); x.beginPath(); x.moveTo(U(8), top); x.lineTo(U(8), H - U(20)); x.stroke(); x.setLineDash([]);
-      font(8.5); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'alphabetic'; x.fillText('earlier recordings', U(14), top - U(6));
-      x.textAlign = 'right'; x.fillText('this recording', W - U(10), top - U(6));
-      const dates = [...new Set(linked.map(t => t.link.date))];
-      TH.forEach((t, i) => {
-        const y = top + rowH * (i + .5), kc = T.color(t.kind), state = live(t, nowOf());
-        x.fillStyle = STATE[state] || kc; hex(right, y, U(5.5)); x.fill();
-        font(10, t.link ? '600' : ''); x.fillStyle = t.link ? ink : muted; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(fit(t.title || '', W - right - U(20)), right + U(12), y);
-        if (!t.link) return;
-        const di = dates.indexOf(t.link.date), ly = top + (H - top - U(30)) * (di + .5) / Math.max(1, dates.length), grow = age('link' + t.id);
-        x.strokeStyle = amber; x.lineWidth = U(1.6); x.globalAlpha = .85; x.beginPath(); x.moveTo(U(8), ly);
-        const ex = lerp(U(8), right - U(8), grow); x.bezierCurveTo(W * .3, ly, W * .35, y, ex, lerp(ly, y, grow)); x.stroke(); x.globalAlpha = 1;
-        font(8.5); x.fillStyle = muted; x.textAlign = 'center'; x.fillText(fit((t.link.shared || []).join(', '), W * .3), W * .36, (ly + y) / 2 - U(8));
+      const L = T.links; if (!L || !L.recordings || !L.recordings.length) return empty();
+      const cx = W / 2, cy = H / 2 + U(16), R0 = Math.min(W, H - U(40)) * .4, recs = L.recordings.slice(0, 40);
+      /* clusters sit together around the circle; within one, oldest first */
+      const order = [...recs].sort((a, b) => String(a.cluster || 'z' + a.id).localeCompare(String(b.cluster || 'z' + b.id)) || (a.at || 0) - (b.at || 0));
+      const toHere = {}; (L.edges || []).filter(e => e.from === 'here').forEach(e => toHere[e.to] = Math.max(toHere[e.to] || 0, e.strength));
+      const pos = {};
+      order.forEach((r, i) => { const a = -Math.PI / 2 + i / order.length * Math.PI * 2, s = toHere[r.id] || 0, rad = R0 * (1 - .45 * s);
+        pos[r.id] = [ease('lx' + r.id, cx + rad * Math.cos(a), .08), ease('ly' + r.id, cy + rad * Math.sin(a), .08), a]; });
+      pos.here = [cx, cy];
+      /* the themes: a soft field behind each cluster, named */
+      (L.clusters || []).forEach((k, ki) => {
+        const ps = k.recordings.map(id => pos[id]).filter(Boolean); if (!ps.length) return;
+        const mx = ps.reduce((a, p) => a + p[0], 0) / ps.length, my = ps.reduce((a, p) => a + p[1], 0) / ps.length;
+        const rr = Math.max(U(26), ...ps.map(p => Math.hypot(p[0] - mx, p[1] - my))) + U(16);
+        const g = x.createRadialGradient(mx, my, 0, mx, my, rr); g.addColorStop(0, 'rgba(57,255,20,.07)'); g.addColorStop(1, 'rgba(57,255,20,0)');
+        x.fillStyle = g; x.beginPath(); x.arc(mx, my, rr, 0, 7); x.fill();
+        if (k.theme) { font(9); x.fillStyle = muted; x.textAlign = 'center'; x.textBaseline = 'middle'; const ox = mx + (mx - cx) * .25, oy = my + (my - cy) * .25;
+          x.fillText(fit(k.theme, U(140)), clamp(ox, U(60), W - U(60)), clamp(oy, U(10), H - U(10))); }
       });
-      dates.forEach((d, i) => { const ly = top + (H - top - U(30)) * (i + .5) / Math.max(1, dates.length); x.fillStyle = amber; x.beginPath(); x.arc(U(8), ly, U(4), 0, 7); x.fill(); font(9.5, '600'); x.textAlign = 'left'; x.fillText(d, U(16), ly - U(10)); });
-      say(linked.length ? 'Amber lines arrive from earlier recordings: a thread opened before and picked up here, joined by the words they share.' : 'No thread here has been picked up from an earlier recording yet. When one is, it arrives from the left edge with its date.');
+      /* recordings joined to each other, then to this session, as thick as the thread they share */
+      (L.edges || []).forEach(e => {
+        const a = pos[e.from], b = pos[e.to]; if (!a || !b) return;
+        const here = e.from === 'here', beat = .5 + .5 * Math.sin(pulseT() * 2 + (b[2] || 0));
+        x.strokeStyle = here ? amber : '#5ab4ff'; x.globalAlpha = here ? .35 + .5 * e.strength * (.7 + .3 * beat) : .18 + .3 * e.strength; x.lineWidth = U(here ? 1 + 3 * e.strength : .8 + 1.5 * e.strength);
+        x.beginPath(); x.moveTo(a[0], a[1]); x.quadraticCurveTo((a[0] + b[0]) / 2 + (cy - (a[1] + b[1]) / 2) * .15, (a[1] + b[1]) / 2 + ((a[0] + b[0]) / 2 - cx) * .15, b[0], b[1]); x.stroke(); x.globalAlpha = 1;
+      });
+      hits = [];
+      order.forEach(r => {
+        const [px, py] = pos[r.id], s = toHere[r.id] || 0, size = U(5 + Math.min(7, (r.threads || 0) * 1.2)), c = T.color(r.kind || 'story');
+        hex(px, py, size); x.fillStyle = c; x.globalAlpha = .25 + .6 * Math.max(s, .2); x.fill(); x.globalAlpha = 1; x.strokeStyle = s ? amber : c; x.lineWidth = U(s ? 1.6 : .8); x.stroke();
+        if (s > .3 || order.length < 14) { font(8.5); x.fillStyle = s ? ink : muted; x.textAlign = Math.cos(pos[r.id][2]) > .2 ? 'left' : Math.cos(pos[r.id][2]) < -.2 ? 'right' : 'center'; x.textBaseline = 'middle';
+          const dx = Math.cos(pos[r.id][2]) * (size + U(5)), dy = Math.sin(pos[r.id][2]) * (size + U(9)); x.fillText(fit(r.title || '', U(110)), px + dx, py + dy); }
+        hits.push({ x: px, y: py, r: Math.max(U(12), size + U(4)), id: 'rec:' + r.id });
+      });
+      /* this session at the centre, its threads a ring of beads */
+      const cur = L.current || [], beat = .5 + .5 * Math.sin(pulseT() * 2.4);
+      glowOn(amber, U(10 + 8 * beat)); hex(cx, cy, U(14)); x.fillStyle = 'rgba(255,201,74,.22)'; x.fill(); x.strokeStyle = amber; x.lineWidth = U(2); x.stroke(); glowOff();
+      cur.forEach((c, i) => { const a = -Math.PI / 2 + i / Math.max(1, cur.length) * Math.PI * 2; x.fillStyle = c.matches.length ? amber : muted;
+        x.beginPath(); x.arc(cx + U(22) * Math.cos(a), cy + U(22) * Math.sin(a), U(2.4), 0, 7); x.fill(); });
+      font(9.5, '600'); x.fillStyle = ink; x.textAlign = 'center'; x.textBaseline = 'top'; x.fillText('this session', cx, cy + U(26));
+      font(9); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'top';
+      const linked = cur.filter(c => c.matches.length).length;
+      x.fillText(`${recs.length} recordings · ${linked} of ${cur.length} threads here meet one`, U(8), U(6));
+      if ((L.waiting || []).length) { x.fillStyle = amber; x.fillText(fit(`waiting: ${L.waiting[0].title} (${L.waiting[0].count})`, W - U(16)), U(8), U(19)); }
+      say('Each hexagon is an earlier recording; the amber hexagon is this session. Amber lines are threads this session shares with a recording, as thick as the likeness; blue lines join recordings to each other, and soft fields gather them into themes. Tap a recording to replay it at that thread.');
     }
 
-    function empty(t) { font(11); x.fillStyle = muted; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(t || 'The views fill as you speak.', W / 2, H / 2); say(''); }
+    /* nothing to draw yet: the loop shows a preview instead, drawn from made-up speech and marked as such */
+    function empty() { wasEmpty = true; }
     let said = '';
     function say(t) { if (t !== said) { said = t; if (note) note.textContent = t; } }
 
     function loop() {
       requestAnimationFrame(loop);
-      if (view === 'now' || !T || !canvas.getClientRects().length) return;
+      if (view === 'now' || (!T && !P) || !canvas.getClientRects().length) return;
       if (x.isContextLost && x.isContextLost()) return;
       dpr = devicePixelRatio || 1;
       const w = Math.round(canvas.clientWidth * dpr), h = Math.round(canvas.clientHeight * dpr);
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
       W = w; H = h; x.clearRect(0, 0, W, H); hits = [];
       if (W < 40 * dpr || H < 40 * dpr) return;                            // too small to draw anything legible
-      ({ river, window: windowView, build, shape, ideas, bars, lenses: lensesView, arc: arcView, threads: threadsView, pulse: pulseView, airtime: airtimeView, questions: questionsView, links: linksView })[view]();
+      const draw = () => ({ river, window: windowView, build, shape, ideas, bars, lenses: lensesView, arc: arcView, threads: threadsView, pulse: pulseView, airtime: airtimeView, questions: questionsView, links: linksView })[view]();
+      wasEmpty = false; if (T) draw(); else wasEmpty = true;
+      if (wasEmpty && P) {
+        /* a showcase of what this view will show: made-up speech, phrase by phrase, looping gently, marked "preview" */
+        const keep = T, n = P.phrases.length, k = Math.max(2, Math.min(n, 2 + Math.floor((performance.now() / 1600) % (n + 3))));
+        T = { ...P, focus: null, phrases: P.phrases.slice(0, k), now: (P.phrases[k - 1] || {}).at };
+        x.clearRect(0, 0, W, H); hits = []; draw(); hits = []; T = keep;
+        font(8.5, '600'); const t = 'PREVIEW', tw = x.measureText(t).width;
+        x.fillStyle = 'rgba(0,0,0,.75)'; x.fillRect(W - tw - U(16), U(4), tw + U(12), U(15)); x.strokeStyle = amber; x.lineWidth = dpr; x.strokeRect(W - tw - U(16), U(4), tw + U(12), U(15));
+        x.fillStyle = amber; x.textAlign = 'left'; x.textBaseline = 'middle'; x.fillText(t, W - tw - U(10), U(11.5));
+      }
+      if (previewing !== (wasEmpty && !!P)) { previewing = wasEmpty && !!P; canvas.style.opacity = previewing ? .55 : ''; }
     }
     requestAnimationFrame(loop);
-    return { set(t) { T = t; }, setView(v) { view = v; }, get view() { return view; }, canvas };
+    return { set(t) { T = t; }, setPreview(p) { P = p; }, setView(v) { view = v; }, get view() { return view; }, canvas };
   }
 
   /* the classifier screen: one renderer, and (if a bar is given) a row of view icons */
@@ -632,7 +671,7 @@
     host.classList.add('vgrid');
     host.innerHTML = views.map(v => `<div class="vcell" data-v="${v}"><div class="vcap"><svg viewBox="0 0 24 24">${ICON[v]}</svg><span>${v}</span></div><canvas></canvas></div>`).join('');
     const rs = [...host.querySelectorAll('canvas')].map((c, i) => renderer(c, { start: views[i], onPick, scale }));
-    return { set: t => rs.forEach(r => r.set(t)) };
+    return { set: t => rs.forEach(r => r.set(t)), setPreview: p => rs.forEach(r => r.setPreview(p)) };
   }
   let board = null;
   function dashboard({ onPick } = {}) {
@@ -673,5 +712,6 @@
       sync(page, view) { cur = page === 1 ? view : (SCREENS.find(x => x[1] === page) || SCREENS[0])[0]; paint(); }, get current() { return cur; } };
   }
 
-  root.SpeechformViews = { mount, renderer, grid, dashboard, screens, ICON, SCREENS, VIEWS: VIEWS.map(v => v[0]), STEER, GRID, SPEAKER, STATE, STATE_WORD };
+  root.SpeechformViews = { mount, renderer, LOOKS: [['image', 'the image'], ['bars', 'shares'], ['river', 'river'], ['window', 'window'], ['build', 'build'], ['shape', 'shape'], ['ideas', 'ideas'],
+    ['lenses', 'lenses'], ['arc', 'arc'], ['threads', 'threads'], ['pulse', 'pulse'], ['airtime', 'speakers'], ['questions', 'questions'], ['links', 'links'], ['all', 'all at once']], grid, dashboard, screens, ICON, SCREENS, VIEWS: VIEWS.map(v => v[0]), STEER, GRID, SPEAKER, STATE, STATE_WORD };
 })(this);

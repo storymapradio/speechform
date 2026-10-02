@@ -120,7 +120,7 @@
       frame();
     }
     box.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { doc = b.dataset.d; showDoc(); });
-    let loadedFor = null;
+    let loadedFor = null, pendingAt = null;
     const detail = async () => {
       box.hidden = !server || !open; if (box.hidden) return;
       const src = open.audio ? url(open, open.audio) : '';
@@ -146,6 +146,7 @@
         box.querySelectorAll('.dthr').forEach((el, i) => el.onclick = () => { const p = P.find(q => q.at >= (th[i].opened_at || 0) - .01); if (p) seek(p.at - since + .01); });
       }
       showDoc();
+      if (pendingAt) { seek(pendingAt - since + .01); pendingAt = null; }      // opened at a thread's moment
     };
     sheet.onclick = e => { if (e.target === sheet) { sheet.hidden = true; open = null; au.pause(); playing = false; } };
     /* tap the card to flip it: the clear art on the front, the grown image and the whole reading on the back */
@@ -217,7 +218,7 @@
       if (tab === 'sections') draw();
     }
     draw();
-    return { make, keepSection, draw, open: c => show(c), show: t => { tab = t; page.querySelectorAll('[data-t]').forEach(q => q.classList.toggle('on', q.dataset.t === t)); draw(); }, onMake: f => page.querySelector('[data-make]').onclick = f };
+    return { make, keepSection, draw, open: (c, at) => { pendingAt = at || null; show(c); }, show: t => { tab = t; page.querySelectorAll('[data-t]').forEach(q => q.classList.toggle('on', q.dataset.t === t)); draw(); }, onMake: f => page.querySelector('[data-make]').onclick = f };
   }
 
   /* the style every page shares for the deck */

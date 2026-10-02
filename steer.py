@@ -17,7 +17,7 @@ Jev never runs here. The server may ask Jev at a natural pause (see imagery/serv
 import json, re, time
 from collections import Counter
 from pathlib import Path
-import depth
+import depth, match
 
 ROOT = Path(__file__).resolve().parent
 INDEX = ROOT / 'runtime' / 'threads-index.json'
@@ -47,51 +47,70 @@ def stages_in(kind, text):
     return out
 
 def keywords(text):
-    return [w for w in re.findall(r"[a-z']+", (text or '').lower()) if len(w) > 3 and w not in STOP]
+    """the stems of a passage's content words (match.py: the same in the browser)"""
+    return match.keywords(text)
+
+RECHECK = 3                # a thread is matched again against the index every few phrases, all through its life
+MOST_LINKS = 3
 
 # ── the cross-recording index ─────────────────────────────────────────────────────
+_index_cache = {'mtime': None, 'items': []}
 def index_load():
     try:
-        return json.loads(INDEX.read_text())
+        m = INDEX.stat().st_mtime
+        if m != _index_cache['mtime']:
+            _index_cache.update(mtime=m, items=json.loads(INDEX.read_text()))
+        return _index_cache['items']
     except (OSError, ValueError):
         return []
 
 def index_add(threads, card=None, session=None, when=None):
-    """keep this recording's threads, so a later recording that picks one up is linked to it"""
-    items = index_load()
+    """keep this recording's threads (their stems, meaning vectors and words), so a later recording is linked to them"""
+    items = list(index_load())
     have = {(x.get('session'), x.get('id')) for x in items}
     for t in threads or []:
         if (session, t.get('id')) in have or not t.get('keywords'):
             continue
-        items.append({'id': t['id'], 'title': t.get('title'), 'keywords': t['keywords'][:24], 'kind': t.get('kind'), 'state': t.get('state'),
-                      'session': session, 'card': card, 'at': when or time.time()})
+        items.append({'id': t['id'], 'title': t.get('title'), 'keywords': t['keywords'][:24], 'vec': t.get('vec'), 'say': (t.get('say') or {}),
+                      'kind': t.get('kind'), 'stage': t.get('stage'), 'state': t.get('state'), 'first': (t.get('first') or '')[:120],
+                      'opened_by': t.get('opened_by'), 'opened_at': t.get('opened_at'), 'session': session, 'card': card, 'at': when or time.time()})
     INDEX.parent.mkdir(parents=True, exist_ok=True)
-    INDEX.write_text(json.dumps(items[-600:], indent=1))
+    INDEX.write_text(json.dumps(items[-800:], indent=1))
 
-def index_match(kw, session, items=None):
-    """the thread of an earlier recording this one shares most words with, if it shares enough"""
-    kw = set(kw)
-    if len(kw) < 2:
-        return None
-    best = None
+_unpacked = {}
+def index_matches(thread, session, items=None, most=MOST_LINKS):
+    """the earlier threads this one is most like, by meaning and stems (match.strength), the best few above the line"""
+    out = []
     for x in items if items is not None else index_load():
         if x.get('session') == session:
             continue
-        other = set(x.get('keywords') or [])
-        shared = kw & other
-        score = len(shared) / max(1, min(len(kw), len(other)))
-        if len(shared) >= 2 and score >= .34 and (best is None or score > best[0]):
-            best = (score, x, sorted(shared))
-    if not best:
-        return None
-    s, x, shared = best
-    return {'title': x.get('title'), 'at': x.get('at'), 'card': x.get('card'), 'kind': x.get('kind'), 'shared': shared[:6], 'score': round(s, 2),
-            'date': time.strftime('%-d %B', time.localtime(x.get('at') or 0))}
+        v = _unpacked.get(x.get('vec')) if x.get('vec') else None
+        if x.get('vec') and v is None:
+            v = _unpacked[x['vec']] = match.unpack(x['vec'])
+        m = match.strength(thread, {**x, 'vec': v})
+        if m['s'] >= match.LINK:
+            words = x.get('say') or {}
+            out.append({'title': x.get('title'), 'at': x.get('at'), 'card': x.get('card'), 'kind': x.get('kind'), 'state': x.get('state'),
+                        'first': x.get('first'), 'opened_at': x.get('opened_at'), 'thread': x.get('id'), 'strength': m['s'], 'score': m['s'],
+                        'shared': [(thread.get('say') or {}).get(w) or words.get(w) or w for w in m['shared']][:6], 'meaning': m['meaning'], 'form': m['form'],
+                        'date': time.strftime('%-d %B', time.localtime(x.get('at') or 0))})
+    out.sort(key=lambda m: -m['strength'])
+    seen, best = set(), []
+    for m in out:                                   # one link per earlier recording
+        if (m['card'], m['thread']) not in seen and len(best) < most:
+            seen.add((m['card'], m['thread'])); best.append(m)
+    return best
+
+def index_match(kw, session, items=None):
+    """the older call: stems alone, the best one link"""
+    got = index_matches({'keywords': kw}, session, items, 1)
+    return got[0] if got else None
 
 # ── the ledger ────────────────────────────────────────────────────────────────────
 class Ledger:
-    def __init__(self, session=None):
+    def __init__(self, session=None, embed=None):
         self.session = session
+        self.embed = embed       # text → a meaning vector (the Mac's MiniLM); without it, stems alone link threads
         self.threads = {}; self.order = []
         self.questions = []; self.airtime = Counter(); self.turns = 0; self.last_speaker = None
         self.words = 0; self.prev_topic = None
@@ -105,7 +124,7 @@ class Ledger:
             return t, False
         t = {'id': topic['id'], 'title': topic.get('title'), 'kinds': Counter(), 'opened_at': now, 'opened_by': speaker, 'last_at': now,
              'last_word': self.words, 'words': 0, 'n': 0, 'returns': 0, 'speakers': Counter(), 'stages': {}, 'landing_n': None, 'landing_at': None,
-             'returned_n': None, 'marks': [], 'first': text[:90], 'link': None, 'keywords': []}
+             'returned_n': None, 'marks': [], 'first': text[:90], 'link': None, 'links': [], 'keywords': [], 'say': {}, 'opening': '', 'vec': None}
         self.threads[topic['id']] = t; self.order.append(topic['id'])
         return t, True
 
@@ -122,7 +141,12 @@ class Ledger:
         self.words += n
         t['n'] += 1; t['words'] += n; t['last_at'] = now; t['last_word'] = self.words; t['kinds'][kind] += n; t['speakers'][speaker] += n
         t['title'] = topic.get('title') or t['title']
-        t['keywords'] = list(dict.fromkeys((topic.get('keywords') or []) + keywords(text)))[:30]
+        for st_, w in match.pairs(text):
+            if st_ not in t['say'] and len(t['say']) < 40:
+                t['say'][st_] = w
+        t['keywords'] = list(dict.fromkeys(t['keywords'] + keywords(text)))[:30]
+        if len(t['opening'].split()) < 40:
+            t['opening'] = (t['opening'] + ' ' + text).strip()
         hit = stages_in(kind, text)
         for s in hit:
             t['stages'].setdefault(kind, {}).setdefault(s, now)
@@ -131,11 +155,9 @@ class Ledger:
         lands = [s['id'] for s in arc(kind) if s.get('landing')]
         if t['n'] >= 2 and (any(s in lands for s in hit) or LANDING.search(text)):
             t['landing_n'] = t['n']; t['landing_at'] = now
-        # a thread an earlier recording opened: linked while it is young and its words are still gathering
-        if t['n'] <= 3 and not t['link']:
-            if self._index is None:
-                self._index = index_load()
-            t['link'] = index_match(t['keywords'], self.session, self._index)
+        # earlier recordings' threads: matched at its first phrases, and again every few phrases all through its life
+        if t['n'] <= 3 or t['n'] % RECHECK == 0:
+            self.relink(t, kind)
         # who speaks, and what they ask
         if self.last_speaker and speaker != self.last_speaker:
             self.turns += 1
@@ -159,6 +181,21 @@ class Ledger:
                 if e['found']:
                     self.held[(depth_reading['kind'], e['id'])] += 1; self.held_names[(depth_reading['kind'], e['id'])] = e['name']
         return self.snapshot(now, kind, t['id'])
+
+    def relink(self, t, kind=None):
+        """this thread against the index: its meaning (opening words and its words so far), its stems, its form"""
+        if self.embed:
+            try:
+                t['vec'] = match.pack(self.embed(t['opening'] + '. ' + ' '.join(list(t['say'].values())[:12])))
+            except Exception:
+                pass
+        probe = {'keywords': t['keywords'], 'vec': t['vec'], 'kind': kind or (t['kinds'].most_common(1)[0][0] if t['kinds'] else None), 'say': t['say']}
+        t['links'] = index_matches(probe, self.session, index_load())
+        t['link'] = t['links'][0] if t['links'] else None
+
+    def vectors(self):
+        """each thread's meaning vector, for the card (kept out of the per-phrase snapshot, which stays small)"""
+        return {tid: t['vec'] for tid, t in self.threads.items() if t.get('vec')}
 
     # ── judging ──
     def judge(self, t, now):
@@ -228,7 +265,8 @@ class Ledger:
             t = self.threads[tid]
             threads.append({'id': tid, 'title': t['title'], **self.judge(t, now), 'opened_at': t['opened_at'], 'opened_by': t['opened_by'], 'last_at': t['last_at'],
                             'words': t['words'], 'n': t['n'], 'returns': t['returns'], 'speakers': dict(t['speakers']), 'first': t['first'],
-                            'link': t['link'], 'landing_at': t['landing_at'], 'marks': t['marks'], 'keywords': t['keywords'][:12]})
+                            'link': t['link'], 'links': t['links'], 'landing_at': t['landing_at'], 'marks': t['marks'], 'keywords': t['keywords'][:12],
+                            'say': {k: t['say'][k] for k in t['keywords'][:12] if k in t['say']}})
         many = len([s for s, v in self.airtime.items() if v > 0]) > 1
         unpicked = [t['id'] for t in threads if many and t['state'] != 'closed' and set(t['speakers']) == {t['opened_by']} and t['id'] != active]
         talk = {'airtime': dict(self.airtime), 'turns': self.turns, 'speakers': sorted(self.airtime),

@@ -124,6 +124,12 @@ def jev_card(cfg, text, bank_hit=None, segs=None, threads=None):
     for i in range(len(segs)):
         qs[f'p{i + 1}'] = {'type': 'choice', 'instructions': f'What kind of speech is Passage {i + 1}?', 'criteria': heavy.KIND_CRITERIA}
         qs.update(lens_questions(f'Passage {i + 1}', segs[i].get('classifier'), f'p{i + 1}_'))
+    # how this recording connects to earlier ones: each thread linked to an earlier thread, continued, closed or contradicted
+    linked = [t for t in (threads or []) if t.get('link')][:4]
+    for i, t in enumerate(linked):
+        l = t['link']
+        qs[f'c{i + 1}'] = {'type': 'choice', 'instructions': f'The thread "{t.get("title")}" in this recording is linked to the thread "{l.get("title")}" from {l.get("date")}, which began "{(l.get("first") or "")[:100]}". What did this recording do with it?',
+                           'criteria': {'continued': 'took it further', 'closed': 'brought it to an end or answered it', 'contradicted': 'said the opposite or changed its mind about it', 'unrelated': 'the link is a coincidence of words'}}
     for i, t in enumerate(open_threads):
         qs[f't{i + 1}'] = {'type': 'choice', 'instructions': f'The thread "{t.get("title")}" ({t.get("kind")}) was left {t.get("state")}, beginning "{t.get("first", "")}". How could it best have continued or closed?',
                            'criteria': moves.get(t['id']) or {'rest': 'Let it rest.'}}
@@ -138,6 +144,8 @@ def jev_card(cfg, text, bank_hit=None, segs=None, threads=None):
         out['reuse'] = a.get('reuse', {}).get('noul', 0)
     out['segments'] = [{**sg, 'jev': a.get(f'p{i + 1}', {}).get('choice'), 'confidence': a.get(f'p{i + 1}', {}).get('confidence'),
                         'depth': lens_answers(a, f'p{i + 1}_')} for i, sg in enumerate(segs)]
+    out['connections'] = {t['id']: {'past': t['link'].get('title'), 'date': t['link'].get('date'), 'card': t['link'].get('card'), 'relation': (a.get(f'c{i + 1}') or {}).get('choice'),
+                                    'confidence': (a.get(f'c{i + 1}') or {}).get('confidence')} for i, t in enumerate(linked) if (a.get(f'c{i + 1}') or {}).get('choice')}
     out['threads'] = {t['id']: {'move': (moves.get(t['id']) or {}).get((a.get(f't{i + 1}') or {}).get('choice')), 'choice': (a.get(f't{i + 1}') or {}).get('choice'),
                                 'confidence': (a.get(f't{i + 1}') or {}).get('confidence')} for i, t in enumerate(open_threads) if a.get(f't{i + 1}')}
     return out
@@ -405,6 +413,8 @@ def _summary(folder):
                 L.append(f"    {'Jev' if sug.get('by') == 'Jev' else 'The algorithm'} suggests: {sug['move']}")
             if t.get('link'):
                 L.append(f"    Picked up from {t['link'].get('date')}: \"{t['link'].get('title')}\".")
+            if t.get('connection'):
+                L.append(f"    Jev: this recording {t['connection'].get('relation')} \"{t['connection'].get('past')}\" from {t['connection'].get('date')}.")
     L += ['', 'THE ART', f"  {card.get('art', '')}", f"  Style: {card.get('style', '')}", f"  Words: {', '.join(card.get('words') or [])}", f"  Prompt: {card.get('prompt', '')}"]
     (folder / 'reading.txt').write_text('\n'.join(L) + '\n')
 
@@ -562,7 +572,11 @@ def _paint(cfg, folder, card, say, on_learn=None):
             except (OSError, ValueError):
                 ths = None
             j = jev_card(cfg, card.get('text', ''), hit, segs, ths)
-            if ths and j.get('threads'):
+            if ths and j.get('connections'):
+                for t in ths:
+                    if j['connections'].get(t['id']):
+                        t['connection'] = j['connections'][t['id']]
+            if ths and (j.get('threads') or j.get('connections')):
                 for t in ths:
                     got = j['threads'].get(t['id'])
                     if got and got.get('move'):

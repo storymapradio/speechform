@@ -66,6 +66,9 @@ class Engine:
   self.examples=np.vstack([self.base_examples,vecs])
   self.owner=np.concatenate([self.base_owner,np.array([self.labels.index(x['kind']) for x in items])])
   return len(items)
+ def embed_thread(self,text):
+  """a thread's meaning, for linking it to earlier recordings"""
+  return self.model.encode([text],normalize_embeddings=True)[0]
  def classify(self,text):
   """the kind of a passage: nearest examples, less each kind's general pull, plus how the passage is built"""
   v=self.model.encode([text],normalize_embeddings=True)[0]
@@ -113,7 +116,7 @@ class Engine:
   return v,s,acc/wsum,vec,fired
  def reset(self):
   self.state={'session':str(uuid.uuid4()),'started':time.time(),'revision':0,'status':'Ready for speech.','form':'thinking aloud','world':'scrolls','scores':[], 'topics':[],'events':[],'words':{},'active_topic':None,'speaker_words':{'A':0,'B':0},'speaker':'A','conclusion_at':0,'radius':.85,'gate_at':0,'gate_from':'','error':'','model':'MiniLM, nearest examples over the last minute','source':'Ready','processing':False,'map':{'forms':self.form_xy,'ideas':[]}}
-  self.settled=None;self.ledger=steer.Ledger(self.state['session'])
+  self.settled=None;self.ledger=steer.Ledger(self.state['session'],self.embed_thread)
   self.vectors={};self.phrase_scores={};self.phrase_vecs={};self.phrase_heat={};self.last_match={};self.candidate=None;self.candidate_count=0;self.seen=set()
  def ingest(self,text,speaker='A',source='Typed',event_id=None,start=None,end=None,form_override=None):
   text=text.strip()
@@ -169,7 +172,7 @@ class Engine:
   try:event['why']['depth']=depth.reading([(x['text'],x['w']) for x in self.last_weights],depth.near_kinds(new,settled))
   except Exception as ex:event['why']['depth']=None;event['why']['depth_error']=str(ex)[:120]
   # the threads: every idea a thread, judged within its form's arc, with who spoke and asked what, and the listener's hold
-  try:event['why']['steer']=self.ledger.add(event,event['why'].get('depth'),topic);self.state['steer']=event['why']['steer']
+  try:event['why']['steer']=self.ledger.add(event,event['why'].get('depth'),topic);self.state['steer']=event['why']['steer'];self.state['thread_vecs']=self.ledger.vectors()
   except Exception as ex:event['why']['steer']=None;event['why']['steer_error']=str(ex)[:120]
   topic['events'].append(event_id);topic['words']+=len(words(text));topic['updated']=now
   self.state['events'].append(event)

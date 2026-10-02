@@ -105,13 +105,16 @@
 
   /* at the stop: the kind of the whole recording, the lenses of each passage, and how each open thread could have gone on */
   async function card({ segments, threads, text }) {
-    const open = (threads || []).filter(t => t.state !== 'closed').slice(0, 6), moves = Lg.suggestions(open);
-    const room = Math.floor((MAX_Q - 1 - open.length) / 6), segs = segments.slice(0, Math.max(1, room));
+    const open = (threads || []).filter(t => t.state !== 'closed').slice(0, 6), moves = Lg.suggestions(open), linked = (threads || []).filter(t => t.link).slice(0, 4);
+    const room = Math.floor((MAX_Q - 1 - open.length - linked.length) / 6), segs = segments.slice(0, Math.max(1, room));
     const per = Math.max(200, Math.floor(7000 / Math.max(1, segs.length)));
     const state = segs.length ? segs.map((s, i) => `Passage ${i + 1}: ` + s.text.slice(0, per)).join('\n\n') : text;
     const qs = { kind: { type: 'choice', instructions: 'What kind of speech is this recording, taken as a whole' + (segs.length ? ' (all the passages together)?' : '?'), criteria: KIND_CRITERIA } };
     segs.forEach((s, i) => { qs[`p${i + 1}`] = { type: 'choice', instructions: `What kind of speech is Passage ${i + 1}?`, criteria: KIND_CRITERIA };
       Object.assign(qs, lensQuestions(`Passage ${i + 1}`, s.classifier, `p${i + 1}_`)); });
+    /* how this recording connects to earlier ones: continued, closed or contradicted */
+    linked.forEach((t, i) => { const l = t.link; qs[`c${i + 1}`] = { type: 'choice', instructions: `The thread "${t.title}" in this recording is linked to the thread "${l.title}" from ${l.date}, which began "${String(l.first || '').slice(0, 100)}". What did this recording do with it?`,
+      criteria: { continued: 'took it further', closed: 'brought it to an end or answered it', contradicted: 'said the opposite or changed its mind about it', unrelated: 'the link is a coincidence of words' } }; });
     open.forEach((t, i) => { qs[`t${i + 1}`] = { type: 'choice', instructions: `The thread "${t.title}" (${t.kind}) was left ${t.state}, beginning "${t.first || ''}". How could it best have continued or closed?`, criteria: moves[t.id] || { rest: 'Let it rest.' } }; });
     const r = await ask(state, qs);
     if (r.rested) return { rested: true };
@@ -119,6 +122,7 @@
     const a = r.answers;
     return { kind: (a.kind || {}).choice, confidence: (a.kind || {}).confidence,
       segments: segs.map((s, i) => ({ ...s, jev: (a[`p${i + 1}`] || {}).choice, confidence: (a[`p${i + 1}`] || {}).confidence, depth: lensAnswers(a, `p${i + 1}_`) })),
+      connections: Object.fromEntries(linked.map((t, i) => [t.id, { past: t.link.title, date: t.link.date, card: t.link.card, relation: (a[`c${i + 1}`] || {}).choice, confidence: (a[`c${i + 1}`] || {}).confidence }]).filter(([, v]) => v.relation)),
       threads: Object.fromEntries(open.map((t, i) => { const c = (a[`t${i + 1}`] || {}).choice; return [t.id, { choice: c, move: (moves[t.id] || {})[c], confidence: (a[`t${i + 1}`] || {}).confidence }]; }).filter(([, v]) => v.choice)) };
   }
 
