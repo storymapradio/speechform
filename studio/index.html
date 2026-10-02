@@ -392,7 +392,7 @@ let lastDraw = 0;
 })(0);
 const clock = s => { s = Math.max(0, Math.floor(s)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 /* handles for tests over CDP (a hidden or headless tab has no microphone): recordFrom marks where a recording began */
-window.speechformStudio = { paint: (t, dt) => paintImage(t, dt), get state() { return S; }, poll: () => poll(), pause: () => onPause(true), showLook, showPage,
+window.speechformStudio = { live: () => liveIndex(true), get lastUpsert() { return lastUpsert; }, get indexLive() { return indexLive; }, paint: (t, dt) => paintImage(t, dt), get state() { return S; }, poll: () => poll(), pause: () => onPause(true), showLook, showPage,
   recordFrom: t => { recStart = t; }, get presses() { return presses; }, closing: () => closingCheck(), card: () => makeCard(), section: t => sectionFor(t) };
 
 /* ── hearing and recording: one window hears; the stage window hands its record button to the desk ── */
@@ -502,7 +502,7 @@ async function joinWav(a, b) {
   return window.SpeechformHearing.toWav([new Float32Array(new Int16Array(x, 44)).map(v => v / 32767), new Float32Array(new Int16Array(y, 44)).map(v => v / 32767)], 16000, 16000);
 }
 /* a card's threads carry their meaning vectors (the Mac's), their best earlier link, and what the room asked of them */
-let lastKept = null;
+let lastKept = null, lastUpsert = null;
 function withVectors(threads) {
   const room = roomNow(), vecs = (S && S.thread_vecs) || {};
   return threads.map(t => { const m = LA && LA.current.find(c => c.thread.id === t.id), best = m && m.matches[0];
@@ -513,7 +513,9 @@ function withVectors(threads) {
 /* the global index: the recording and its threads, once it is kept (signed in only) */
 function toIndex(kept, phrases, threads) {
   if (!kept || !window.SpeechformIndex) return;
-  SpeechformIndex.upsert({ item: { id: kept.id, title: kept.name, kind: kept.kind, at: kept.since || kept.made, text: phrases.map(p => p.text).join(' ').slice(0, 20000) }, threads }).catch(() => {});
+  SpeechformIndex.upsert({ item: { id: kept.id, name: kept.name, kind: kept.kind, since: kept.since, made: kept.made, text: phrases.map(p => p.text).join(' ').slice(0, 60000) },
+    phrases: phrases.map(p => ({ text: p.text, at: p.at, kind: p.kind, idea: p.idea, speaker: p.speaker })), threads, since: kept.since, visibility: 'private' })
+    .then(r => { if (r) { lastUpsert = r; drawLinks(true); } }).catch(() => {});
 }
 async function makeCard() {
   await poll();
@@ -585,8 +587,14 @@ async function drawLinks(force) {
   if (force || Date.now() - linksAt > 8000) { linksAt = Date.now(); await LINKS.refresh(force); }
   const th = ((S.steer || {}).threads || []).map(t => ({ ...t, vec: (S.thread_vecs || {})[t.id] || null }));
   LA = LINKS.analyze(th, S.now);
-  if (indexLive && indexLive.length) LA.live = indexLive;
-  const real = LA.recordings.length > 0;
+  /* what the global index heard as you spoke joins the constellation, each recording named with its app */
+  if (indexLive && indexLive.length) {
+    const seen = new Set(LA.recordings.map(r => r.id));
+    for (const r of indexLive) { const id = 'ix:' + r.app + ':' + (r.recording || r.id); if (seen.has(id)) continue; seen.add(id);
+      LA.recordings.push({ id, title: `${r.title || r.appName} · ${r.appName}`, at: r.at, kind: null, cluster: null, source: r.app, threads: 1 });
+      LA.edges.push({ from: 'here', to: id, strength: Math.max(r.strength || 0, Math.min(1, ((r.meaning || 0) - .76) / .14)), shared: r.shared, title: r.title, meaning: r.meaning }); }
+  }
+  const real = LA.recordings.length > 0 || !!LIB.user;
   LPANEL.draw(real ? LA : PREVIEW && PREVIEW.links, !real);
 }
 /* a recording of the past, opened in the replay at the moment its thread began */
@@ -597,11 +605,16 @@ async function openRecording(r, at) {
   showPage('cards'); D.open(c, at);
 }
 /* the global index, every few phrases while speaking: retrieval, not Jev (signed in only) */
-function liveIndex() {
-  if (!window.SpeechformIndex || !LIB.user || !H.listening || !S) return;
-  const n = S.transcript.length; if (n - liveCount < 3 || Date.now() - liveAt < 10000) return;
-  liveCount = n; liveAt = Date.now();
-  SpeechformIndex.live({ threads: (S.steer || {}).threads || [], text: S.transcript.slice(-12).map(e => e.text).join(' ') }).then(rows => { if (rows) indexLive = rows; }).catch(() => {});
+let liveSeq = 0;
+function liveIndex(force) {
+  if (!window.SpeechformIndex || !LIB.user || !S || (!H.listening && !force)) return;
+  const n = S.transcript.length; if (!force && (n - liveCount < 3 || Date.now() - liveAt < 8000)) return;
+  liveCount = n; liveAt = Date.now(); const seq = ++liveSeq;
+  /* never waits: only the newest answer is kept, and one about talk that has since moved on is dropped */
+  SpeechformIndex.live({ phrases: S.transcript.slice(-12).map(e => e.text) }).then(rows => {
+    if (!rows || seq !== liveSeq || (S.transcript.length - n > 6)) return;
+    indexLive = rows; LPANEL.setLive(rows);
+  }).catch(() => {});
 }
 /* the steering's offer from the past: a waiting thread to pick up */
 const linkMove = () => LA && LINKS.offer(((S && S.steer) || {}).threads || []);

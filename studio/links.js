@@ -148,54 +148,86 @@
     const bar = v => `<span class="lkbar"><i style="width:${Math.round(v * 100)}%"></i></span>`;
     function rec(r, extra = '') { return `<button class="lkrec" data-rec="${esc(r.id)}"><b>${esc(r.title)}</b><span>${day(r.at)}${r.kind ? ' · ' + esc(r.kind) : ''}${r.source === 'library' ? ' · another device' : ''}${extra}</span></button>`; }
     /* why two threads are linked: the words they share (as said), how alike they mean, whether the form is the same */
-    const why = m => [m.shared && m.shared.length ? 'shares ' + m.shared.slice(0, 4).map(w => `<q>${esc(w)}</q>`).join(', ') : 'no words in common',
-      m.meaning != null ? `meaning ${Math.round(Math.max(0, m.meaning) * 100)}%` : '', m.form ? 'same form' : '', m.edge ? esc(m.edge) : ''].filter(Boolean).join(' · ');
-    let scope = 'me', apps = new Set(IX ? IX.APPS : []), fromIndex = null;
+    const why = m => [m.shared && m.shared.length ? 'shares ' + m.shared.slice(0, 4).map(w => `<q>${esc(w)}</q>`).join(', ') : (m.entities && m.entities.length ? '' : 'no words in common'),
+      m.entities && m.entities.length ? 'both name ' + m.entities.slice(0, 3).map(w => `<q>${esc(w)}</q>`).join(', ') : '',
+      m.meaning != null ? `meaning ${Math.round(Math.max(0, m.meaning) * 100)}%` : '', m.form ? 'same form' : '', m.edge ? esc(m.edge) + (m.edgeBy === 'jev' ? ' (Jev)' : '') : ''].filter(Boolean).join(' · ');
+    /* the global index: scope and apps narrow what it answers */
+    let scope = 'all', apps = new Set(IX ? IX.APPS : []), fromIndex = null, live = null, themes = null, themesAt = 0, tl = null, tlFor = null;
+    const ixOn = () => IX && (IX.status === 'ready' || IX.status === 'resting');
+    const appsArg = () => (IX && apps.size === IX.APPS.length ? null : [...apps]);
     function filters() {
-      if (!IX || IX.status !== 'ready') return '';
-      return `<div class="lkf">${IX.SCOPES.map(s => `<button class="${s === scope ? 'on' : ''}" data-scope="${s}">${s === 'me' ? 'mine' : s === 'cohort' ? 'my cohort' : 'public'}</button>`).join('')}</div>
-        <div class="lkf">${IX.APPS.map(a => `<button class="${apps.has(a) ? 'on' : ''}" data-app="${a}">${a}</button>`).join('')}</div>`;
+      if (!ixOn()) return '';
+      return `<div class="lkf">${IX.SCOPES.map(s => `<button class="${s === scope ? 'on' : ''}" data-scope="${s}">${{ all: 'everything I can see', me: 'mine', cohort: 'my cohort', public: 'public' }[s]}</button>`).join('')}</div>
+        <div class="lkf">${IX.APPS.map(x => `<button class="${apps.has(x) ? 'on' : ''}" data-app="${x}">${esc(IX.APP_NAME[x])}</button>`).join('')}</div>`;
     }
+    /* one row from the index: what it is, which app, whose, and why it is linked */
+    /* the index answers in stems; the words as they were said come from this session's threads */
+    const sayMap = () => Object.assign({}, ...((a && a.current) || []).map(c => c.thread.say || {}));
+    const said = r => { const m = sayMap(); return { ...r, shared: (r.shared || []).map(w => m[w] || w) }; };
+    /* one row per recording: a passage and its whole recording are the same place */
+    const one = rows => { const seen = new Set(); return (rows || []).filter(r => { const k = r.app + '|' + (r.recording || r.id); if (seen.has(k)) return false; seen.add(k); return true; }); };
+    const ixRow = r0 => { const r = said(r0); return `<div class="lktl lkx"><b>${esc(r.title || r.appName)}</b><span class="lksub"><em class="lkapp">${esc(r.appName)}</em>${r.at ? ' · ' + day(r.at) : ''}${r.scope ? ' · ' + esc(r.scope === 'me' ? 'mine' : r.scope) : ''}${r.speaker ? ' · ' + esc(r.speaker) : ''}</span>
+      <div class="lkwhy">${why(r)}</div><p>${r.highlight ? r.highlight.replace(/<(?!\/?mark>)[^>]*>/g, '') : '“' + esc(String(r.first).slice(0, 220)) + '”'}</p></div>`; };
     async function fromTheIndex() {
-      if (!IX || !q.value.trim()) return null;
-      fromIndex = await IX.search({ q: q.value.trim(), scope, apps: [...apps] }); if (a) draw(a);
+      if (!IX) return null;
+      if (q.value.trim()) fromIndex = await IX.search({ q: q.value.trim(), scope, apps: appsArg() });
+      if (Date.now() - themesAt > 60000 || themes === null) { themesAt = Date.now(); themes = await IX.concepts({ scope, apps: appsArg() }); }
+      if (a) draw(a, isPreview);
     }
     function draw(an, prev) {
       a = an; isPreview = !!prev; mark.hidden = !prev; el.classList.toggle('lkpreview', !!prev);
       if (!a) { body.innerHTML = ''; return; }
       if (q.value.trim().length >= 2 && !prev) return drawSearch();
       const sp = VW && VW.SPEAKER || {};
-      let h = filters() + '<h4>this session, against every recording</h4>';
+      let h = filters();
+      if (!prev && live && live.length) h += '<h4>elsewhere, as you speak</h4>' + one(live.filter(r => apps.has(r.app === 'studio' ? 'speechform' : r.app))).slice(0, 5).map(ixRow).join('');
+      h += '<h4>this session, against every recording</h4>';
       h += a.current.length ? a.current.map(c => `<div class="lkthr ${focus === c.thread.id ? 'on' : ''}" data-t="${esc(c.thread.id)}"><div class="lkt"><span style="color:${color(c.thread.kind)}">${esc(c.thread.title)}</span>
           <em style="color:${sp[c.thread.opened_by] || 'inherit'}">${esc(c.thread.opened_by || '')}</em><small>${c.matches.length ? c.matches.length + (c.matches.length === 1 ? ' recording' : ' recordings') : 'new here'}</small></div>
           ${c.matches.slice(0, 3).map(m => `<div class="lkm" data-rec="${esc(m.rec.id)}" data-at="${m.thread.opened_at || ''}">${bar(m.strength)}<span>${esc(m.rec.title)} · ${day(m.rec.at)}${m.thread.opened_by ? ' · ' + esc(m.thread.opened_by) : ''}</span></div>
             <div class="lkwhy">${why(m)}</div>`).join('')}</div>`).join('')
         : '<p class="quiet">Threads appear as ideas open.</p>';
+      if (focus && tl && tlFor === focus && (tl.timeline.length || tl.related.length)) {
+        h += '<h4>across every app</h4>' + (tl.timeline.length ? tl.timeline : tl.related).map(r => r.here ? `<div class="lktl lkhere"><b>${esc(r.title)}</b><span class="lksub">here · ${r.at ? day(r.at) : ''}</span></div>` : ixRow(r)).join('');
+      }
       if (focus) {
         const tl = timeline(focus);
         h += `<h4>its timeline</h4>` + (tl.length ? tl.map(x => `<div class="lktl">${rec(x.rec, ' · ' + esc(VW && VW.STATE_WORD[x.thread.state] || x.thread.state || ''))}<p>“${esc(x.thread.first || '')}”</p>${x.thread.room ? `<small>the room: ${x.thread.room.votes || 0} asked for more</small>` : ''}${x.thread.connection ? `<small>Jev: ${esc(x.thread.connection.relation)} “${esc(x.thread.connection.past)}”</small>` : ''}</div>`).join('') : '<p class="quiet">No earlier recording touched it.</p>');
       }
       h += '<h4>waiting threads</h4>' + (a.waiting.length ? a.waiting.map(w => `<div class="lkw" data-w="${esc(w.key)}"><b>${esc(w.title)}</b><span>${w.count === 1 ? 'left open once' : 'open in ' + w.count + ' recordings'} · last ${day(w.lastAt)}${w.need ? ' · ' + esc(w.need) : ''}</span></div>`).join('') : '<p class="quiet">Every earlier thread has landed.</p>');
-      if (a.clusters.length) h += '<h4>themes</h4>' + a.clusters.map(k => `<div class="lkk"><b>${esc(k.theme || 'a theme')}</b><span>${k.recordings.length} recordings</span></div>`).join('');
+      if (!prev && themes && themes.length) h += '<h4>themes across apps</h4>' + themes.slice(0, 8).map(k => `<div class="lkk"><b>${esc(k.title || k.words.slice(0, 3).join(', '))}</b>
+        <span>${k.n || k.members.length} threads · ${k.apps.map(x => esc(IX.APP_NAME[x] || x)).join(', ')}</span></div>`).join('');
+      else if (a.clusters.length) h += '<h4>themes</h4>' + a.clusters.map(k => `<div class="lkk"><b>${esc(k.theme || 'a theme')}</b><span>${k.recordings.length} recordings</span></div>`).join('');
       body.innerHTML = h; wire();
     }
     function drawSearch() {
       const res = search(q.value);
       body.innerHTML = filters() + `<h4>${res.length} threads here</h4>` + res.map(x => `<div class="lktl">${rec(x.rec)}<p><b>${esc(x.thread.title)}</b> · “${esc(x.thread.first || '')}”</p></div>`).join('') +
-        (fromIndex ? `<h4>${fromIndex.length} across every app</h4>` + fromIndex.map(r => `<div class="lktl"><b>${esc(r.title)}</b><span class="lksub">${esc(r.app)} · ${r.at ? day(r.at) : ''} · ${esc(r.scope)}</span><div class="lkwhy">${why(r)}</div><p>“${esc(r.first)}”</p></div>`).join('') : '');
+        (fromIndex ? `<h4>${one(fromIndex).length} across every app</h4>` + one(fromIndex).map(ixRow).join('') : '');
       wire();
+    }
+    /* a thread's timeline across every app: a waiting thread by its recording, a thread here by its best earlier match */
+    async function crossApp() {
+      if (!IX || !focus || !a) return; const f = focus;
+      let id = null, rec = null;
+      const w = a.waiting.find(x => x.key === f); if (w) { const m = w.members[w.members.length - 1]; id = m.thread.id; rec = m.rec.id; }
+      const c = a.current.find(x => x.thread.id === f); if (c && c.matches[0]) { id = c.matches[0].thread.id; rec = c.matches[0].rec.id; }
+      if (!id) return;
+      const got = await IX.thread({ id, recordingId: rec, scope, apps: appsArg() });
+      if (got && focus === f) { tl = got; tlFor = f; draw(a); }
     }
     function wire() {
       if (isPreview) return;
-      body.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { focus = focus === b.dataset.t ? null : b.dataset.t; draw(a); });
-      body.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { focus = focus === b.dataset.w ? null : b.dataset.w; draw(a); });
+      body.querySelectorAll('[data-t]').forEach(b => b.onclick = () => { focus = focus === b.dataset.t ? null : b.dataset.t; draw(a); crossApp(); });
+      body.querySelectorAll('[data-w]').forEach(b => b.onclick = () => { focus = focus === b.dataset.w ? null : b.dataset.w; draw(a); crossApp(); });
       body.querySelectorAll('[data-rec]').forEach(b => b.onclick = e => { e.stopPropagation(); const r = past.find(x => x.id === b.dataset.rec); if (!r || !open) return;
         const t = (timeline(focus || '').find(x => x.rec.id === r.id) || {}).thread; open(r, b.dataset.at ? +b.dataset.at : t ? t.opened_at : null); });
-      body.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => { scope = b.dataset.scope; fromTheIndex(); draw(a); });
-      body.querySelectorAll('[data-app]').forEach(b => b.onclick = () => { apps.has(b.dataset.app) ? apps.delete(b.dataset.app) : apps.add(b.dataset.app); fromTheIndex(); draw(a); });
+      body.querySelectorAll('[data-scope]').forEach(b => b.onclick = () => { scope = b.dataset.scope; themesAt = 0; fromTheIndex(); crossApp(); draw(a); });
+      body.querySelectorAll('[data-app]').forEach(b => b.onclick = () => { apps.has(b.dataset.app) ? apps.delete(b.dataset.app) : apps.add(b.dataset.app); if (!apps.size) apps = new Set(IX.APPS); themesAt = 0; fromTheIndex(); crossApp(); draw(a); });
     }
     let qt = null; q.addEventListener('input', () => { if (a) draw(a); clearTimeout(qt); qt = setTimeout(fromTheIndex, 500); });
-    return { draw };
+    let ixAt = 0;
+    return { draw(an, prev) { draw(an, prev); if (!prev && IX && Date.now() - ixAt > 60000) { ixAt = Date.now(); fromTheIndex(); } }, setLive(rows) { live = rows; if (a) draw(a, isPreview); } };
   }
 
   const css = `.lk{display:flex;flex-direction:column;min-height:0;flex:1}.lkhead{display:flex;align-items:center;gap:10px;padding:10px 14px 6px;border-bottom:1px solid var(--faint)}
@@ -209,6 +241,7 @@
 .lkw b,.lkk b{display:block;font-weight:500}.lkw{border-color:rgba(255,201,74,.35)}.lktl p{margin:4px 0 0;font-size:11.5px;color:var(--muted);line-height:1.45}.lktl small{display:block;color:var(--amber);font-size:10.5px;margin-top:3px}
 .lkwhy{font-size:10.5px;color:var(--muted);margin:2px 0 4px 56px;line-height:1.4}.lkwhy q{color:var(--amber)}.lksub{display:block;color:var(--muted);font-size:10.5px}
 .lkf{display:flex;flex-wrap:wrap;gap:5px;margin:2px 0 6px}.lkf button{font:inherit;font-size:10.5px;padding:3px 9px;border-radius:99px;border:1px solid var(--faint);background:none;color:var(--muted);cursor:pointer}.lkf button.on{color:var(--green);border-color:var(--green-dim)}
+.lkx{border-color:rgba(90,180,255,.35)}.lkx .lkwhy{margin-left:0}.lkapp{font-style:normal;color:#5ab4ff}.lkx p mark{background:rgba(255,201,74,.25);color:var(--ink)}.lkhere{border-color:var(--green-dim)}
 .lkrec{display:block;width:100%;text-align:left;font:inherit;background:none;border:none;color:var(--ink);padding:0;cursor:pointer}.lkrec b{font-weight:500}.lkrec span{display:block;color:var(--muted);font-size:10.5px}`;
   if (typeof document !== 'undefined') { const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st); }
   root.SpeechformLinks = { refresh, analyze, waiting, timeline, search, offer, panel, strength, stemmed, get past() { return past; }, get last() { return last; }, day };

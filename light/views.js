@@ -613,7 +613,7 @@
       });
       hits = [];
       order.forEach(r => {
-        const [px, py] = pos[r.id], s = toHere[r.id] || 0, size = U(5 + Math.min(7, (r.threads || 0) * 1.2)), c = T.color(r.kind || 'story');
+        const [px, py] = pos[r.id], s = toHere[r.id] || 0, size = U(5 + Math.min(7, (r.threads || 0) * 1.2)), c = r.kind ? T.color(r.kind) : '#5ab4ff';   // from another app: cool blue
         hex(px, py, size); x.fillStyle = c; x.globalAlpha = .25 + .6 * Math.max(s, .2); x.fill(); x.globalAlpha = 1; x.strokeStyle = s ? amber : c; x.lineWidth = U(s ? 1.6 : .8); x.stroke();
         if (s > .3 || order.length < 14) { const c2 = Math.cos(pos[r.id][2]); font(8.5);
           label(fit(r.title || '', U(110)), px + (c2 > .2 ? size + U(5) : c2 < -.2 ? -size - U(5) : 0), py + Math.sin(pos[r.id][2]) * (size + U(9)), c2 > .2 ? 'right' : c2 < -.2 ? 'left' : 'center', 8.5, s ? ink : muted); }
@@ -626,8 +626,8 @@
         x.beginPath(); x.arc(cx + U(22) * Math.cos(a), cy + U(22) * Math.sin(a), U(2.4), 0, 7); x.fill(); });
       placed.push([cx - U(16), cy - U(16), cx + U(16), cy + U(16)]); label('this session', cx, cy + U(30), 'center', 9.5, ink);
       font(9); x.fillStyle = muted; x.textAlign = 'left'; x.textBaseline = 'top';
-      const linked = cur.filter(c => c.matches.length).length;
-      x.fillText(`${recs.length} recordings · ${linked} of ${cur.length} threads here meet one`, U(8), U(6));
+      const toThis = new Set((L.edges || []).filter(e => e.from === 'here').map(e => e.to)).size;
+      x.fillText(`${recs.length} recordings · ${toThis} linked to this session`, U(8), U(6));
       if ((L.waiting || []).length) { x.fillStyle = amber; x.fillText(fit(`waiting: ${L.waiting[0].title} (${L.waiting[0].count})`, W - U(16)), U(8), U(19)); }
       say('Each hexagon is an earlier recording; the amber hexagon is this session. Amber lines are threads this session shares with a recording, as thick as the likeness; blue lines join recordings to each other, and soft fields gather them into themes. Tap a recording to replay it at that thread.');
     }
